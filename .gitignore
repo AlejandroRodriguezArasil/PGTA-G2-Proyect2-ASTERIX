@@ -1,0 +1,13 @@
+# Entorno virtual de Python (cada uno crea el suyo con requirements.txt)
+.venv/
+
+# Ficheros que genera Python al ejecutar
+__pycache__/
+
+# Lo que genera crear_exe.bat (PyInstaller)
+build/
+dist/
+*.spec
+
+# Caché de un complemento del editor, no es del proyecto
+.impeccable/

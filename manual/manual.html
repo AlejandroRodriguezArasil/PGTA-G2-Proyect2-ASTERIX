@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Decodificador ASTERIX · Manual de uso</title>
+<!--
+  Fuente del manual de uso. Se convierte a PDF con crear_manual.bat (Microsoft Edge en modo headless).
+  Colores y tipografías: los de estilo.py, para que el manual se parezca a la aplicación.
+  Las capturas están en capturas/ y son de la ventana de la aplicación.
+-->
+<style>
+  :root {
+    --fondo: #F2F4F7;            /* estilo.FONDO */
+    --tarjeta: #FFFFFF;          /* estilo.TARJETA */
+    --borde: #DCE1E8;            /* estilo.BORDE */
+    --texto: #1B2430;            /* estilo.TEXTO */
+    --texto-secundario: #5F6B7A; /* estilo.TEXTO_SECUNDARIO */
+    --cabecera: #14243A;         /* estilo.CABECERA */
+    --cabecera-suave: #A9B6C8;   /* estilo.CABECERA_TEXTO_SUAVE */
+    --principal: #1F5FAD;        /* estilo.PRINCIPAL */
+    --aviso-fondo: #E8F1FC;      /* estilo.AVISO_FONDO */
+    --aviso-texto: #1F4E8C;      /* estilo.AVISO_TEXTO */
+    --resaltado: #D62828;        /* estilo.RESALTADO: color de las marcas numeradas */
+    --radar: #1F6FEB;            /* estilo.RADAR */
+    --adsb: #E8890C;             /* estilo.ADSB */
+    --tabla-cabecera: #E7ECF2;   /* estilo.TABLA_CABECERA */
+    --tabla-alterna: #F7F9FB;    /* estilo.TABLA_FILA_ALTERNA */
+  }
+
+  @page {
+    size: A4;
+    margin: 16mm 16mm 18mm 16mm;
+    @bottom-center {
+      content: "Decodificador ASTERIX · Manual de uso · " counter(page);
+      font-family: "Segoe UI", sans-serif;
+      font-size: 8pt;
+      color: #5F6B7A;   /* estilo.TEXTO_SECUNDARIO */
+    }
+  }
+  @page :first {
+    @bottom-center { content: none; }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", sans-serif;   /* estilo.FAMILIA */
+    font-size: 10.5pt;
+    line-height: 1.45;
+    color: var(--texto);
+    background: var(--tarjeta);
+  }
+  .pagina { break-after: page; }
+  .pagina:last-child { break-after: auto; }
+
+  h2 {
+    font-size: 16pt;
+    margin: 0 0 3mm 0;
+    padding: 2.5mm 4mm;
+    color: #FFFFFF;
+    background: var(--cabecera);
+    border-radius: 2mm;
+  }
+  h3 {
+    font-size: 12pt;
+    margin: 5mm 0 2mm 0;
+    color: var(--principal);
+  }
+  p { margin: 0 0 2.5mm 0; }
+  b { font-weight: 600; }
+  code, .mono { font-family: Consolas, monospace; font-size: 9.5pt; }   /* estilo.FAMILIA_NUMEROS */
+
+  img.captura {
+    display: block;
+    max-width: 100%;
+    border: 1px solid var(--borde);
+    border-radius: 1.5mm;
+  }
+
+  /* Paso: número a la izquierda, texto e imagen a la derecha */
+  .paso {
+    display: flex;
+    gap: 4mm;
+    margin: 0 0 4mm 0;
+    break-inside: avoid;
+  }
+  .paso .numero {
+    flex: 0 0 8mm;
+    height: 8mm;
+    border-radius: 50%;
+    background: var(--principal);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 11pt;
+    text-align: center;
+    line-height: 8mm;
+  }
+  .paso .contenido { flex: 1; }
+  .paso .contenido p { margin-bottom: 2mm; }
+
+  /* Imagen y lista una al lado de la otra */
+  .lado-a-lado {
+    display: flex;
+    gap: 6mm;
+    align-items: flex-start;
+    break-inside: avoid;
+  }
+  .lado-a-lado > .texto { flex: 1; }
+
+  /* Marcas numeradas en rojo, como las de las capturas */
+  .marca {
+    display: inline-block;
+    width: 5.5mm;
+    height: 5.5mm;
+    border-radius: 50%;
+    background: var(--resaltado);
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 8.5pt;
+    text-align: center;
+    line-height: 5.5mm;
+    text-indent: 0;
+    margin: 0 0.6mm;
+    vertical-align: 0.3mm;
+  }
+  ul.marcas .marca { margin: 0 2mm 0 0; }
+  ul.marcas { list-style: none; padding: 0; margin: 2mm 0 3mm 0; }
+  ul.marcas li { margin: 0 0 2mm 0; padding-left: 7.5mm; text-indent: -7.5mm; }
+
+  /* Cuadros de aviso */
+  .nota {
+    background: var(--aviso-fondo);
+    color: var(--aviso-texto);
+    border-left: 1.2mm solid var(--principal);
+    border-radius: 1.5mm;
+    padding: 2.5mm 4mm;
+    margin: 3mm 0;
+    break-inside: avoid;
+  }
+  .nota p:last-child { margin-bottom: 0; }
+
+  /* Bloque de órdenes de la opción con Python */
+  .consola {
+    background: var(--fondo);
+    border: 1px solid var(--borde);
+    border-radius: 1.5mm;
+    padding: 3mm 4mm;
+    margin: 2mm 0 3mm 0;
+    break-inside: avoid;
+  }
+  .consola ol { margin: 0; padding-left: 5mm; }
+  .consola li { margin-bottom: 2mm; }
+  .consola li:last-child { margin-bottom: 0; }
+  .consola code {
+    display: block;
+    margin-top: 0.8mm;
+    padding: 1.2mm 2.5mm;
+    background: var(--tarjeta);
+    border: 1px solid var(--borde);
+    border-radius: 1mm;
+  }
+
+  /* Tablas */
+  table { width: 100%; border-collapse: collapse; margin: 2mm 0 3mm 0; font-size: 9.5pt; }
+  th, td { border: 1px solid var(--borde); padding: 1.8mm 2.5mm; text-align: left; vertical-align: top; }
+  th { background: var(--tabla-cabecera); font-weight: 600; }
+  tr:nth-child(even) td { background: var(--tabla-alterna); }
+  td.control { white-space: nowrap; font-weight: 600; }
+
+  /* Punto de color delante del nombre del color (el texto sigue en oscuro para que se lea bien) */
+  .punto { display: inline-block; width: 3mm; height: 3mm; border-radius: 50%; margin: 0 1mm 0 0.5mm; vertical-align: -0.2mm; }
+  .punto.radar { background: var(--radar); }
+  .punto.adsb { background: var(--adsb); }
+  .punto.rojo { background: var(--resaltado); }
+
+  /* Portada */
+  .portada {
+    height: 262mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .portada .banda {
+    background: var(--cabecera);
+    color: #FFFFFF;
+    border-radius: 3mm;
+    padding: 16mm 14mm 14mm 14mm;
+  }
+  .portada .banda .tipo { color: var(--cabecera-suave); font-size: 11pt; letter-spacing: 0.5mm; margin: 0 0 4mm 0; }
+  .portada h1 { font-size: 30pt; margin: 0; line-height: 1.15; }
+  .portada .banda .subtitulo { font-size: 18pt; color: var(--cabecera-suave); margin: 2mm 0 0 0; }
+  .portada .captura-portada { margin: 12mm auto 0 auto; width: 150mm; }
+  .portada .captura-portada img { box-shadow: 0 1mm 4mm rgba(20, 36, 58, 0.25); }
+  .portada .datos {
+    margin-top: auto;
+    border-top: 1px solid var(--borde);
+    padding-top: 5mm;
+    font-size: 11pt;
+    color: var(--texto-secundario);
+  }
+  .portada .datos p { margin: 0 0 1mm 0; }
+  .portada .datos .grande { font-size: 13pt; color: var(--texto); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ============================== Portada ============================== -->
+<section class="pagina portada">
+  <div class="banda">
+    <p class="tipo">CAT048 · CAT021</p>
+    <h1>Decodificador ASTERIX</h1>
+    <p class="subtitulo">Manual de uso</p>
+  </div>
+  <div class="captura-portada">
+    <img class="captura" src="capturas/portada.png" alt="La aplicación con el fichero combinado cargado">
+  </div>
+  <div class="datos">
+    <p class="grande">PGTA · Proyecto 2</p>
+    <p>Grupo G2</p>
+    <p>Noviembre de 2026</p>
+  </div>
+</section>
+
+<!-- ============================== 1 y 2 ============================== -->
+<section class="pagina">
+  <h2>1. Qué es</h2>
+  <p>El Decodificador ASTERIX lee ficheros <b>.ast</b> con mensajes <b>CAT048</b> (radar de Barcelona) y <b>CAT021</b> (ADS-B).</p>
+  <p>Muestra los mensajes en una tabla, permite filtrarlos y exportarlos a CSV, y simula las trayectorias de los aviones en un mapa.</p>
+
+  <h2 style="margin-top: 7mm;">2. Abrir la aplicación</h2>
+
+  <h3>Opción A (recomendada): el ejecutable</h3>
+  <div class="paso">
+    <div class="numero">1</div>
+    <div class="contenido"><p>Descomprime el .zip de la entrega. <b>DecodificadorASTERIX.exe</b> está en el .zip, junto a este manual.</p></div>
+  </div>
+  <div class="paso">
+    <div class="numero">2</div>
+    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>. No hace falta instalar nada.</p></div>
+  </div>
+  <div class="paso">
+    <div class="numero">3</div>
+    <div class="contenido">
+      <p>Si Windows muestra el aviso <b>«Windows protegió su PC»</b>, pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</p>
+    </div>
+  </div>
+
+  <div class="nota">
+    <p><b>Ficheros .ast.</b> No van en la entrega. Son los de la asignatura: <span class="mono">asterix_radar.ast</span>, <span class="mono">asterix_adsb.ast</span> y <span class="mono">asterix_combinado.ast</span>. Pueden estar en cualquier carpeta del equipo.</p>
+    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet. El resto funciona sin conexión.</p>
+  </div>
+
+  <h3>Opción B: con Python</h3>
+  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta del código y escribe:</p>
+  <div class="consola">
+    <ol>
+      <li>Crear el entorno virtual:<code>python -m venv .venv</code></li>
+      <li>Instalar las librerías:<code>.venv\Scripts\python -m pip install -r requirements.txt</code></li>
+      <li>Abrir la aplicación:<code>.venv\Scripts\python main.py</code></li>
+    </ol>
+  </div>
+  <p>Los pasos 1 y 2 solo se hacen la primera vez. Después basta con el paso 3.</p>
+</section>
+
+<!-- ============================== 3 ============================== -->
+<section class="pagina">
+  <h2>3. Cargar un fichero .ast</h2>
+
+  <div class="paso">
+    <div class="numero">1</div>
+    <div class="contenido">
+      <p>Pulsa <b>Abrir fichero .ast</b> <span class="marca">1</span>. Está arriba a la derecha y, al empezar, también en el centro de la tabla.</p>
+      <img class="captura" src="capturas/inicio.png" style="width: 128mm;" alt="Aplicación recién abierta">
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="numero">2</div>
+    <div class="contenido"><p>En la ventana de Windows, ve a la carpeta del fichero, elígelo y pulsa <b>Abrir</b>.</p></div>
+  </div>
+
+  <div class="paso">
+    <div class="numero">3</div>
+    <div class="contenido">
+      <p>Espera a que se decodifique. La barra grande <span class="marca">1</span> y la de abajo <span class="marca">2</span> muestran el avance. En nuestro equipo, el fichero combinado tarda unos 20 s.</p>
+      <img class="captura" src="capturas/progreso.png" style="width: 128mm;" alt="Decodificación en curso">
+    </div>
+  </div>
+
+  <div class="paso">
+    <div class="numero">4</div>
+    <div class="contenido lado-a-lado">
+      <div class="texto">
+        <p>Al acabar, <b>Resumen del fichero</b> muestra los registros leídos, los mensajes que hay en la tabla, los descartados y los segundos que ha tardado.</p>
+        <p>Debajo está el detalle por categoría y por motivo de descarte.</p>
+        <p>No entran en la tabla los mensajes fuera de 40,9–41,7° N y 1,5–2,6° E, los CAT021 en tierra y los mensajes sin posición.</p>
+      </div>
+      <img class="captura" src="capturas/resumen.png" style="width: 58mm;" alt="Resumen del fichero">
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 4 ============================== -->
+<section class="pagina">
+  <h2>4. Ver los datos</h2>
+  <p>La tabla <b>Mensajes decodificados</b> tiene todos los mensajes, en el orden del fichero. Sus columnas son las mismas que las del CSV.</p>
+  <img class="captura" src="capturas/tabla.png" alt="Tabla de mensajes">
+  <ul class="marcas">
+    <li><span class="marca">1</span><b>Contador:</b> qué mensajes se ven y cuántos hay en total.</li>
+    <li><span class="marca">2</span><b>Barra horizontal:</b> hay una columna por dato (97 en total). Arrástrala para ver el resto de columnas.</li>
+    <li><span class="marca">3</span><b>Anterior / Siguiente:</b> la tabla va en páginas de 500 mensajes.</li>
+  </ul>
+  <div class="nota">
+    <p>Una celda vacía quiere decir que el mensaje no trae ese dato.</p>
+  </div>
+</section>
+
+<!-- ============================== 5 ============================== -->
+<section class="pagina">
+  <h2>5. Filtrar</h2>
+  <p>Ejemplo: la entrada del P3 con <span class="mono">asterix_combinado.ast</span>.</p>
+
+  <div class="lado-a-lado">
+    <img class="captura" src="capturas/filtros.png" style="width: 66mm;" alt="Panel de filtros">
+    <div class="texto">
+      <ul class="marcas">
+        <li><span class="marca">1</span>En <b>Categoría ASTERIX</b>, elige <b>CAT048</b>.</li>
+        <li><span class="marca">2</span>Marca <b>Quitar aeronaves en tierra (CAT048)</b>.</li>
+        <li><span class="marca">3</span>Marca <b>Solo mensajes con FL</b>.</li>
+        <li><span class="marca">4</span>Escribe <b>6000</b> en <b>Altitud máxima (ft)</b>.</li>
+        <li><span class="marca">5</span>Pulsa <b>Aplicar filtros</b> (o Intro en un campo de texto).</li>
+        <li><span class="marca">6</span><b>Quitar filtros</b> vuelve a mostrar todos los mensajes.</li>
+      </ul>
+      <div class="nota">
+        <p>Los filtros solo se aplican al pulsar <b>Aplicar filtros</b>. Se pueden combinar todos.</p>
+        <p>Si pasas el ratón por encima de un filtro, sale una ayuda con lo que hace.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Resultado</h3>
+  <img class="captura" src="capturas/resultado.png" alt="Tabla filtrada">
+  <ul class="marcas">
+    <li><span class="marca">7</span>El contador muestra <b>20.952 mensajes</b> (189.594 sin filtrar).</li>
+  </ul>
+
+  <h3>Los otros filtros</h3>
+  <ul>
+    <li><b>Quitar blancos puros (CAT048):</b> quita los mensajes que no vienen de una interrogación Modo S.</li>
+    <li><b>Quitar transponder fijo (7777):</b> quita los mensajes con Modo 3/A 7777 o con RAB = 1.</li>
+    <li><b>Aeronave:</b> busca el texto en el callsign, la dirección Modo S o el Modo 3/A.</li>
+  </ul>
+</section>
+
+<!-- ============================== 6 ============================== -->
+<section class="pagina">
+  <h2>6. Exportar a CSV</h2>
+
+  <div class="lado-a-lado">
+    <img class="captura" src="capturas/exportar.png" style="width: 70mm;" alt="Botones de exportar">
+    <div class="texto">
+      <ul class="marcas">
+        <li><span class="marca">1</span><b>Exportar todo:</b> guarda todos los mensajes decodificados.</li>
+        <li><span class="marca">2</span><b>Exportar lo filtrado:</b> guarda solo los mensajes que quedan tras los filtros. Se activa al aplicar algún filtro.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Pasos</h3>
+  <div class="paso">
+    <div class="numero">1</div>
+    <div class="contenido"><p>Pulsa <b>Exportar todo</b> o <b>Exportar lo filtrado</b>.</p></div>
+  </div>
+  <div class="paso">
+    <div class="numero">2</div>
+    <div class="contenido"><p>En la ventana <b>Guardar CSV</b>, elige la carpeta y el nombre, y pulsa <b>Guardar</b>.</p></div>
+  </div>
+  <div class="paso">
+    <div class="numero">3</div>
+    <div class="contenido"><p>Al acabar sale el aviso <b>Exportación terminada</b>, con el número de mensajes y la ruta del fichero.</p></div>
+  </div>
+
+  <h3>Cómo es el CSV</h3>
+  <ul>
+    <li>Separador <b>;</b> y coma decimal.</li>
+    <li>Una fila por mensaje y una columna por dato (97 columnas). La celda queda vacía si el mensaje no trae ese dato.</li>
+    <li>Columnas extra: <b>LAT</b>, <b>LON</b> y <b>H</b> en WGS84, y <b>ALT_CORREGIDA_FT</b> (altitud corregida por QNH por debajo de 6000 ft).</li>
+  </ul>
+
+  <div class="nota">
+    <p><b>Excel.</b> Si abres el CSV con doble clic, Excel quita el cero inicial del Modo 3/A (por ejemplo, <span class="mono">0437</span> pasa a <span class="mono">437</span>) y puede leer alguna dirección Modo S (TA) como número.</p>
+    <p>Para verlas igual que en la aplicación, importa el CSV desde Excel y pon las columnas <b>MODE3A</b> y <b>TA</b> como <b>Texto</b>.</p>
+  </div>
+</section>
+
+<!-- ============================== 7 ============================== -->
+<section class="pagina">
+  <h2>7. Simulación</h2>
+
+  <div class="paso">
+    <div class="numero">1</div>
+    <div class="contenido"><p>Pulsa <b>Simulación</b>, en el centro de la parte de arriba.</p></div>
+  </div>
+
+  <div class="nota">
+    <p><b>Se simula lo que está filtrado en la pestaña Datos.</b> El aviso azul encima del mapa dice cuántos mensajes se simulan y con qué filtros. Para simularlo todo, pulsa <b>Quitar filtros</b> en Datos.</p>
+  </div>
+
+  <div class="paso">
+    <div class="numero">2</div>
+    <div class="contenido"><p>Usa los controles de encima del mapa. A su derecha está la <b>Hora de la simulación (UTC)</b>.</p></div>
+  </div>
+  <img class="captura" src="capturas/controles.png" alt="Controles de la simulación">
+
+  <table>
+    <tr><th style="width: 9mm;"></th><th style="width: 32mm;">Control</th><th>Qué hace</th></tr>
+    <tr><td><span class="marca">1</span></td><td class="control">Reproducir</td><td>Avanza la simulación de 1 s en 1 s de hora del día.</td></tr>
+    <tr><td><span class="marca">2</span></td><td class="control">Pausa</td><td>Para la simulación. Al cambiar a la pestaña Datos, la simulación se pausa.</td></tr>
+    <tr><td><span class="marca">3</span></td><td class="control">+1 s</td><td>Avanza un solo salto de 1 s.</td></tr>
+    <tr><td><span class="marca">4</span></td><td class="control">Reset</td><td>Para la simulación y vuelve a la primera hora de los datos.</td></tr>
+    <tr><td><span class="marca">5</span></td><td class="control">Velocidad</td><td>De x1 a x60. Cada salto es siempre de 1 s; la velocidad solo cambia cada cuánto se dibuja (x1: un salto por segundo; x60: 60 saltos por segundo).</td></tr>
+    <tr><td><span class="marca">6</span></td><td class="control">Sistema</td><td><b>Ambos</b>, <b>Radar</b> (CAT048) o <b>ADS-B</b> (CAT021). Con Ambos, un avión que ven los dos sistemas sale dos veces.</td></tr>
+    <tr><td><span class="marca">7</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
+    <tr><td><span class="marca">8</span></td><td class="control">Etiquetas</td><td>Muestra u oculta el callsign de cada avión (o su dirección Modo S si no tiene).</td></tr>
+    <tr><td><span class="marca">9</span></td><td class="control">Estelas</td><td>Muestra u oculta la línea con las últimas posiciones de cada avión.</td></tr>
+  </table>
+
+  <h3>El mapa</h3>
+  <ul>
+    <li>Arrastra el mapa para moverte. Acerca o aleja con la rueda del ratón o con los botones <b>+</b> y <b>−</b>.</li>
+    <li>La silueta de cada avión apunta a su rumbo.</li>
+    <li>Un avión desaparece si pasa más de 12 s sin mensajes.</li>
+  </ul>
+</section>
+
+<!-- ============================== 7 (cont.) y 8 ============================== -->
+<section class="pagina">
+  <h3 style="margin-top: 0;">Leyenda y clic en un avión</h3>
+  <div class="lado-a-lado">
+    <div class="texto">
+      <img class="captura" src="capturas/mapa_avion.png" style="width: 112mm;" alt="Avión seleccionado y su pareja">
+      <div class="paso" style="margin-top: 4mm;">
+        <div class="numero">3</div>
+        <div class="contenido">
+          <p>Haz clic en un avión. Se pone en <span class="punto rojo"></span>rojo <span class="marca">1</span> y, si el otro sistema también lo ve, su pareja también <span class="marca">2</span>.</p>
+          <p>En el ejemplo, 1 es el radar y 2 el ADS-B del mismo avión (VLG8FU).</p>
+          <p>Colores: <span class="punto radar"></span>azul, radar; <span class="punto adsb"></span>naranja, ADS-B; <span class="punto rojo"></span>rojo, el avión seleccionado y su pareja.</p>
+          <p>A la derecha: la <b>Leyenda</b>, cuántos hay <b>En el mapa</b> (radar, ADS-B y blancos puros) y, en <b>Avión seleccionado</b>, sus datos (callsign, dirección Modo S, FL, posición, velocidades y rumbo).</p>
+        </div>
+      </div>
+    </div>
+    <img class="captura" src="capturas/panel.png" style="width: 46mm;" alt="Panel de la simulación">
+  </div>
+
+  <h2 style="margin-top: 6mm;">8. Problemas frecuentes</h2>
+  <table>
+    <tr><th style="width: 52mm;">Problema</th><th>Qué hacer</th></tr>
+    <tr>
+      <td>Al abrir el .exe sale «Windows protegió su PC».</td>
+      <td>Es el aviso de SmartScreen, porque el ejecutable no está firmado. Pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</td>
+    </tr>
+    <tr>
+      <td>El .exe tarda en abrirse la primera vez.</td>
+      <td>Es normal: el .exe lleva dentro todo lo que necesita y lo descomprime al arrancar. Espera unos segundos y no lo abras dos veces.</td>
+    </tr>
+    <tr>
+      <td>El mapa se ve gris.</td>
+      <td>No hay conexión a internet. El mapa descarga sus imágenes de OpenStreetMap: conéctate y mueve un poco el mapa.</td>
+    </tr>
+    <tr>
+      <td>En la simulación no se ve nada.</td>
+      <td>Revisa los filtros de la pestaña Datos (el aviso azul encima del mapa dice cuáles hay) y el selector <b>Sistema</b>. Si sale un mensaje en el centro del mapa, dice qué hacer.</td>
+    </tr>
+    <tr>
+      <td>Aparecen puntos grises que desaparecen enseguida.</td>
+      <td>Son blancos puros (ecos del radar primario). Se quitan con el filtro <b>«Quitar blancos puros»</b>.</td>
+    </tr>
+    <tr>
+      <td>Excel quita los ceros del Modo 3/A.</td>
+      <td>Importa el CSV desde Excel y pon las columnas <b>MODE3A</b> y <b>TA</b> como <b>Texto</b> (apartado 6).</td>
+    </tr>
+  </table>
+</section>
+
+</body>
+</html>
