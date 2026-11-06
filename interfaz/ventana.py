@@ -480,11 +480,9 @@ def configurar_estilo_tabla(app):
 
 def crear_tarjeta_tabla(app, padre):
     """
-    Tarjeta con la tabla de mensajes (todas las columnas del CSV), su paginación y el
-    mensaje que se ve cuando la tabla está vacía.
-    Guarda: app.tabla, app.etiqueta_total, app.boton_anterior, app.etiqueta_pagina,
-            app.boton_siguiente, app.estado_vacio_tabla, app.etiqueta_vacio_tabla, app.boton_vacio_tabla,
-            app.progreso_tabla, app.barra_progreso_tabla, app.etiqueta_progreso_tabla.
+    Tarjeta con la tabla de mensajes (todas las columnas del CSV), su paginación y lo que se
+    pone en su sitio cuando está vacía o mientras se decodifica.
+    Guarda: app.etiqueta_total y lo que guarda cada función de las que llama.
     """
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=1, sticky="nsew")
@@ -501,6 +499,15 @@ def crear_tarjeta_tabla(app, padre):
     marco.grid_rowconfigure(0, weight=1)
     marco.grid_columnconfigure(0, weight=1)
 
+    # La tabla se crea antes que los dos avisos para que estos queden por encima al mostrarlos
+    crear_tabla(app, marco)
+    crear_estado_vacio_tabla(app, marco)
+    crear_progreso_tabla(app, marco)
+    crear_paginacion(app, tarjeta)
+
+
+def crear_tabla(app, marco):
+    """La tabla (ttk.Treeview) con una columna por columna del CSV y sus dos barras. Guarda: app.tabla."""
     configurar_estilo_tabla(app)
     app.tabla = ttk.Treeview(marco, columns=COLUMNAS, show="headings", style="Asterix.Treeview",
                              selectmode="browse")
@@ -517,7 +524,12 @@ def crear_tarjeta_tabla(app, padre):
     barra_vertical.grid(row=0, column=1, sticky="ns")
     barra_horizontal.grid(row=1, column=0, sticky="ew")
 
-    # Mensaje que se pone encima de la tabla cuando no hay nada que mostrar (main.py dice cuál)
+
+def crear_estado_vacio_tabla(app, marco):
+    """
+    Mensaje que se pone encima de la tabla cuando no hay nada que mostrar (main.py dice cuál).
+    Guarda: app.estado_vacio_tabla, app.etiqueta_vacio_tabla, app.boton_vacio_tabla.
+    """
     app.estado_vacio_tabla = ctk.CTkFrame(marco, fg_color=estilo.TARJETA)
     app.etiqueta_vacio_tabla = ctk.CTkLabel(app.estado_vacio_tabla, text="",
                                             font=estilo.fuente(estilo.TAMANO_SECCION),
@@ -527,7 +539,12 @@ def crear_tarjeta_tabla(app, padre):
                                                   app.elegir_fichero, 180)
     app.boton_vacio_tabla.pack(pady=(0, 24))
 
-    # Progreso grande de la decodificación, en el sitio de la tabla (main.py lo muestra y lo quita)
+
+def crear_progreso_tabla(app, marco):
+    """
+    Progreso grande de la decodificación, en el sitio de la tabla (main.py lo muestra y lo quita).
+    Guarda: app.progreso_tabla, app.barra_progreso_tabla, app.etiqueta_progreso_tabla.
+    """
     app.progreso_tabla = ctk.CTkFrame(marco, fg_color=estilo.TARJETA)
     app.barra_progreso_tabla = ctk.CTkProgressBar(app.progreso_tabla, width=ANCHO_BARRA_PROGRESO_TABLA, height=14,
                                                   fg_color=estilo.BORDE, progress_color=estilo.PRINCIPAL)
@@ -537,6 +554,12 @@ def crear_tarjeta_tabla(app, padre):
                                                text_color=estilo.TEXTO)
     app.etiqueta_progreso_tabla.pack(padx=30, pady=(0, 28))
 
+
+def crear_paginacion(app, tarjeta):
+    """
+    Botones Anterior y Siguiente y la página actual.
+    Guarda: app.boton_anterior, app.etiqueta_pagina, app.boton_siguiente.
+    """
     paginacion = ctk.CTkFrame(tarjeta, fg_color="transparent")
     paginacion.pack(fill="x", padx=16, pady=(8, 12))
     app.boton_anterior = crear_boton_secundario(paginacion, "◀  Anterior", app.pagina_anterior, 110)
@@ -589,15 +612,28 @@ def crear_pestana_datos(app):
 
 def crear_controles_simulacion(app, padre):
     """
-    Controles de la simulación (R40, R41, R43) en dos filas.
-    Guarda: app.boton_play, app.boton_pausa, app.boton_paso, app.boton_reset, app.selector_velocidad,
-            app.selector_sistema, app.casilla_etiquetas, app.casilla_estelas, app.entrada_hora, app.boton_ir.
+    Controles de la simulación (R40, R41, R43) en dos filas: arriba los botones y los selectores;
+    abajo las casillas e "Ir a la hora". Lo que guarda cada parte está en su función.
     """
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=0, sticky="nsew", padx=(0, estilo.MARGEN), pady=(0, estilo.MARGEN))
 
     fila_1 = ctk.CTkFrame(tarjeta, fg_color="transparent")
     fila_1.pack(fill="x", padx=16, pady=(12, 6))
+    crear_botones_reproduccion(app, fila_1)
+    crear_selectores_simulacion(app, fila_1)
+
+    fila_2 = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    fila_2.pack(fill="x", padx=16, pady=(6, 12))
+    crear_casillas_simulacion(app, fila_2)
+    crear_ir_a_hora(app, fila_2)
+
+
+def crear_botones_reproduccion(app, fila_1):
+    """
+    Reproducir, Pausa, +1 s y Reset.
+    Guarda: app.boton_play, app.boton_pausa, app.boton_paso, app.boton_reset.
+    """
     app.boton_play = crear_boton_principal(fila_1, "▶  Reproducir", app.play, 130)
     app.boton_play.pack(side="left")
     Tooltip(app.boton_play, "Avanza la simulación de 1 s en 1 s de hora del día.")
@@ -611,6 +647,9 @@ def crear_controles_simulacion(app, padre):
     app.boton_reset.pack(side="left", padx=(8, 0))
     Tooltip(app.boton_reset, "Para la simulación y vuelve a la primera hora de los datos.")
 
+
+def crear_selectores_simulacion(app, fila_1):
+    """Selectores de velocidad y de sistema. Guarda: app.selector_velocidad, app.selector_sistema."""
     # La ayuda de los selectores va en su etiqueta
     etiqueta_velocidad = crear_etiqueta(fila_1, "Velocidad", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_velocidad.pack(side="left", padx=(24, 8))
@@ -624,8 +663,9 @@ def crear_controles_simulacion(app, padre):
     app.selector_sistema = crear_selector(fila_1, ["Ambos", "Radar", "ADS-B"], app.cambiar_sistema)
     app.selector_sistema.pack(side="left")
 
-    fila_2 = ctk.CTkFrame(tarjeta, fg_color="transparent")
-    fila_2.pack(fill="x", padx=16, pady=(6, 12))
+
+def crear_casillas_simulacion(app, fila_2):
+    """Casillas Etiquetas y Estelas, marcadas al empezar. Guarda: app.casilla_etiquetas, app.casilla_estelas."""
     app.casilla_etiquetas = crear_casilla(fila_2, "Etiquetas", app.cambiar_etiquetas)
     app.casilla_etiquetas.select()
     app.casilla_etiquetas.pack(side="left")
@@ -635,6 +675,9 @@ def crear_controles_simulacion(app, padre):
     app.casilla_estelas.pack(side="left", padx=(16, 0))
     Tooltip(app.casilla_estelas, "Línea con las últimas posiciones de cada avión.")
 
+
+def crear_ir_a_hora(app, fila_2):
+    """Campo de la hora (hh:mm) y botón Ir (R41). Guarda: app.entrada_hora, app.boton_ir."""
     crear_etiqueta(fila_2, "Ir a la hora", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(side="left", padx=(24, 8))
     app.entrada_hora = crear_entrada(fila_2, 80, "hh:mm")
     app.entrada_hora.pack(side="left")

@@ -38,6 +38,7 @@ SERVIDOR_TESELAS = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ZOOM_MAXIMO_SERVIDOR = 19
 USER_AGENT = "DecodificadorASTERIX-PGTA-G2/1.0 (proyecto universitario UPC)"
 ATRIBUCION_MAPA = "© OpenStreetMap contributors"
+TIEMPO_MAXIMO_TESELA_S = 10     # si el servidor no responde en este tiempo, se deja de esperar esa tesela
 
 # Tamaño de los iconos en píxeles
 TAMANO_SILUETA = 22
@@ -90,14 +91,16 @@ class MapaOSM(tkintermapview.TkinterMapView):
         """
         Copia de TkinterMapView.request_image (tkintermapview 1.29, map_widget.py) con estos cambios:
           - la petición lleva USER_AGENT en lugar de "TkinterMapView";
+          - la petición espera como mucho TIEMPO_MAXIMO_TESELA_S (el original no tenía límite);
           - se quita la lectura de teselas de una base de datos (es para usar el mapa sin conexión,
             que la política de OpenStreetMap no permite) y la capa superpuesta, que no se usa.
         Las variables tienen los nombres del original para poder compararlo.
         """
         try:
             url = self.tile_server.replace("{x}", str(x)).replace("{y}", str(y)).replace("{z}", str(zoom))
-            # Único cambio en la petición: el original ponía headers={"User-Agent": "TkinterMapView"}
-            respuesta = requests.get(url, stream=True, headers={"User-Agent": USER_AGENT})
+            # El original ponía headers={"User-Agent": "TkinterMapView"} y no tenía timeout
+            respuesta = requests.get(url, stream=True, headers={"User-Agent": USER_AGENT},
+                                     timeout=TIEMPO_MAXIMO_TESELA_S)
             image = Image.open(respuesta.raw)
 
             # Si la ventana se ha cerrado mientras tanto, no se usa la imagen
@@ -120,6 +123,7 @@ class MapaOSM(tkintermapview.TkinterMapView):
             return self.empty_tile_image
 
         except Exception:
+            # Sin conexión, sin respuesta a tiempo u otro fallo: tesela vacía para que el mapa siga funcionando
             return self.empty_tile_image
 
 

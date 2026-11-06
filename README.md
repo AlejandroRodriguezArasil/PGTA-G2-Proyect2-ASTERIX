@@ -74,6 +74,8 @@ Decodifica los tres ficheros de la asignatura y compara los recuentos con los es
 - **Controles:** **Reproducir**, **Pausa**, **+1 s** y **Reset**. Los saltos son siempre de 1 s de hora del día; la velocidad (x1 a x60) solo cambia cada cuánto se dibujan. Al cambiar a la pestaña Datos, la simulación se pausa.
 - **Sistema:** Ambos, Radar o ADS-B. Radar en azul y ADS-B en naranja; con «Ambos», un avión visto por los dos sistemas aparece dos veces.
 - **Siluetas:** apuntan al rumbo del avión. En radar es el de I048/200; en ADS-B, la dirección en la que se ha movido (se recalcula cada 100 m), solo para dibujar.
+- **Blancos puros** (CAT048 con TYP 0, 1, 2 o 3, sin Modo S): se dibujan con un punto gris, sin silueta ni rumbo. Su etiqueta es el tipo (PSR, SSR, PSR+SSR o Sin det.) seguido del Modo 3/A o, si no lo traen, del track number; por ejemplo, «PSR 45». Se quitan con el filtro «Quitar blancos puros».
+- **En el mapa:** tres cifras, radar, ADS-B y blancos puros. Los blancos puros no cuentan como radar y el transponder fijo no se cuenta.
 - **Clic en un avión:** muestra su información en el panel y resalta también el mismo avión visto por el otro sistema.
 - **Ir a la hora (hh:mm):** salta a ese momento; cada avión aparece en su última posición conocida.
 - **Desaparición:** un avión desaparece con más de 12 s sin mensajes. El transponder fijo (7777) se dibuja con una antena y siempre está quieto.
