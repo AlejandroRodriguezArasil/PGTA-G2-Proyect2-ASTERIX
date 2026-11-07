@@ -4,7 +4,7 @@ mapa.py
 Lo que se dibuja en el mapa de la pestaña Simulación (tkintermapview, teselas de OpenStreetMap):
     - el propio mapa (MapaOSM), que pide las teselas con nuestro User-Agent
     - los iconos: siluetas de avión giradas según su rumbo, blancos puros, transponder fijo y
-      radar de BCN (R43, R44)
+      radar de BCN (R43, R44); también los de las pestañas Datos y Simulación de la cabecera
     - la zona del filtro geográfico (D11) y el radar de Barcelona (D22)
     - el marcador de cada avión, su etiqueta y su estela (R42, R45)
     - el texto del panel con la información del avión seleccionado (R42)
@@ -190,6 +190,24 @@ def dibujar_punto(color, tamano, color_borde, ancho_borde):
     ImageDraw.Draw(imagen).ellipse((0, 0, grande - 1, grande - 1), fill=color, outline=color_borde,
                                    width=ancho_borde * ESCALA_DIBUJO)
     return imagen.resize((tamano, tamano), Image.LANCZOS)
+
+
+def dibujar_icono_tabla(color, tamano):
+    """Icono de la pestaña Datos: una tabla con su fila de cabecera y una columna."""
+    grande = tamano * ESCALA_DIBUJO
+    imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
+    dibujo = ImageDraw.Draw(imagen)
+    grosor = 2 * ESCALA_DIBUJO
+    dibujo.rounded_rectangle((grande * 0.1, grande * 0.15, grande * 0.9, grande * 0.85), radius=grande * 0.12,
+                             outline=color, width=grosor)
+    dibujo.line([(grande * 0.1, grande * 0.4), (grande * 0.9, grande * 0.4)], fill=color, width=grosor)
+    dibujo.line([(grande * 0.5, grande * 0.4), (grande * 0.5, grande * 0.85)], fill=color, width=grosor)
+    return imagen.resize((tamano, tamano), Image.LANCZOS)
+
+
+def dibujar_icono_avion(color, tamano):
+    """Icono de la pestaña Simulación: la misma silueta de los aviones del mapa, girada hacia el noreste."""
+    return dibujar_silueta(color, tamano, color, 1).rotate(-45, resample=Image.BICUBIC)
 
 
 def dibujar_rectangulo(color, tamano):
@@ -528,8 +546,11 @@ def texto_o_guion(texto):
     return texto
 
 
-def texto_informacion(avion, identificador, pareja_en_mapa):
-    """Texto del panel con los datos del último mensaje del avión seleccionado."""
+def texto_informacion(avion, identificador):
+    """
+    Texto del panel con los datos del último mensaje del avión seleccionado. Si el avión también
+    está en el mapa por el otro sistema lo indica el selector Radar / ADS-B del panel, no este texto.
+    """
     fila = avion["fila"]
     lineas = []
     if filtros.es_transponder_fijo(fila):
@@ -566,10 +587,4 @@ def texto_informacion(avion, identificador, pareja_en_mapa):
     else:
         lineas.append("Velocidad y rumbo: no disponibles en")
         lineas.append("CAT021 (sus DI no se decodifican, D16).")
-    lineas.append("")
-    if pareja_en_mapa:
-        lineas.append("También en el mapa por el otro sistema")
-        lineas.append("(resaltado en rojo).")
-    else:
-        lineas.append("No está en el mapa por el otro sistema.")
     return "\n".join(lineas)

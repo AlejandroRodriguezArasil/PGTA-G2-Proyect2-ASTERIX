@@ -56,6 +56,9 @@ INTERVALO_CAMBIO_DE_HILO_S = 0.0005
 ESPERA_POR_VELOCIDAD_MS = {"x1": 1000, "x2": 500, "x5": 200, "x10": 100, "x30": 33, "x60": 17}
 RETRASO_MAXIMO_S = 1.0      # retraso del reloj de la simulación que se intenta recuperar (ver tic_reloj)
 
+# Ayuda de la opción Radar / ADS-B del panel cuando no se puede pulsar
+AYUDA_SIN_PAREJA = "Este avión no está en el mapa por el otro sistema."
+
 
 class Aplicacion:
     """
@@ -666,19 +669,63 @@ class Aplicacion:
     def al_pulsar_avion(self, marcador):
         """
         Clic en un avión del mapa: lo selecciona, lo resalta junto a su pareja del otro sistema (R08)
-        y muestra su información en el panel (R42).
+        y muestra su información en el panel (R42). El selector Radar / ADS-B del panel se pone en
+        el sistema de ese avión.
         """
         self.avion_seleccionado = marcador.data
         mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
         self.actualizar_panel_simulacion()
 
+    def cambiar_sistema_avion(self, sistema):
+        """
+        Selector Radar / ADS-B del panel: el avión seleccionado pasa a ser su pareja del otro
+        sistema (misma TA, R08). El resaltado no cambia: las dos siluetas ya estaban en rojo.
+        'sistema' es la opción pulsada, que la pasa el Selector. No hace falta usarla: como solo
+        hay dos sistemas, pulsar la otra opción siempre significa pasar a la pareja.
+        """
+        pareja = mapa.pareja_otro_sistema(self.avion_seleccionado)
+        if pareja is None:
+            return
+        self.avion_seleccionado = pareja
+        self.actualizar_panel_simulacion()
+
+    def actualizar_selector_sistema_avion(self):
+        """
+        Selector Radar / ADS-B del panel: desactivado si no hay avión seleccionado. Si lo hay, marca
+        su sistema, y la otra opción solo se puede pulsar si la pareja está en el mapa (la pareja
+        puede aparecer o caducar en cualquier salto). cambiar_estado y cambiar_estado_opcion no
+        tocan nada si ya estaba así, para que el selector no parpadee al reproducir.
+        """
+        if self.avion_seleccionado is None:
+            # Se reactivan las dos opciones para que no quede la ayuda de una pareja que ya no existe
+            self.selector_sistema_avion.cambiar_estado_opcion("Radar", True, "")
+            self.selector_sistema_avion.cambiar_estado_opcion("ADS-B", True, "")
+            ventana.cambiar_estado(self.selector_sistema_avion, False)
+            return
+        ventana.cambiar_estado(self.selector_sistema_avion, True)
+
+        if self.avion_seleccionado[0] == mapa.CATEGORIA_048:
+            sistema = "Radar"
+            otro_sistema = "ADS-B"
+        else:
+            sistema = "ADS-B"
+            otro_sistema = "Radar"
+        pareja = mapa.pareja_otro_sistema(self.avion_seleccionado)
+        pareja_en_mapa = pareja is not None and pareja in self.marcadores
+
+        self.selector_sistema_avion.set(sistema)
+        self.selector_sistema_avion.cambiar_estado_opcion(sistema, True, "")
+        self.selector_sistema_avion.cambiar_estado_opcion(otro_sistema, pareja_en_mapa, AYUDA_SIN_PAREJA)
+
     def actualizar_panel_simulacion(self):
         """
-        Pone al día el reloj (R44), el aviso de qué se simula, el contador, el panel del avión y el
-        mensaje del mapa. Se llama en cada salto: solo se cambian los textos que son distintos.
+        Pone al día el reloj (R44), el aviso de qué se simula, el contador, el panel del avión con
+        su selector Radar / ADS-B y el mensaje del mapa. Se llama en cada salto: solo se cambia lo
+        que es distinto.
         """
         self.actualizar_aviso_simulacion()
         self.actualizar_mensaje_mapa()
+        self.actualizar_selector_sistema_avion()
         estado = self.estado_simulacion
         if estado is None:
             ventana.cambiar_texto(self.etiqueta_reloj, "--:--:--")
@@ -696,10 +743,7 @@ class Aplicacion:
         if self.avion_seleccionado is None:
             return
         if self.avion_seleccionado in estado["aviones"]:
-            pareja = mapa.pareja_otro_sistema(self.avion_seleccionado)
-            pareja_en_mapa = pareja is not None and pareja in self.marcadores
-            texto = mapa.texto_informacion(estado["aviones"][self.avion_seleccionado],
-                                           self.avion_seleccionado, pareja_en_mapa)
+            texto = mapa.texto_informacion(estado["aviones"][self.avion_seleccionado], self.avion_seleccionado)
         else:
             texto = ("El avión seleccionado ya no está a la vista (más de "
                      + str(simulacion.SEGUNDOS_PARA_CADUCAR) + " s sin mensajes).")

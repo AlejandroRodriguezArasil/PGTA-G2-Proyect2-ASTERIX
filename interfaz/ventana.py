@@ -41,6 +41,13 @@ ANCHO_MINIMO_OPCION = 44
 RADIO_OPCION = 6
 SEPARACION_OPCIONES = 4
 
+# Pestañas Datos / Simulación de la cabecera, en forma de cápsula (píxeles)
+ANCHO_PESTANA = 150
+ALTO_PESTANA = 36
+RADIO_PESTANA = 18              # la mitad del alto: los extremos quedan redondos
+MARGEN_PESTANAS = 4             # cápsula de fondo que se ve alrededor de las pestañas
+TAMANO_ICONO_PESTANA = 18
+
 # Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
 COLOR_ORIGINAL_BOTONES = {}
 
@@ -109,6 +116,7 @@ class Selector(ctk.CTkFrame):
     Se hace con botones normales porque CTkSegmentedButton pone el mismo color de texto a todas
     las opciones, y aquí la elegida va en blanco sobre azul y las demás en oscuro sobre blanco,
     para que se vea que se pueden pulsar. Desactivado, todo va en el gris de los botones.
+    También se puede desactivar una sola opción (cambiar_estado_opcion).
     """
 
     def __init__(self, padre, valores, comando):
@@ -117,6 +125,8 @@ class Selector(ctk.CTkFrame):
         self.elegido = valores[0]
         self.activo = True
         self.botones = {}
+        self.ayudas = {}                    # ayuda de cada opción; solo tiene texto si está desactivada
+        self.opciones_desactivadas = []
         for valor in valores:
             boton = ctk.CTkButton(self, text=valor, width=ANCHO_MINIMO_OPCION, height=ALTO_SELECTOR,
                                   corner_radius=RADIO_OPCION, border_width=1,
@@ -128,6 +138,7 @@ class Selector(ctk.CTkFrame):
             else:
                 boton.pack(side="left", fill="x", expand=True, padx=(SEPARACION_OPCIONES, 0))
             self.botones[valor] = boton
+            self.ayudas[valor] = Tooltip(boton, "")
         self.pintar()
 
     def funcion_al_pulsar(self, valor):
@@ -158,11 +169,29 @@ class Selector(ctk.CTkFrame):
         self.activo = activo
         self.pintar()
 
+    def cambiar_estado_opcion(self, valor, activa, ayuda):
+        """
+        Activa o desactiva una sola opción. Desactivada se ve en gris, no se puede pulsar y, con el
+        ratón encima, muestra 'ayuda' (por qué no se puede). Si ya estaba así no se toca nada,
+        para no redibujar el selector en cada salto de la simulación.
+        """
+        if activa and valor not in self.opciones_desactivadas:
+            return
+        if not activa and valor in self.opciones_desactivadas:
+            return
+        if activa:
+            self.opciones_desactivadas.remove(valor)
+            self.ayudas[valor].texto = ""
+        else:
+            self.opciones_desactivadas.append(valor)
+            self.ayudas[valor].texto = ayuda
+        self.pintar()
+
     def pintar(self):
         """Pone a cada opción sus colores: desactivada, elegida o no elegida."""
         for valor in self.botones:
             boton = self.botones[valor]
-            if not self.activo:
+            if not self.activo or valor in self.opciones_desactivadas:
                 boton.configure(state="disabled", fg_color=estilo.DESACTIVADO_FONDO,
                                 border_color=estilo.DESACTIVADO_FONDO)
             elif valor == self.elegido:
@@ -172,6 +201,55 @@ class Selector(ctk.CTkFrame):
                 boton.configure(state="normal", fg_color=estilo.SELECTOR_NO_ELEGIDO,
                                 hover_color=estilo.SELECTOR_HOVER, border_color=estilo.SELECTOR_BORDE,
                                 text_color=estilo.TEXTO)
+
+
+class Pestanas(Selector):
+    """
+    Pestañas Datos / Simulación de la cabecera: un Selector en forma de cápsula sobre la franja
+    oscura, con un icono en cada pestaña. Funciona igual que Selector (get, set y comando al
+    pulsar); solo cambian el tamaño y los colores (pintar).
+    iconos: pestaña -> (icono cuando está elegida, icono cuando no lo está).
+    """
+
+    def __init__(self, padre, valores, iconos, comando):
+        self.iconos = iconos            # antes de crear el Selector, porque al crearse ya llama a pintar()
+        super().__init__(padre, valores, comando)
+        self.configure(fg_color=estilo.CABECERA_PESTANA, corner_radius=RADIO_PESTANA + MARGEN_PESTANAS)
+        for valor in self.botones:
+            # bg_color: las esquinas de fuera de cada pestaña son del color de la cápsula, no de la cabecera
+            self.botones[valor].configure(width=ANCHO_PESTANA, height=ALTO_PESTANA, corner_radius=RADIO_PESTANA,
+                                          border_width=0, bg_color=estilo.CABECERA_PESTANA, compound="left",
+                                          font=estilo.fuente(estilo.TAMANO_SECCION, True))
+            self.botones[valor].pack_configure(pady=MARGEN_PESTANAS)
+        # Margen también a la izquierda de la primera y a la derecha de la última
+        self.botones[valores[0]].pack_configure(padx=(MARGEN_PESTANAS, 0))
+        self.botones[valores[-1]].pack_configure(padx=(SEPARACION_OPCIONES, MARGEN_PESTANAS))
+
+    def pintar(self):
+        """La pestaña elegida, en el azul principal con texto blanco; la otra, del color de la cápsula."""
+        for valor in self.botones:
+            boton = self.botones[valor]
+            if valor == self.elegido:
+                boton.configure(fg_color=estilo.PRINCIPAL, hover_color=estilo.PRINCIPAL_HOVER,
+                                text_color=estilo.CABECERA_TEXTO, image=self.iconos[valor][0])
+            else:
+                boton.configure(fg_color=estilo.CABECERA_PESTANA, hover_color=estilo.CABECERA_PESTANA_HOVER,
+                                text_color=estilo.CABECERA_PESTANA_TEXTO, image=self.iconos[valor][1])
+
+
+def crear_iconos_pestanas():
+    """Iconos de las pestañas: blancos para la elegida y del color suave para la otra (dibujados en mapa.py)."""
+    tamano = TAMANO_ICONO_PESTANA
+    tabla = mapa.dibujar_icono_tabla(estilo.CABECERA_TEXTO, tamano)
+    tabla_suave = mapa.dibujar_icono_tabla(estilo.CABECERA_PESTANA_TEXTO, tamano)
+    avion = mapa.dibujar_icono_avion(estilo.CABECERA_TEXTO, tamano)
+    avion_suave = mapa.dibujar_icono_avion(estilo.CABECERA_PESTANA_TEXTO, tamano)
+    return {
+        "Datos": (ctk.CTkImage(light_image=tabla, size=(tamano, tamano)),
+                  ctk.CTkImage(light_image=tabla_suave, size=(tamano, tamano))),
+        "Simulación": (ctk.CTkImage(light_image=avion, size=(tamano, tamano)),
+                       ctk.CTkImage(light_image=avion_suave, size=(tamano, tamano))),
+    }
 
 
 def crear_selector(padre, valores, comando):
@@ -204,8 +282,8 @@ class Tooltip:
         elemento.bind("<Leave>", self.ocultar, add="+")
 
     def mostrar(self, evento):
-        """Crea una ventanita sin bordes justo debajo del control."""
-        if self.ventana_ayuda is not None:
+        """Crea una ventanita sin bordes justo debajo del control. Sin texto, no sale nada."""
+        if self.ventana_ayuda is not None or self.texto == "":
             return
         x = self.elemento.winfo_rootx() + 8
         y = self.elemento.winfo_rooty() + self.elemento.winfo_height() + 6
@@ -288,16 +366,7 @@ def crear_cabecera(app):
     ctk.CTkLabel(titulos, text="CAT048 · CAT021     PGTA · Grupo G2", font=estilo.fuente(estilo.TAMANO_AYUDA),
                  text_color=estilo.CABECERA_TEXTO_SUAVE, anchor="w").pack(anchor="w")
 
-    app.selector_pestana = ctk.CTkSegmentedButton(cabecera, values=["Datos", "Simulación"],
-                                                  command=app.cambiar_pestana, width=320, height=36,
-                                                  font=estilo.fuente(estilo.TAMANO_SECCION, True),
-                                                  fg_color=estilo.CABECERA,
-                                                  selected_color=estilo.PRINCIPAL,
-                                                  selected_hover_color=estilo.PRINCIPAL_HOVER,
-                                                  unselected_color=estilo.CABECERA_PESTANA,
-                                                  unselected_hover_color=estilo.CABECERA_PESTANA_HOVER,
-                                                  text_color=estilo.CABECERA_TEXTO)
-    app.selector_pestana.set("Datos")
+    app.selector_pestana = Pestanas(cabecera, ["Datos", "Simulación"], crear_iconos_pestanas(), app.cambiar_pestana)
     app.selector_pestana.grid(row=0, column=1)
 
     derecha = ctk.CTkFrame(cabecera, fg_color="transparent")
@@ -756,7 +825,8 @@ def crear_panel_simulacion(app, padre):
     """
     Panel derecho de la simulación: leyenda (R44), aviones en el mapa e información del
     avión pulsado (R42).
-    Guarda: app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros, app.cuadro_info.
+    Guarda: app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros, app.selector_sistema_avion,
+            app.cuadro_info.
     """
     panel = ctk.CTkFrame(padre, fg_color="transparent", width=estilo.ANCHO_PANEL_LATERAL)
     panel.grid(row=1, column=1, sticky="nsew")
@@ -789,6 +859,10 @@ def crear_panel_simulacion(app, padre):
 
     informacion = crear_tarjeta(panel, "Avión seleccionado")
     informacion.pack(fill="both", expand=True)
+    # Radar / ADS-B: pasa a los datos del mismo avión visto por el otro sistema (main.py lo pone al día)
+    app.selector_sistema_avion = crear_selector(informacion, ["Radar", "ADS-B"], app.cambiar_sistema_avion)
+    app.selector_sistema_avion.pack(fill="x", padx=16, pady=(0, 8))
+    cambiar_estado(app.selector_sistema_avion, False)      # al empezar no hay avión seleccionado
     app.cuadro_info = ctk.CTkTextbox(informacion, wrap="word", fg_color=estilo.TARJETA, text_color=estilo.TEXTO,
                                      font=estilo.fuente_numeros(estilo.TAMANO_AYUDA + 1),
                                      activate_scrollbars=False)

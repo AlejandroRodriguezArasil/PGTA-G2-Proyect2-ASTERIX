@@ -23,8 +23,9 @@ TEXTO_SUAVE = "#8A939F"
 CABECERA = "#14243A"
 CABECERA_TEXTO = "#FFFFFF"
 CABECERA_TEXTO_SUAVE = "#A9B6C8"
-CABECERA_PESTANA = "#22364F"
+CABECERA_PESTANA = "#22364F"              # cápsula de las pestañas y pestaña no elegida
 CABECERA_PESTANA_HOVER = "#2C4566"
+CABECERA_PESTANA_TEXTO = "#C9D3E0"        # texto e icono de la pestaña no elegida
 
 # --- Botones ---
 PRINCIPAL = "#1F5FAD"
