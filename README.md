@@ -14,29 +14,27 @@ funciones/           la lógica: lectura, decodificación, coordenadas, QNH, fil
 interfaz/            la ventana: construcción (ventana), mapa, y colores y tipografías (estilo)
 pruebas/             prueba_recuentos.py, que no forma parte de la aplicación
 manual/              Manual_de_uso.pdf y su fuente: manual.html y capturas/
-crear_exe.bat        genera DecodificadorASTERIX.exe en esta carpeta (doble clic)
-crear_manual.bat     genera manual\Manual_de_uso.pdf con Microsoft Edge
+crear_exe.bat        genera el ejecutable DecodificadorASTERIX.exe en esta carpeta
+crear_manual.bat     vuelve a generar manual\Manual_de_uso.pdf a partir de manual.html (con Microsoft Edge)
 requirements.txt     librerías y versiones
-DecodificadorASTERIX.exe  lo genera crear_exe.bat; no está en el repositorio
-.venv/               entorno virtual de Python, cada uno crea el suyo; no va en el .zip
 ```
 
-## Qué va en el .zip de la entrega
+Al ejecutar `crear_exe.bat` aparecen además `.venv/` (el entorno de Python con las librerías) y `DecodificadorASTERIX.exe`. Los dos se generan en cada equipo, así que no están en el repositorio.
 
-```
-DecodificadorASTERIX.exe       el que genera crear_exe.bat
-Manual_de_uso.pdf              copia de manual/Manual_de_uso.pdf
-Codigo/                        esta carpeta, sin .venv/ ni el .exe
-Documentacion/                 la documentación
-```
+## Entrega
 
-Tampoco van `__pycache__` ni los ficheros .ast: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
+El .zip de la entrega es esta carpeta tal como está en el repositorio. No lleva el ejecutable ni `.venv/`: se generan con `crear_exe.bat` (ver «Cómo se ejecuta»). Tampoco lleva los ficheros .ast: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
 
 ## Cómo se ejecuta
 
-**Con el ejecutable:** doble clic en `DecodificadorASTERIX.exe`. No hace falta instalar nada. El mapa de la simulación necesita conexión a internet.
+Hace falta Windows y Python 3; el proyecto se ha probado con Python 3.14. El mapa de la simulación necesita conexión a internet.
 
-**Con Python** (Windows, desde esta carpeta). El proyecto se ha probado con Python 3.14.
+**Con el ejecutable** (recomendado)
+
+1. Doble clic en `crear_exe.bat`. La primera vez crea `.venv` e instala las librerías y PyInstaller, así que tarda unos minutos y necesita internet; las siguientes va directo. Al acabar, `DecodificadorASTERIX.exe` queda en esta carpeta.
+2. Doble clic en `DecodificadorASTERIX.exe`.
+
+**Con Python**, sin generar el ejecutable (desde esta carpeta):
 
 ```
 python -m venv .venv
@@ -45,7 +43,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-**El .exe no está en el repositorio:** se genera con doble clic en `crear_exe.bat` y queda en esta misma carpeta. Solo hace falta tener Python 3; la primera vez crea `.venv` e instala lo necesario (tarda unos minutos y necesita internet).
+Si ya se ha ejecutado `crear_exe.bat`, el entorno ya existe: basta con `.venv\Scripts\activate` y `python main.py`.
 
 **Prueba de los recuentos:** desde esta carpeta, con el entorno activado:
 

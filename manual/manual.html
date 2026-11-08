@@ -229,16 +229,21 @@
   <h2 style="margin-top: 7mm;">2. Abrir la aplicación</h2>
 
   <h3>Opción A (recomendada): el ejecutable</h3>
+  <p>El .zip de la entrega no trae el ejecutable: se crea en tu equipo con <b>crear_exe.bat</b>. Solo hace falta tener Python 3 instalado.</p>
   <div class="paso">
     <div class="numero">1</div>
-    <div class="contenido"><p>Descomprime el .zip de la entrega. <b>DecodificadorASTERIX.exe</b> está en el .zip, junto a este manual.</p></div>
+    <div class="contenido"><p>Descomprime el .zip de la entrega en cualquier carpeta.</p></div>
   </div>
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>. No hace falta instalar nada.</p></div>
+    <div class="contenido"><p>Haz doble clic en <b>crear_exe.bat</b>. Prepara lo necesario y crea <b>DecodificadorASTERIX.exe</b> en esa misma carpeta. La primera vez tarda unos minutos y necesita internet; las siguientes va directo.</p></div>
   </div>
   <div class="paso">
     <div class="numero">3</div>
+    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>.</p></div>
+  </div>
+  <div class="paso">
+    <div class="numero">4</div>
     <div class="contenido">
       <p>Si Windows muestra el aviso <b>«Windows protegió su PC»</b>, pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</p>
     </div>
@@ -246,11 +251,11 @@
 
   <div class="nota">
     <p><b>Ficheros .ast.</b> No van en la entrega. Son los de la asignatura: <span class="mono">asterix_radar.ast</span>, <span class="mono">asterix_adsb.ast</span> y <span class="mono">asterix_combinado.ast</span>. Pueden estar en cualquier carpeta del equipo.</p>
-    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet. El resto funciona sin conexión.</p>
+    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet, y <b>crear_exe.bat</b> también la primera vez. El resto funciona sin conexión.</p>
   </div>
 
   <h3>Opción B: con Python</h3>
-  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta del código y escribe:</p>
+  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta descomprimida y escribe:</p>
   <div class="consola">
     <ol>
       <li>Crear el entorno virtual:<code>python -m venv .venv</code></li>
