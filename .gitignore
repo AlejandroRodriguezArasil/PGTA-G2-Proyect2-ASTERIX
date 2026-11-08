@@ -4,10 +4,8 @@
 # Ficheros que genera Python al ejecutar
 __pycache__/
 
-# Lo que genera crear_exe.bat (PyInstaller)
-build/
-dist/
-*.spec
+# El ejecutable que genera crear_exe.bat (cada uno lo genera con doble clic)
+DecodificadorASTERIX.exe
 
 # Caché de un complemento del editor, no es del proyecto
 .impeccable/

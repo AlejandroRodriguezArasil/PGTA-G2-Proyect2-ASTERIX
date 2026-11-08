@@ -14,23 +14,23 @@ funciones/           la lógica: lectura, decodificación, coordenadas, QNH, fil
 interfaz/            la ventana: construcción (ventana), mapa, y colores y tipografías (estilo)
 pruebas/             prueba_recuentos.py, que no forma parte de la aplicación
 manual/              Manual_de_uso.pdf y su fuente: manual.html y capturas/
-crear_exe.bat        genera el .exe en dist\
+crear_exe.bat        genera DecodificadorASTERIX.exe en esta carpeta (doble clic)
 crear_manual.bat     genera manual\Manual_de_uso.pdf con Microsoft Edge
 requirements.txt     librerías y versiones
-dist/                generada por crear_exe.bat; no va en el .zip
+DecodificadorASTERIX.exe  lo genera crear_exe.bat; no está en el repositorio
 .venv/               entorno virtual de Python, cada uno crea el suyo; no va en el .zip
 ```
 
 ## Qué va en el .zip de la entrega
 
 ```
-DecodificadorASTERIX.exe       el ejecutable (copiado de dist\)
+DecodificadorASTERIX.exe       el que genera crear_exe.bat
 Manual_de_uso.pdf              copia de manual/Manual_de_uso.pdf
-Codigo/                        esta carpeta, sin dist/ ni .venv/
+Codigo/                        esta carpeta, sin .venv/ ni el .exe
 Documentacion/                 la documentación
 ```
 
-Tampoco van `build`, `__pycache__` ni los `.spec`, ni los ficheros .ast: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
+Tampoco van `__pycache__` ni los ficheros .ast: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
 
 ## Cómo se ejecuta
 
@@ -45,7 +45,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Para volver a generar el `.exe`: `.venv\Scripts\python -m pip install pyinstaller` (una sola vez) y después `crear_exe.bat`. El ejecutable queda en `dist\`.
+**El .exe no está en el repositorio:** se genera con doble clic en `crear_exe.bat` y queda en esta misma carpeta. Solo hace falta tener Python 3; la primera vez crea `.venv` e instala lo necesario (tarda unos minutos y necesita internet).
 
 **Prueba de los recuentos:** desde esta carpeta, con el entorno activado:
 
