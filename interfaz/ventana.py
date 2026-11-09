@@ -24,8 +24,9 @@ from interfaz import estilo
 from interfaz import mapa
 
 TITULO = "Decodificador ASTERIX CAT048 / CAT021 - PGTA Proyecto 2"
-ANCHO_MINIMO = 1200
-ALTO_MINIMO = 720
+# Tamaño mínimo de la ventana: cabe en un portátil de 1920x1080 al 150 % (unos 1280 x 690 útiles)
+ANCHO_MINIMO = 1100
+ALTO_MINIMO = 600
 
 # Ancho de las columnas de la tabla (píxeles): el del texto más largo, con un máximo
 MARGEN_COLUMNA = 24
@@ -47,6 +48,11 @@ ALTO_PESTANA = 36
 RADIO_PESTANA = 18              # la mitad del alto: los extremos quedan redondos
 MARGEN_PESTANAS = 4             # cápsula de fondo que se ve alrededor de las pestañas
 TAMANO_ICONO_PESTANA = 18
+
+# Cuadro "Avión seleccionado": líneas de su versión más larga (mapa.texto_informacion de un avión
+# de radar que además es el transponder fijo) y margen interior en píxeles
+LINEAS_INFO_AVION = 26
+MARGEN_CUADRO_INFO = 20
 
 # Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
 COLOR_ORIGINAL_BOTONES = {}
@@ -681,8 +687,9 @@ def crear_pestana_datos(app):
 
 def crear_controles_simulacion(app, padre):
     """
-    Controles de la simulación (R40, R41, R43) en dos filas: arriba los botones y los selectores;
-    abajo las casillas e "Ir a la hora". Lo que guarda cada parte está en su función.
+    Controles de la simulación (R40, R41, R43) en dos filas: arriba los botones y la velocidad;
+    abajo las casillas, "Ir a la hora" y el sistema. Repartidos así caben en un portátil de
+    1280 píxeles de ancho. Lo que guarda cada parte está en su función.
     """
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=0, sticky="nsew", padx=(0, estilo.MARGEN), pady=(0, estilo.MARGEN))
@@ -690,12 +697,13 @@ def crear_controles_simulacion(app, padre):
     fila_1 = ctk.CTkFrame(tarjeta, fg_color="transparent")
     fila_1.pack(fill="x", padx=16, pady=(12, 6))
     crear_botones_reproduccion(app, fila_1)
-    crear_selectores_simulacion(app, fila_1)
+    crear_selector_velocidad(app, fila_1)
 
     fila_2 = ctk.CTkFrame(tarjeta, fg_color="transparent")
     fila_2.pack(fill="x", padx=16, pady=(6, 12))
     crear_casillas_simulacion(app, fila_2)
     crear_ir_a_hora(app, fila_2)
+    crear_selector_sistema(app, fila_2)
 
 
 def crear_botones_reproduccion(app, fila_1):
@@ -717,8 +725,8 @@ def crear_botones_reproduccion(app, fila_1):
     Tooltip(app.boton_reset, "Para la simulación y vuelve a la primera hora de los datos.")
 
 
-def crear_selectores_simulacion(app, fila_1):
-    """Selectores de velocidad y de sistema. Guarda: app.selector_velocidad, app.selector_sistema."""
+def crear_selector_velocidad(app, fila_1):
+    """Selector de velocidad (R41). Guarda: app.selector_velocidad."""
     # La ayuda de los selectores va en su etiqueta
     etiqueta_velocidad = crear_etiqueta(fila_1, "Velocidad", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_velocidad.pack(side="left", padx=(24, 8))
@@ -726,10 +734,13 @@ def crear_selectores_simulacion(app, fila_1):
     app.selector_velocidad = crear_selector(fila_1, ["x1", "x2", "x5", "x10", "x30", "x60"], app.cambiar_velocidad)
     app.selector_velocidad.pack(side="left")
 
-    etiqueta_sistema = crear_etiqueta(fila_1, "Sistema", estilo.TAMANO_TEXTO, estilo.TEXTO)
+
+def crear_selector_sistema(app, fila_2):
+    """Selector Radar / ADS-B / Ambos (R43). Guarda: app.selector_sistema."""
+    etiqueta_sistema = crear_etiqueta(fila_2, "Sistema", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_sistema.pack(side="left", padx=(24, 8))
     Tooltip(etiqueta_sistema, "Aviones vistos por el radar (CAT048), por ADS-B (CAT021) o por los dos.")
-    app.selector_sistema = crear_selector(fila_1, ["Ambos", "Radar", "ADS-B"], app.cambiar_sistema)
+    app.selector_sistema = crear_selector(fila_2, ["Ambos", "Radar", "ADS-B"], app.cambiar_sistema)
     app.selector_sistema.pack(side="left")
 
 
@@ -823,16 +834,57 @@ def crear_cifra_mapa(padre, columna, color, texto_pie):
 
 def crear_panel_simulacion(app, padre):
     """
-    Panel derecho de la simulación: leyenda (R44), aviones en el mapa e información del
-    avión pulsado (R42).
-    Guarda: app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros, app.selector_sistema_avion,
-            app.cuadro_info.
+    Panel derecho de la simulación, de arriba abajo: aviones en el mapa, información del avión
+    pulsado (R42) y leyenda (R44). Lo que más se mira va arriba y la leyenda, que es de consulta
+    y la que más ocupa, al final. En pantallas bajas (portátiles) el panel se desplaza con la
+    rueda del ratón, como el de la pestaña Datos.
     """
-    panel = ctk.CTkFrame(padre, fg_color="transparent", width=estilo.ANCHO_PANEL_LATERAL)
+    panel = ctk.CTkScrollableFrame(padre, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
     panel.grid(row=1, column=1, sticky="nsew")
+    crear_tarjeta_en_el_mapa(app, panel)
+    crear_tarjeta_avion(app, panel)
+    crear_tarjeta_leyenda(app, panel)
 
+
+def crear_tarjeta_en_el_mapa(app, panel):
+    """Contador de aviones en el mapa. Guarda: app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros."""
+    contador = crear_tarjeta(panel, "En el mapa")
+    contador.pack(fill="x", pady=(0, estilo.MARGEN))
+    cifras = ctk.CTkFrame(contador, fg_color="transparent")
+    cifras.pack(fill="x", padx=16, pady=(0, 12))
+    # Tres columnas del mismo ancho: al pasar de 9 a 10 aviones no se mueve nada
+    cifras.grid_columnconfigure((0, 1, 2), weight=1, uniform="cifras")
+    app.cifra_radar = crear_cifra_mapa(cifras, 0, estilo.RADAR, "radar")
+    app.cifra_adsb = crear_cifra_mapa(cifras, 1, estilo.ADSB, "ADS-B")
+    app.cifra_blancos_puros = crear_cifra_mapa(cifras, 2, estilo.BLANCO_PURO, "blancos puros")
+
+
+def crear_tarjeta_avion(app, panel):
+    """
+    Información del avión pulsado, con el selector Radar / ADS-B encima.
+    El cuadro de texto tiene la altura justa para su versión más larga y no tiene barra propia:
+    si no cabe en la pantalla, se ve desplazando el panel.
+    Guarda: app.selector_sistema_avion, app.cuadro_info.
+    """
+    informacion = crear_tarjeta(panel, "Avión seleccionado")
+    informacion.pack(fill="x", pady=(0, estilo.MARGEN))
+    # Radar / ADS-B: pasa a los datos del mismo avión visto por el otro sistema (main.py lo pone al día)
+    app.selector_sistema_avion = crear_selector(informacion, ["Radar", "ADS-B"], app.cambiar_sistema_avion)
+    app.selector_sistema_avion.pack(fill="x", padx=16, pady=(0, 8))
+    cambiar_estado(app.selector_sistema_avion, False)      # al empezar no hay avión seleccionado
+
+    fuente = estilo.fuente_numeros(estilo.TAMANO_AYUDA + 1)
+    alto = LINEAS_INFO_AVION * fuente.metrics("linespace") + MARGEN_CUADRO_INFO
+    app.cuadro_info = ctk.CTkTextbox(informacion, height=alto, wrap="word", fg_color=estilo.TARJETA,
+                                     text_color=estilo.TEXTO, font=fuente, activate_scrollbars=False)
+    app.cuadro_info.pack(fill="x", padx=12, pady=(0, 12))
+    escribir_texto(app.cuadro_info, "Haz clic en un avión del mapa para ver su información.")
+
+
+def crear_tarjeta_leyenda(app, panel):
+    """Leyenda del mapa (R44), con las mismas imágenes que se dibujan en él."""
     leyenda = crear_tarjeta(panel, "Leyenda")
-    leyenda.pack(fill="x", pady=(0, estilo.MARGEN))
+    leyenda.pack(fill="x")
     imagenes = app.imagenes_leyenda
     crear_fila_leyenda(leyenda, imagenes["radar"], "Radar (CAT048)")
     crear_fila_leyenda(leyenda, imagenes["adsb"], "ADS-B (CAT021)")
@@ -846,28 +898,6 @@ def crear_panel_simulacion(app, padre):
     crear_fila_leyenda(leyenda, imagenes["estela"], "Estela: últimas posiciones")
     crear_etiqueta(leyenda, "La silueta apunta al rumbo del avión.", estilo.TAMANO_AYUDA,
                    estilo.TEXTO_SUAVE).pack(fill="x", padx=16, pady=(4, 12))
-
-    contador = crear_tarjeta(panel, "En el mapa")
-    contador.pack(fill="x", pady=(0, estilo.MARGEN))
-    cifras = ctk.CTkFrame(contador, fg_color="transparent")
-    cifras.pack(fill="x", padx=16, pady=(0, 12))
-    # Tres columnas del mismo ancho: al pasar de 9 a 10 aviones no se mueve nada
-    cifras.grid_columnconfigure((0, 1, 2), weight=1, uniform="cifras")
-    app.cifra_radar = crear_cifra_mapa(cifras, 0, estilo.RADAR, "radar")
-    app.cifra_adsb = crear_cifra_mapa(cifras, 1, estilo.ADSB, "ADS-B")
-    app.cifra_blancos_puros = crear_cifra_mapa(cifras, 2, estilo.BLANCO_PURO, "blancos puros")
-
-    informacion = crear_tarjeta(panel, "Avión seleccionado")
-    informacion.pack(fill="both", expand=True)
-    # Radar / ADS-B: pasa a los datos del mismo avión visto por el otro sistema (main.py lo pone al día)
-    app.selector_sistema_avion = crear_selector(informacion, ["Radar", "ADS-B"], app.cambiar_sistema_avion)
-    app.selector_sistema_avion.pack(fill="x", padx=16, pady=(0, 8))
-    cambiar_estado(app.selector_sistema_avion, False)      # al empezar no hay avión seleccionado
-    app.cuadro_info = ctk.CTkTextbox(informacion, wrap="word", fg_color=estilo.TARJETA, text_color=estilo.TEXTO,
-                                     font=estilo.fuente_numeros(estilo.TAMANO_AYUDA + 1),
-                                     activate_scrollbars=False)
-    app.cuadro_info.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-    escribir_texto(app.cuadro_info, "Haz clic en un avión del mapa para ver su información.")
 
 
 def crear_pestana_simulacion(app):
