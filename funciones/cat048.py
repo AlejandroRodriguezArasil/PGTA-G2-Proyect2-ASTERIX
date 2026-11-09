@@ -5,8 +5,8 @@ Paso 2 del flujo: DECODIFICACIÓN de CAT048 (radar monorradar, especificación v
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
 Recorre los DI de un registro en el orden de su FSPEC:
-    - los 14 DI que pide la D10 se decodifican (una función por DI)
-    - los 14 DI marcados en rojo en la D10 se saltan sin decodificarlos,
+    - los 14 DI que pide el enunciado se decodifican (una función por DI)
+    - los 14 DI que el enunciado deja fuera se saltan sin decodificarlos,
       sumando su longitud (CAT048 v1.31, §5.2 y Tabla 2 - Standard UAP)
 
 Cada función decode_i048_xxx recibe los datos, la posición donde empieza el DI
@@ -201,7 +201,7 @@ def decode_i048_250(datos, posicion, fila):
     I048/250 BDS Register Data (Mode S MB Data). Repetitivo: 1 + 8 x REP octetos.
     CAT048 v1.31, §5.2.25.
     Cada repetición: 56 bits de datos (bits 64-9) + BDS1 (bits 8-5) + BDS2 (bits 4-1).
-    Solo se decodifican los BDS 4.0, 5.0 y 6.0 (D10); el resto se salta.
+    Solo se decodifican los BDS 4.0, 5.0 y 6.0, los que pide el enunciado; el resto se salta.
     Columnas: BP y las BDS40_*, BDS50_* y BDS60_* (ver bds.py).
     """
     repeticiones = datos[posicion]        # REP: número de registros BDS
@@ -302,7 +302,7 @@ DECODIFICADORES_048 = {
 
 
 # =============================================================================
-# DI en rojo (D10): se saltan sin decodificarlos
+# DI que el enunciado deja fuera: se saltan sin decodificarlos
 # =============================================================================
 
 # DI de longitud fija que se saltan: FRN -> octetos (CAT048 v1.31, Tabla 2)

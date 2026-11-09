@@ -4,10 +4,10 @@ mapa.py
 Lo que se dibuja en el mapa de la pestaña Simulación (tkintermapview, teselas de OpenStreetMap):
     - el propio mapa (MapaOSM), que pide las teselas con nuestro User-Agent
     - los iconos: siluetas de avión giradas según su rumbo, blancos puros, transponder fijo y
-      radar de BCN (R43, R44); también los de las pestañas Datos y Simulación de la cabecera
-    - la zona del filtro geográfico (D11) y el radar de Barcelona (D22)
-    - el marcador de cada avión, su etiqueta y su estela (R42, R45)
-    - el texto del panel con la información del avión seleccionado (R42)
+      radar de BCN; también los de las pestañas Datos y Simulación de la cabecera
+    - la zona del filtro geográfico y el radar de Barcelona
+    - el marcador de cada avión, su etiqueta y su estela
+    - el texto del panel con la información del avión seleccionado
 
 La lógica de la simulación (qué aviones hay y dónde) está en simulacion.py.
 Cada avión tiene un solo marcador, que se crea cuando aparece, se mueve en cada
@@ -71,7 +71,7 @@ ESCALA_DIBUJO = 4       # se dibuja 4 veces más grande y se reduce, para que lo
 # Modo 3/A o, si no hay, del track number
 TIPO_BLANCO_PURO_ETIQUETA = {0: "Sin det.", 1: "PSR", 2: "SSR", 3: "PSR+SSR"}
 
-# Esquinas de la zona del filtro geográfico (D11 y D17)
+# Esquinas de la zona del filtro geográfico
 ESQUINA_NOROESTE = (geo.LATITUD_MAXIMA_DEG, geo.LONGITUD_MINIMA_DEG)
 ESQUINA_SURESTE = (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MAXIMA_DEG)
 
@@ -301,7 +301,7 @@ def encuadrar_zona(app):
 # =============================================================================
 
 def sistema_visible(app, categoria):
-    """True si el selector Radar / ADS-B / Ambos permite ver esa categoría (R43)."""
+    """True si el selector Radar / ADS-B / Ambos permite ver esa categoría."""
     sistema = app.selector_sistema.get()
     if sistema == "Radar":
         return categoria == CATEGORIA_048
@@ -312,7 +312,7 @@ def sistema_visible(app, categoria):
 
 def pareja_otro_sistema(identificador):
     """
-    El mismo avión en el otro sistema (R08): misma TA y la otra categoría.
+    El mismo avión en el otro sistema: misma TA y la otra categoría.
     Un avión identificado por track number (sin TA) no tiene pareja: devuelve None.
     """
     categoria = identificador[0]
@@ -328,7 +328,7 @@ def rumbo_para_dibujar(identificador, avion):
     """
     Rumbo en grados (0 = norte, sentido horario) con el que se gira la silueta, o None si no se sabe.
         - Radar: el rumbo de I048/200.
-        - ADS-B: no se decodifica su rumbo (sus DI no están en verde en la D16), así que se usa la
+        - ADS-B: no se decodifica su rumbo (el enunciado no pide esos DI), así que se usa la
           dirección en la que se ha movido. Es solo para dibujar: no va al CSV ni al panel.
     """
     if identificador[0] == CATEGORIA_048:
@@ -418,7 +418,7 @@ def dibujar_avion(app, identificador, avion):
 
 
 def dibujar_estela(app, identificador, avion):
-    """Línea con las últimas posiciones del avión (R45). Hacen falta al menos 2 posiciones."""
+    """Línea con las últimas posiciones del avión. Hacen falta al menos 2 posiciones."""
     if app.casilla_estelas.get() == 0 or len(avion["estela"]) < 2:
         return
     posiciones = list(avion["estela"])        # copia: la lista del avión sigue cambiando
@@ -485,7 +485,7 @@ def actualizar_etiquetas(app, aviones):
 def actualizar_resaltado(app, aviones):
     """
     Resalta el avión seleccionado y, si está en el mapa, el mismo avión visto por el otro
-    sistema (misma TA, R08). Solo cambia el icono de los marcadores que lo necesitan.
+    sistema (misma TA). Solo cambia el icono de los marcadores que lo necesitan.
     """
     app.aviones_resaltados = set()
     if app.avion_seleccionado is not None:
@@ -526,7 +526,7 @@ def contar_en_mapa(app, aviones):
 
 
 # =============================================================================
-# Panel de información del avión seleccionado (R42)
+# Panel de información del avión seleccionado
 # =============================================================================
 
 def texto_numero(numero, decimales, unidad):
@@ -585,6 +585,5 @@ def texto_informacion(avion, identificador):
         lineas.append("  BAR             " + texto_numero(valor(fila, "BDS60_BAR"), 0, "ft/min"))
         lineas.append("  IVV             " + texto_numero(valor(fila, "BDS60_IVV"), 0, "ft/min"))
     else:
-        lineas.append("Velocidad y rumbo: no disponibles en")
-        lineas.append("CAT021 (sus DI no se decodifican, D16).")
+        lineas.append("Velocidad y rumbo: no disponibles en CAT021.")
     return "\n".join(lineas)

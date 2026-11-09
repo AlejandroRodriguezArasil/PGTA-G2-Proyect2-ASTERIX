@@ -4,8 +4,8 @@ cat021.py
 Paso 2 del flujo: DECODIFICACIÓN de CAT021 (ADS-B, especificación v2.1).
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
-Se decodifican 9 DI (D16): los 8 en verde (I021/010, /131, /080, /073, /070,
-/145, /170 y el BPS del RE) y el I021/040 en amarillo (duda 12). Los otros DI
+Se decodifican los 9 DI que pide el enunciado: I021/010, /131, /080, /073, /070,
+/145, /170, el BPS del RE y el I021/040 (duda 12). Los otros DI
 de la UAP se saltan sumando su longitud (CAT021 v2.1, §5.3, Tabla 2).
 
 Para que vaya rápido, cada registro se trata en dos pasos:
@@ -160,7 +160,7 @@ def decode_i021_re(datos, posicion, fila):
     RE Reserved Expansion Field. Longitud explícita. CAT021 v2.1 Appendix A, §2.
     Octeto 1: LEN (incluye este octeto). Octeto 2: Items Indicator
     (bit 8 BPS, 7 SelH, 6 NAV, 5 GAO, 4 SGV, 3 STA, 2 TNH, 1 MES).
-    Solo se decodifica el BPS (D16), que si está es el primer subcampo.
+    Solo se decodifica el BPS, el único que pide el enunciado; si está, es el primer subcampo.
     Columna: BP.
     """
     indicador_items = datos[posicion + 1]
@@ -338,13 +338,13 @@ def decodificar_registro(datos, posicion, lista_frn):
 
     fila = {"CAT": 21}
 
-    # Paso 2a: descarte de aeronaves y vehículos en tierra (D17), bit GBS de I021/040
+    # Paso 2a: descarte obligatorio de aeronaves y vehículos en tierra, bit GBS de I021/040
     if FRN_I021_040 in posiciones:
         decode_i021_040(datos, posiciones[FRN_I021_040], fila)
     if fila.get("I021_040_GBS") == 1:
         return None, posicion_siguiente, MOTIVO_EN_TIERRA
 
-    # Paso 2b: descarte sin posición (duda 10) y fuera de la zona (D17), con I021/131
+    # Paso 2b: descarte sin posición (duda 10) y fuera del filtro geográfico, con I021/131
     if FRN_I021_131 not in posiciones:
         return None, posicion_siguiente, MOTIVO_SIN_POSICION
     decode_i021_131(datos, posiciones[FRN_I021_131], fila)

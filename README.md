@@ -100,7 +100,7 @@ Entrada del P3: Categoría CAT048 + Quitar aeronaves en tierra + Solo mensajes c
 4. `funciones/cat048.py` y `funciones/bds.py`: los DI de CAT048 y los BDS 4.0, 5.0 y 6.0.
 5. `funciones/cat021.py`: los DI de CAT021 y el BPS del Reserved Expansion Field.
 6. `funciones/geo.py`: port de GeoUtils.cs (radar → WGS84 y proyección estereográfica para el P3).
-7. `funciones/qnh.py`: corrección de altitud (D14 y D15).
+7. `funciones/qnh.py`: corrección de altitud con el QNH por debajo de 6000 ft.
 8. `funciones/exportar_csv.py`: columnas y formato del CSV.
 9. `funciones/filtros.py`: un filtro por función.
 10. `funciones/simulacion.py` e `interfaz/mapa.py`: lógica de la simulación y lo que se dibuja en el mapa.

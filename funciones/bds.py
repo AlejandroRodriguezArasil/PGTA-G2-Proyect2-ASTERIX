@@ -4,7 +4,7 @@ bds.py
 Paso 2 del flujo: DECODIFICACIÓN de los registros BDS que van dentro de I048/250.
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
-Solo se decodifican los BDS 4.0, 5.0 y 6.0 (D10), con las tablas de
+Solo se decodifican los BDS 4.0, 5.0 y 6.0, los que pide el enunciado, con las tablas de
 ICAO 9871 (2.ª ed.), Apéndice A:
     BDS 4.0  Selected vertical intention    Tabla A-2-64
     BDS 5.0  Track and turn report          Tabla A-2-80

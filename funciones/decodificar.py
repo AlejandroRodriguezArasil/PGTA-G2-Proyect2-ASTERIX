@@ -12,8 +12,8 @@ queda produce una fila (diccionario columna -> valor), y decodificar_fichero la
 guarda en la lista que devuelve, ya como tupla (ver exportar_csv.py).
 
 Descartes obligatorios (no aparecen en el CSV):
-    - CAT048 y CAT021 fuera de 40,9-41,7° N y 1,5-2,6° E (D11 y D17)
-    - CAT021 con GBS = 1, en tierra (D17)
+    - CAT048 y CAT021 fuera de 40,9-41,7° N y 1,5-2,6° E (filtro geográfico del enunciado)
+    - CAT021 con GBS = 1, en tierra
     - mensajes sin posición (duda 10)
 """
 
@@ -75,7 +75,7 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
                                                             fila["I048_040_THETA_DEG"],
                                                             altura_m)
 
-    # Filtro geográfico (D11)
+    # Filtro geográfico del enunciado
     if not geo.dentro_de_zona(latitud, longitud):
         recuentos["descartados_048_fuera_de_zona"] += 1
         return None, posicion
@@ -84,7 +84,7 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     fila["LON"] = longitud
     fila["H"] = altura_wgs84
 
-    # Corrección QNH (D14), solo con los mensajes que se quedan
+    # Corrección QNH, solo con los mensajes que se quedan
     fl_dudoso = fila.get("I048_090_V") == 1 or fila.get("I048_090_G") == 1
     fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_048, fl_dudoso)
@@ -110,7 +110,7 @@ def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
     else:
         fila["H_SIN_FL"] = 1
 
-    # Corrección QNH (D14), solo con los mensajes que se quedan. I021/145 no tiene bits V ni G.
+    # Corrección QNH, solo con los mensajes que se quedan. I021/145 no tiene bits V ni G.
     fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_021, False)
     return fila, posicion
@@ -157,7 +157,7 @@ def decodificar_bloque(datos, inicio_bloque, longitud_bloque, categoria, estados
 
 def decodificar_fichero(ruta_ast, informar_progreso=None):
     """
-    Decodifica un fichero ASTERIX completo una sola vez (R11) y devuelve (filas, recuentos):
+    Decodifica un fichero ASTERIX completo una sola vez y devuelve (filas, recuentos):
         filas:     lista de tuplas, una por mensaje que se queda, en el orden del fichero
         recuentos: diccionario con los contadores del resumen
     informar_progreso, si se da, es una función que recibe el porcentaje del fichero leído (0-100)

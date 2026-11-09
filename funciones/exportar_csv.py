@@ -5,7 +5,7 @@ Paso 5 del flujo: CSV.
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
 Define las 97 columnas, cómo se guarda una fila en memoria (una tupla con un
-valor por columna) y cómo se escribe el CSV con el formato pedido en la D9:
+valor por columna) y cómo se escribe el CSV con el formato que pide el enunciado:
     - delimitador punto y coma (;) y separador decimal coma (,)
     - una columna por subcampo y una fila por mensaje, en el orden del fichero
     - celda vacía cuando el mensaje no trae ese dato
@@ -30,7 +30,7 @@ COLUMNAS = [
     "MODE3A",                           # I048/070 - I021/070
     "FL",                               # I048/090 - I021/145
     "BP",                               # BDS 4.0 de I048/250 - BPS del RE de CAT021
-    "ALT_CORREGIDA_FT",                 # corrección QNH (D14)
+    "ALT_CORREGIDA_FT",                 # corrección QNH (qnh.py)
 
     # --- CAT048: I048/020 Target Report Descriptor ---
     "I048_020_TYP", "I048_020_SIM", "I048_020_RDP", "I048_020_SPI", "I048_020_RAB",
@@ -101,7 +101,7 @@ def formatear_valor(columna, valor):
 # -----------------------------------------------------------------------------
 # Al decodificar, cada mensaje es un diccionario (columna -> valor). Para guardarlo se
 # pasa a una tupla con los 97 valores en el orden de COLUMNAS (None si no hay dato),
-# que ocupa menos RAM que el diccionario (R13). Un valor se lee con valor(fila, "FL").
+# que ocupa menos RAM que el diccionario. Un valor se lee con valor(fila, "FL").
 
 # Posición de cada columna dentro de la tupla: "CAT" -> 0, "SAC" -> 1, ...
 INDICE_COLUMNA = {}
@@ -133,7 +133,7 @@ def formatear_fila(fila):
 
 
 # -----------------------------------------------------------------------------
-# Exportar (R18, R35 y R38)
+# Exportar
 # -----------------------------------------------------------------------------
 
 def exportar(ruta, filas, informar_progreso=None):

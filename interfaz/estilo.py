@@ -1,7 +1,7 @@
 """
 estilo.py
 
-Colores, tipografías y tamaños de toda la aplicación (R17). Es el único fichero
+Colores, tipografías y tamaños de toda la aplicación. Es el único fichero
 con colores: ventana.py y mapa.py los toman de aquí.
 
 Estilo sobrio, de herramienta de control: fondo gris muy claro, tarjetas blancas,
@@ -55,7 +55,7 @@ TABLA_CABECERA = "#E7ECF2"
 TABLA_FILA_ALTERNA = "#F7F9FB"
 TABLA_SELECCION = "#CFE0F7"
 
-# --- Mapa (R43: radar y ADS-B se distinguen por el color) ---
+# --- Mapa (radar y ADS-B se distinguen por el color) ---
 RADAR = "#1F6FEB"
 ADSB = "#E8890C"
 RESALTADO = "#D62828"

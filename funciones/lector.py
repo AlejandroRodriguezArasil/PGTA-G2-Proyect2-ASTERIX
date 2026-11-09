@@ -135,7 +135,7 @@ def decodificar_caracteres_6_bits(datos, posicion):
 
 def formatear_hora(segundos):
     """
-    Pasa segundos desde medianoche a texto hh:mm:ss,sss (coma decimal, R19).
+    Pasa segundos desde medianoche a texto hh:mm:ss,sss (con coma decimal).
     Lo usan I048/140 e I021/073.
     """
     milisegundos_totales = round(segundos * 1000)

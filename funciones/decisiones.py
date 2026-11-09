@@ -8,7 +8,7 @@ dónde están aplicadas.
 """
 
 # Duda 1. ¿Qué es presión estándar en CAT021? El BPS va en saltos de 0,8 hPa y nunca cae en 1013-1013,5.
-# Decisión: 1013-1013,5 hPa en CAT048 (D14); 1012,8 y 1013,6 hPa en CAT021. (qnh.py)
+# Decisión: 1013-1013,5 hPa en CAT048 (el rango del enunciado); 1012,8 y 1013,6 hPa en CAT021. (qnh.py)
 PRESION_ESTANDAR_048_MINIMA_HPA = 1013.0
 PRESION_ESTANDAR_048_MAXIMA_HPA = 1013.5
 PRESIONES_ESTANDAR_021_HPA = (1012.8, 1013.6)

@@ -1,7 +1,7 @@
 """
 simulacion.py
 
-Lógica de la simulación de trayectorias (R03, R40, D21), sin nada de ventana ni mapa.
+Lógica de la simulación de trayectorias, sin nada de ventana ni mapa.
 Lo que se dibuja está en mapa.py y los botones en main.py (sección 6).
 
 Cómo funciona:
@@ -9,14 +9,14 @@ Cómo funciona:
        fichero los mensajes no van en orden de tiempo (retrocesos de hasta 0,7 s
        en CAT048 y 2 s en CAT021), así que hay que ordenarlos. La lista ordenada
        solo guarda referencias a las mismas tuplas, no las copia.
-    2. avanzar_un_segundo() suma 1 s a la hora de la simulación (R40) y procesa los
+    2. avanzar_un_segundo() suma 1 s a la hora de la simulación y procesa los
        mensajes con TIME_S <= esa hora. Cada mensaje actualiza la última posición
        conocida de su avión.
     3. Un avión que lleva más de SEGUNDOS_PARA_CADUCAR sin mensajes desaparece.
 
 Un avión es la pareja (categoría, dirección Modo S). Si el mensaje no trae
 dirección (TA), se usa (categoría, track number). Radar y ADS-B nunca se juntan:
-el mismo avión visto por los dos sistemas son dos aviones de la simulación (R08).
+el mismo avión visto por los dos sistemas son dos aviones de la simulación.
 """
 
 from funciones.exportar_csv import valor
@@ -117,7 +117,7 @@ def quitar_caducados(estado):
 
 def avanzar_un_segundo(estado):
     """
-    Un salto de la simulación: la hora avanza 1 s (R40).
+    Un salto de la simulación: la hora avanza 1 s.
     Devuelve (cambiados, caducados): los aviones con posición nueva y los que han desaparecido.
     """
     estado["segundo"] = estado["segundo"] + 1

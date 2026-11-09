@@ -29,7 +29,7 @@ Diferencias con el original:
     - Los ángulos van en radianes y las distancias en metros, como en el original.
 
 Al final del fichero están los datos del proyecto: posición del radar de
-Barcelona (D22) y filtro geográfico (D11 y D17).
+Barcelona y límites del filtro geográfico, los dos dados por el enunciado.
 """
 
 import math
@@ -319,7 +319,7 @@ class GeoUtils:
 # Una sola instancia de GeoUtils para todo el programa (ver la nota del constructor)
 GEO_UTILS = GeoUtils()
 
-# Radar de Barcelona (D22): 41° 18' 02,5284" N, 02° 06' 07,4095" E.
+# Radar de Barcelona (datos del enunciado): 41° 18' 02,5284" N, 02° 06' 07,4095" E.
 # Altura = elevación del terreno (2,007 m) + altura de la antena (25,25 m).
 ELEVACION_TERRENO_RADAR_M = 2.007
 ALTURA_ANTENA_RADAR_M = 25.25
@@ -327,10 +327,10 @@ RADAR_BCN = CoordinatesWGS84(GEO_UTILS.LatLon2Radians(41, 18, 2.5284, 0),
                              GEO_UTILS.LatLon2Radians(2, 6, 7.4095, 0),
                              ELEVACION_TERRENO_RADAR_M + ALTURA_ANTENA_RADAR_M)
 
-# Radio terrestre para la elevación (D22: Rt = 6371 km)
+# Radio terrestre para la elevación (Rt = 6371 km, dato del enunciado)
 RADIO_TIERRA_M = 6371000.0
 
-# Filtro geográfico (D11 y D17): 40,9° N < lat < 41,7° N y 1,5° E < lon < 2,6° E
+# Filtro geográfico del enunciado: 40,9° N < lat < 41,7° N y 1,5° E < lon < 2,6° E
 LATITUD_MINIMA_DEG = 40.9
 LATITUD_MAXIMA_DEG = 41.7
 LONGITUD_MINIMA_DEG = 1.5
@@ -338,7 +338,7 @@ LONGITUD_MAXIMA_DEG = 2.6
 
 def posicion_wgs84_048(rho_nm, theta_deg, altura_m):
     """
-    Posición WGS84 de un blanco CAT048 (R06 y R25) a partir de I048/040 y de su altura.
+    Posición WGS84 de un blanco CAT048 a partir de I048/040 y de su altura.
     Sigue la cadena SR5 -> SR7 -> SR10 -> SR17 con el radar de Barcelona.
     Devuelve (latitud_deg, longitud_deg, altura_m).
     """
@@ -357,7 +357,7 @@ def posicion_wgs84_048(rho_nm, theta_deg, altura_m):
 
 
 def dentro_de_zona(latitud_deg, longitud_deg):
-    """True si el punto está dentro del filtro geográfico de la D11 y la D17 (límites excluidos)."""
+    """True si el punto está dentro del filtro geográfico del enunciado (límites excluidos)."""
     if not LATITUD_MINIMA_DEG < latitud_deg < LATITUD_MAXIMA_DEG:
         return False
     if not LONGITUD_MINIMA_DEG < longitud_deg < LONGITUD_MAXIMA_DEG:

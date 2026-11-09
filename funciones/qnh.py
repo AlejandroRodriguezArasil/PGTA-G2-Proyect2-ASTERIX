@@ -5,7 +5,7 @@ Paso 4 del flujo: corrección QNH.
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
 El Modo C (FL) va referido a la presión estándar (1013,25 hPa), no al QNH.
-Por eso los aviones que vuelan bajo pueden tener FL negativos. La D14 pide
+Por eso los aviones que vuelan bajo pueden tener FL negativos. El enunciado pide
 corregir el Modo C de los vuelos por debajo de la altitud de transición
 (6000 ft) con:
 
@@ -14,14 +14,14 @@ corregir el Modo C de los vuelos por debajo de la altitud de transición
 
 El QNH actual es el BP que transmite el avión (BDS 4.0 en CAT048, BPS en CAT021).
 Un BP dentro del rango estándar (duda 1) no es un QNH: es el avión que ya ha
-puesto la presión estándar. La D14 y la D15 dicen que en ese caso se sigue
+puesto la presión estándar. El enunciado dice que en ese caso se sigue
 corrigiendo con el BP anterior hasta los 6000 ft.
 
-Ejemplo de la D15 (un avión despegando):
+Ejemplo del enunciado (un avión despegando):
     FL 23,5,  BP 1018 -> 2350 + (1018 - 1013,25) x 30 = 2492,5 ft
     FL 24,75, BP 1013 -> 1013 es estándar, se usa el BP guardado (1018):
                          2475 + (1018 - 1013,25) x 30 = 2617,5 ft   (correcto)
-                         con 1013 saldría 2467,5 ft                 (incorrecto, en rojo en la D15)
+                         con 1013 saldría 2467,5 ft                 (incorrecto)
 
 Como hay que recordar el último BP de cada avión, se guarda un estado por
 dirección Modo S (TA). Hay un estado para CAT048 y otro para CAT021, y solo
@@ -30,8 +30,8 @@ se actualiza con los mensajes que se quedan en el CSV.
 
 from funciones import decisiones
 
-QNH_ESTANDAR_HPA = 1013.25      # D14
-PIES_POR_HPA = 30               # D14: 1 hPa equivale a 30 ft
+QNH_ESTANDAR_HPA = 1013.25      # QNH estándar de la fórmula
+PIES_POR_HPA = 30               # 1 hPa equivale a 30 ft
 PIES_POR_FL = 100               # Modo C: FL x 100 = altitud en ft
 
 
@@ -45,7 +45,7 @@ def crear_estado():
 
 
 def es_presion_estandar(bp_hpa, categoria):
-    """True si el BP se considera presión estándar (D14 y duda 1)."""
+    """True si el BP se considera presión estándar (duda 1)."""
     if categoria == 48:
         return decisiones.PRESION_ESTANDAR_048_MINIMA_HPA <= bp_hpa <= decisiones.PRESION_ESTANDAR_048_MAXIMA_HPA
     return bp_hpa in decisiones.PRESIONES_ESTANDAR_021_HPA
@@ -103,5 +103,5 @@ def corregir_altitud(estado, direccion_modo_s, nivel_vuelo, bp_hpa, categoria, f
             return None
         return altitud_sin_corregir
 
-    # 7. Corrección de la D14 con el BP guardado.
+    # 7. Se aplica la fórmula con el BP guardado.
     return altitud_sin_corregir + (bp_guardado[direccion_modo_s] - QNH_ESTANDAR_HPA) * PIES_POR_HPA

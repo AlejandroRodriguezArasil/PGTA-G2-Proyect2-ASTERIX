@@ -1,7 +1,7 @@
 """
 ventana.py
 
-Construcción de la ventana (R15-R17). Aquí solo se crean y se colocan los elementos;
+Construcción de la ventana. Aquí solo se crean y se colocan los elementos;
 lo que hace cada botón está en main.py y los colores y tipografías, en estilo.py.
 
 Cada función recibe la aplicación (app) y guarda en ella los elementos que main.py
@@ -54,6 +54,10 @@ TAMANO_ICONO_PESTANA = 18
 LINEAS_INFO_AVION = 26
 MARGEN_CUADRO_INFO = 20
 
+# Flecha de la cabecera de la leyenda plegable del panel de la simulación
+FLECHA_RECOGIDA = "▸"
+FLECHA_DESPLEGADA = "▾"
+
 # Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
 COLOR_ORIGINAL_BOTONES = {}
 
@@ -66,7 +70,7 @@ ESTADO_CONTROLES = {}
 # =============================================================================
 
 def crear_ventana_principal():
-    """Crea la ventana principal en modo claro, maximizada (R16)."""
+    """Crea la ventana principal en modo claro, maximizada."""
     ctk.set_appearance_mode("light")
     raiz = ctk.CTk(fg_color=estilo.FONDO)
     raiz.title(TITULO)
@@ -278,7 +282,7 @@ def crear_entrada(padre, ancho, ejemplo):
 
 
 class Tooltip:
-    """Texto de ayuda que aparece al dejar el ratón sobre un control (R15)."""
+    """Texto de ayuda que aparece al dejar el ratón sobre un control."""
 
     def __init__(self, elemento, texto):
         self.elemento = elemento
@@ -310,7 +314,7 @@ class Tooltip:
 def cambiar_estado(elemento, activo):
     """
     Activa o desactiva un control. Los botones desactivados se ponen en gris para que se vea
-    que no se pueden pulsar (R15); al activarlos recuperan su color original.
+    que no se pueden pulsar; al activarlos recuperan su color original.
     Si el control ya está en ese estado no se toca: volver a configurarlo hace que customtkinter
     lo redibuje (en los selectores, varias veces seguidas) y se ve un parpadeo.
     """
@@ -462,7 +466,7 @@ def crear_tarjeta_resumen(app, padre):
 
 def crear_tarjeta_filtros(app, padre):
     """
-    Filtros combinables (R34-R39).
+    Filtros combinables.
     Guarda: app.selector_categoria, las casillas, app.entrada_altitud, app.entrada_aeronave,
             app.boton_aplicar y app.boton_quitar.
     """
@@ -513,7 +517,7 @@ def crear_tarjeta_filtros(app, padre):
 
 def crear_tarjeta_exportar(app, padre):
     """
-    Exportar a CSV (R18, R35).
+    Exportar a CSV.
     Guarda: app.boton_exportar_todo y app.boton_exportar_filtrado.
     """
     tarjeta = crear_tarjeta(padre, "Exportar a CSV")
@@ -687,7 +691,7 @@ def crear_pestana_datos(app):
 
 def crear_controles_simulacion(app, padre):
     """
-    Controles de la simulación (R40, R41, R43) en dos filas: arriba los botones y la velocidad;
+    Controles de la simulación en dos filas: arriba los botones y la velocidad;
     abajo las casillas, "Ir a la hora" y el sistema. Repartidos así caben en un portátil de
     1280 píxeles de ancho. Lo que guarda cada parte está en su función.
     """
@@ -726,7 +730,7 @@ def crear_botones_reproduccion(app, fila_1):
 
 
 def crear_selector_velocidad(app, fila_1):
-    """Selector de velocidad (R41). Guarda: app.selector_velocidad."""
+    """Selector de velocidad. Guarda: app.selector_velocidad."""
     # La ayuda de los selectores va en su etiqueta
     etiqueta_velocidad = crear_etiqueta(fila_1, "Velocidad", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_velocidad.pack(side="left", padx=(24, 8))
@@ -736,7 +740,7 @@ def crear_selector_velocidad(app, fila_1):
 
 
 def crear_selector_sistema(app, fila_2):
-    """Selector Radar / ADS-B / Ambos (R43). Guarda: app.selector_sistema."""
+    """Selector Radar / ADS-B / Ambos. Guarda: app.selector_sistema."""
     etiqueta_sistema = crear_etiqueta(fila_2, "Sistema", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_sistema.pack(side="left", padx=(24, 8))
     Tooltip(etiqueta_sistema, "Aviones vistos por el radar (CAT048), por ADS-B (CAT021) o por los dos.")
@@ -757,7 +761,7 @@ def crear_casillas_simulacion(app, fila_2):
 
 
 def crear_ir_a_hora(app, fila_2):
-    """Campo de la hora (hh:mm) y botón Ir (R41). Guarda: app.entrada_hora, app.boton_ir."""
+    """Campo de la hora (hh:mm) y botón Ir. Guarda: app.entrada_hora, app.boton_ir."""
     crear_etiqueta(fila_2, "Ir a la hora", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(side="left", padx=(24, 8))
     app.entrada_hora = crear_entrada(fila_2, 80, "hh:mm")
     app.entrada_hora.pack(side="left")
@@ -769,7 +773,7 @@ def crear_ir_a_hora(app, fila_2):
 
 
 def crear_tarjeta_reloj(app, padre):
-    """Hora del día de la simulación, grande y legible (R44). Guarda: app.etiqueta_reloj."""
+    """Hora del día de la simulación, grande y legible. Guarda: app.etiqueta_reloj."""
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=1, sticky="nsew", pady=(0, estilo.MARGEN))
     crear_etiqueta(tarjeta, "Hora de la simulación (UTC)", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(
@@ -834,16 +838,16 @@ def crear_cifra_mapa(padre, columna, color, texto_pie):
 
 def crear_panel_simulacion(app, padre):
     """
-    Panel derecho de la simulación, de arriba abajo: aviones en el mapa, información del avión
-    pulsado (R42) y leyenda (R44). Lo que más se mira va arriba y la leyenda, que es de consulta
-    y la que más ocupa, al final. En pantallas bajas (portátiles) el panel se desplaza con la
-    rueda del ratón, como el de la pestaña Datos.
+    Panel derecho de la simulación, de arriba abajo: leyenda (plegable y recogida al empezar,
+    porque es de consulta y es lo que más ocupa), aviones en el mapa e información del avión
+    pulsado. En pantallas bajas (portátiles) el panel se desplaza con la rueda del ratón, como
+    el de la pestaña Datos.
     """
     panel = ctk.CTkScrollableFrame(padre, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
     panel.grid(row=1, column=1, sticky="nsew")
+    crear_tarjeta_leyenda(app, panel)
     crear_tarjeta_en_el_mapa(app, panel)
     crear_tarjeta_avion(app, panel)
-    crear_tarjeta_leyenda(app, panel)
 
 
 def crear_tarjeta_en_el_mapa(app, panel):
@@ -882,26 +886,51 @@ def crear_tarjeta_avion(app, panel):
 
 
 def crear_tarjeta_leyenda(app, panel):
-    """Leyenda del mapa (R44), con las mismas imágenes que se dibujan en él."""
-    leyenda = crear_tarjeta(panel, "Leyenda")
-    leyenda.pack(fill="x")
+    """
+    Leyenda del mapa, con las mismas imágenes que se dibujan en él. Es plegable: al pulsar su
+    cabecera se despliega o se recoge (main.py, cambiar_leyenda). Al empezar está recogida.
+    Guarda: app.cabecera_leyenda, app.contenido_leyenda, app.leyenda_desplegada.
+    """
+    leyenda = crear_tarjeta(panel, "")
+    leyenda.pack(fill="x", pady=(0, estilo.MARGEN))
+    # Botón plano con aspecto de título; customtkinter ya pone el cursor de mano encima
+    app.cabecera_leyenda = ctk.CTkButton(leyenda, text="", command=app.cambiar_leyenda, anchor="w",
+                                         height=estilo.ALTO_BOTON, fg_color="transparent",
+                                         hover_color=estilo.SECUNDARIO_HOVER, text_color=estilo.TEXTO,
+                                         font=estilo.fuente(estilo.TAMANO_SECCION, True))
+    app.cabecera_leyenda.pack(fill="x", padx=8, pady=6)
+
+    app.contenido_leyenda = ctk.CTkFrame(leyenda, fg_color="transparent")
     imagenes = app.imagenes_leyenda
-    crear_fila_leyenda(leyenda, imagenes["radar"], "Radar (CAT048)")
-    crear_fila_leyenda(leyenda, imagenes["adsb"], "ADS-B (CAT021)")
-    crear_fila_leyenda(leyenda, imagenes["blanco_puro"], "Blanco puro (sin Modo S): eco de\n"
-                                                         "radar primario o secundario. Se\n"
-                                                         "quitan con «Quitar blancos puros»")
-    crear_fila_leyenda(leyenda, imagenes["resaltado"], "Avión seleccionado y su pareja")
-    crear_fila_leyenda(leyenda, imagenes["transponder_fijo"], "Transponder fijo (7777), siempre quieto")
-    crear_fila_leyenda(leyenda, imagenes["estacion"], "Radar de Barcelona")
-    crear_fila_leyenda(leyenda, imagenes["zona"], "Zona del filtro geográfico")
-    crear_fila_leyenda(leyenda, imagenes["estela"], "Estela: últimas posiciones")
-    crear_etiqueta(leyenda, "La silueta apunta al rumbo del avión.", estilo.TAMANO_AYUDA,
-                   estilo.TEXTO_SUAVE).pack(fill="x", padx=16, pady=(4, 12))
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["radar"], "Radar (CAT048)")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["adsb"], "ADS-B (CAT021)")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["blanco_puro"], "Blanco puro (sin Modo S): eco de\n"
+                                                                       "radar primario o secundario. Se\n"
+                                                                       "quitan con «Quitar blancos puros»")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["resaltado"], "Avión seleccionado y su pareja")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["transponder_fijo"], "Transponder fijo (7777), siempre quieto")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["estacion"], "Radar de Barcelona")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["zona"], "Zona del filtro geográfico")
+    crear_fila_leyenda(app.contenido_leyenda, imagenes["estela"], "Estela: últimas posiciones")
+    crear_etiqueta(app.contenido_leyenda, "La silueta apunta al rumbo del avión.", estilo.TAMANO_AYUDA,
+                   estilo.TEXTO_SUAVE).pack(fill="x", padx=16, pady=(4, 2))
+    mostrar_leyenda(app, False)
+
+
+def mostrar_leyenda(app, desplegada):
+    """Despliega o recoge la leyenda y cambia la flecha de su cabecera (▸ recogida, ▾ desplegada)."""
+    app.leyenda_desplegada = desplegada
+    if desplegada:
+        app.cabecera_leyenda.configure(text=FLECHA_DESPLEGADA + "  Leyenda")
+        # Margen para no tapar el borde ni las esquinas redondeadas de abajo de la tarjeta
+        app.contenido_leyenda.pack(fill="x", padx=1, pady=(0, estilo.RADIO_TARJETA))
+    else:
+        app.cabecera_leyenda.configure(text=FLECHA_RECOGIDA + "  Leyenda")
+        app.contenido_leyenda.pack_forget()
 
 
 def crear_pestana_simulacion(app):
-    """Pestaña Simulación (R03, R40-R45): controles y reloj arriba; mapa y panel debajo."""
+    """Pestaña Simulación: controles y reloj arriba; mapa y panel debajo."""
     pestana = app.pestana_simulacion
     pestana.grid_rowconfigure(1, weight=1)
     pestana.grid_columnconfigure(0, weight=1)

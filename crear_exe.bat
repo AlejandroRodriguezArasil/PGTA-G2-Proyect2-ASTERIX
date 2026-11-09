@@ -1,7 +1,7 @@
 @echo off
 REM ==========================================================================
 REM crear_exe.bat
-REM Genera el ejecutable unico de la aplicacion (R49: un solo .exe aislado).
+REM Genera el ejecutable de la aplicacion: un unico .exe aislado, como pide el enunciado.
 REM
 REM Uso: doble clic en este fichero. Solo hace falta tener Python 3 instalado.
 REM   1. Busca Python: primero el lanzador "py -3" y, si no esta, "python".

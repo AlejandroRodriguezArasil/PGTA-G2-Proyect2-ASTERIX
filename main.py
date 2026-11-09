@@ -5,18 +5,18 @@ Punto de entrada de la aplicación: python main.py
 
 Flujo del programa. Los métodos de la clase Aplicacion están en este mismo orden:
 
-    1. Elegir fichero      elegir_fichero                                  (R10)
+    1. Elegir fichero      elegir_fichero
     2. Decodificar         decodificar_en_segundo_plano, revisar_decodificacion
-                           (R12: en un hilo aparte, con barra de progreso)
+                           (en un hilo aparte, con barra de progreso)
     3. Mostrar datos       mostrar_datos, mostrar_pagina                   (tabla por páginas)
-    4. Filtrar             aplicar_filtros, quitar_filtros                 (R34-R39)
-    5. Exportar            exportar_todo, exportar_filtrado                (R18, R35, R38)
+    4. Filtrar             aplicar_filtros, quitar_filtros
+    5. Exportar            exportar_todo, exportar_filtrado
     6. Simular             preparar_simulacion, play, tic_reloj, dar_un_salto
-                           (R03, R08, R40-R45: mapa con los mensajes filtrados en Datos)
+                           (mapa con los mensajes filtrados en Datos)
 
 Los datos se decodifican una sola vez y se guardan en memoria (self.filas_todas).
 Filtrar, cambiar de página, exportar y simular trabajan sobre esa lista sin volver a
-leer el .ast (R11).
+leer el .ast.
 
 tkinter no permite tocar la ventana desde otro hilo: el hilo solo guarda el porcentaje
 y el resultado, y la ventana los consulta cada 100 ms con after(). El reloj de la
@@ -51,7 +51,7 @@ INTERVALO_REVISION_MS = 100          # cada cuánto mira la ventana cómo va el 
 # Cambiando cada 0,5 ms la ventana responde; a cambio, decodificar tarda un 10 % más.
 INTERVALO_CAMBIO_DE_HILO_S = 0.0005
 
-# Espera entre saltos de 1 s de la simulación según la velocidad elegida (R41).
+# Espera entre saltos de 1 s de la simulación según la velocidad elegida.
 # Cada salto es siempre de 1 s; lo que cambia es cada cuánto se dibuja.
 ESPERA_POR_VELOCIDAD_MS = {"x1": 1000, "x2": 500, "x5": 200, "x10": 100, "x30": 33, "x60": 17}
 RETRASO_MAXIMO_S = 1.0      # retraso del reloj de la simulación que se intenta recuperar (ver tic_reloj)
@@ -98,7 +98,7 @@ class Aplicacion:
         # Las funciones de ventana.py crean los elementos y los guardan en la aplicación
         # (self.boton_abrir, self.tabla...); el docstring de cada una dice cuáles.
         self.raiz = ventana.crear_ventana_principal()
-        # Un error no previsto se muestra en un diálogo y no como traza (R14)
+        # Un error no previsto se muestra en un diálogo y no como traza
         self.raiz.report_callback_exception = self.mostrar_error_inesperado
         mapa.crear_iconos(self)
         ventana.crear_cabecera(self)
@@ -111,7 +111,7 @@ class Aplicacion:
         self.actualizar_panel_simulacion()
 
     # =========================================================================
-    # 1. Elegir fichero (R10)
+    # 1. Elegir fichero
     # =========================================================================
 
     def elegir_fichero(self):
@@ -124,12 +124,12 @@ class Aplicacion:
         self.decodificar_en_segundo_plano(ruta)
 
     # =========================================================================
-    # 2. Decodificar en un hilo aparte (R12)
+    # 2. Decodificar en un hilo aparte
     # =========================================================================
 
     def decodificar_en_segundo_plano(self, ruta):
         """Suelta los datos anteriores y lanza la decodificación en otro hilo."""
-        # Los datos del fichero anterior se sueltan antes de cargar el nuevo (R13)
+        # Los datos del fichero anterior se sueltan antes de cargar el nuevo
         self.filas_todas = []
         self.filas_visibles = []
         self.recuentos = None
@@ -344,7 +344,7 @@ class Aplicacion:
             self.mostrar_pagina()
 
     # =========================================================================
-    # 4. Filtrar (R34-R39)
+    # 4. Filtrar
     # =========================================================================
 
     def leer_opciones_filtros(self):
@@ -382,7 +382,7 @@ class Aplicacion:
         return opciones
 
     def aplicar_filtros(self):
-        """Botón "Aplicar filtros": aplica a la vez todos los filtros marcados (R36)."""
+        """Botón "Aplicar filtros": aplica a la vez todos los filtros marcados."""
         opciones = self.leer_opciones_filtros()
         if opciones is None:
             return
@@ -403,7 +403,7 @@ class Aplicacion:
             self.aplicar_filtros()
 
     def quitar_filtros(self):
-        """Botón "Quitar filtros": deja el panel como al principio y vuelve a mostrar todo (R34)."""
+        """Botón "Quitar filtros": deja el panel como al principio y vuelve a mostrar todo."""
         self.selector_categoria.set("Ambas")
         self.casilla_blancos_puros.deselect()
         self.casilla_transponder_fijo.deselect()
@@ -420,7 +420,7 @@ class Aplicacion:
         self.poner_estado("Sin filtros: " + con_miles(len(self.filas_todas)) + " mensajes", estilo.ESTADO_LISTO)
 
     # =========================================================================
-    # 5. Exportar a CSV (R18, R35, R38)
+    # 5. Exportar a CSV
     # =========================================================================
 
     def exportar_todo(self):
@@ -434,7 +434,7 @@ class Aplicacion:
         self.exportar(self.filas_visibles, nombre_base + "_filtrado.csv")
 
     def exportar(self, filas, nombre_sugerido):
-        """Diálogo para elegir dónde se guarda el CSV (R18) y exportación en un hilo aparte."""
+        """Diálogo para elegir dónde se guarda el CSV y exportación en un hilo aparte."""
         ruta = filedialog.asksaveasfilename(
             title="Guardar CSV", initialfile=nombre_sugerido, defaultextension=".csv",
             filetypes=[("CSV separado por ';'", "*.csv")])
@@ -488,7 +488,7 @@ class Aplicacion:
                             "Se han guardado " + con_miles(numero_filas) + " mensajes en:\n" + ruta)
 
     # =========================================================================
-    # 6. Simular en el mapa (R03, R08, R40-R45)
+    # 6. Simular en el mapa
     # =========================================================================
 
     def cambiar_pestana(self, pestana):
@@ -532,7 +532,7 @@ class Aplicacion:
         self.actualizar_botones()
 
     def play(self):
-        """Botón Reproducir: arranca el reloj de la simulación (R40)."""
+        """Botón Reproducir: arranca el reloj de la simulación."""
         if self.estado_simulacion is None:
             self.preparar_simulacion()
         if simulacion.ha_terminado(self.estado_simulacion):
@@ -642,14 +642,14 @@ class Aplicacion:
         self.actualizar_panel_simulacion()
 
     def cambiar_velocidad(self, velocidad):
-        """Selector de velocidad (R41): cambia la espera entre saltos, no el tamaño del salto."""
+        """Selector de velocidad: cambia la espera entre saltos, no el tamaño del salto."""
         self.espera_ms = ESPERA_POR_VELOCIDAD_MS[velocidad]
         self.instante_siguiente_salto = time.perf_counter()
         if self.reproduciendo:
             self.poner_estado("Reproduciendo a " + velocidad, estilo.ESTADO_LISTO)
 
     def cambiar_sistema(self, sistema):
-        """Selector Radar / ADS-B / Ambos (R43): vuelve a dibujar solo los aviones del sistema elegido."""
+        """Selector Radar / ADS-B / Ambos: vuelve a dibujar solo los aviones del sistema elegido."""
         if self.estado_simulacion is not None:
             mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
             mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
@@ -661,15 +661,19 @@ class Aplicacion:
             mapa.actualizar_etiquetas(self, self.estado_simulacion["aviones"])
 
     def cambiar_estelas(self):
-        """Casilla Estelas: muestra u oculta la línea con las últimas posiciones de cada avión (R45)."""
+        """Casilla Estelas: muestra u oculta la línea con las últimas posiciones de cada avión."""
         if self.estado_simulacion is not None:
             mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
             mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
 
+    def cambiar_leyenda(self):
+        """Cabecera de la leyenda del panel de la simulación: la despliega si está recogida y al revés."""
+        ventana.mostrar_leyenda(self, not self.leyenda_desplegada)
+
     def al_pulsar_avion(self, marcador):
         """
-        Clic en un avión del mapa: lo selecciona, lo resalta junto a su pareja del otro sistema (R08)
-        y muestra su información en el panel (R42). El selector Radar / ADS-B del panel se pone en
+        Clic en un avión del mapa: lo selecciona, lo resalta junto a su pareja del otro sistema
+        y muestra su información en el panel. El selector Radar / ADS-B del panel se pone en
         el sistema de ese avión.
         """
         self.avion_seleccionado = marcador.data
@@ -679,7 +683,7 @@ class Aplicacion:
     def cambiar_sistema_avion(self, sistema):
         """
         Selector Radar / ADS-B del panel: el avión seleccionado pasa a ser su pareja del otro
-        sistema (misma TA, R08). El resaltado no cambia: las dos siluetas ya estaban en rojo.
+        sistema (misma TA). El resaltado no cambia: las dos siluetas ya estaban en rojo.
         'sistema' es la opción pulsada, que la pasa el Selector. No hace falta usarla: como solo
         hay dos sistemas, pulsar la otra opción siempre significa pasar a la pareja.
         """
@@ -719,7 +723,7 @@ class Aplicacion:
 
     def actualizar_panel_simulacion(self):
         """
-        Pone al día el reloj (R44), el aviso de qué se simula, el contador, el panel del avión con
+        Pone al día el reloj, el aviso de qué se simula, el contador, el panel del avión con
         su selector Radar / ADS-B y el mensaje del mapa. Se llama en cada salto: solo se cambia lo
         que es distinto.
         """
@@ -805,7 +809,7 @@ class Aplicacion:
 
     def actualizar_botones(self):
         """
-        Activa o desactiva cada control según la situación (R15): sin datos no se puede filtrar,
+        Activa o desactiva cada control según la situación: sin datos no se puede filtrar,
         exportar ni simular, y mientras se decodifica o se exporta no se puede tocar nada.
         """
         trabajando = self.hilo is not None
@@ -836,7 +840,7 @@ class Aplicacion:
         ventana.cambiar_estado(self.boton_pausa, hay_simulacion and self.reproduciendo)
 
     def mostrar_error_inesperado(self, tipo, valor, traza):
-        """Cualquier error no previsto en un botón se muestra en un diálogo, sin traza (R14)."""
+        """Cualquier error no previsto en un botón se muestra en un diálogo, sin traza."""
         messagebox.showerror("Error inesperado",
                              "Ha ocurrido un error inesperado:\n" + str(valor)
                              + "\n\nLos datos cargados siguen disponibles.")

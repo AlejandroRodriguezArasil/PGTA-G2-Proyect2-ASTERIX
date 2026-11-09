@@ -1,15 +1,15 @@
 """
 filtros.py
 
-Filtros sobre las filas ya decodificadas (R34-R39, D18-D20).
+Filtros sobre las filas ya decodificadas.
 
 Cada filtro es una función que recibe una lista de filas y devuelve otra lista
 con las que cumplen la condición, en el mismo orden. No se copian las filas:
 la lista nueva apunta a las mismas tuplas, así que filtrar no gasta RAM extra.
-Como cada filtro devuelve una lista, se pueden encadenar (R36): eso es lo que
+Como cada filtro devuelve una lista, se pueden encadenar: eso es lo que
 hace aplicar_filtros().
 
-Los filtros nunca vuelven a leer el .ast: trabajan sobre la lista en memoria (R11).
+Los filtros nunca vuelven a leer el .ast: trabajan sobre la lista en memoria.
 """
 
 from funciones import decisiones
@@ -23,7 +23,7 @@ PIES_POR_FL = 100
 
 def filtrar_por_categoria(filas, categoria):
     """
-    Categoría ASTERIX (R37, D19).
+    Categoría ASTERIX.
     Columna: CAT. Se quedan las filas cuya CAT es la indicada (48 o 21).
     """
     resultado = []
@@ -46,7 +46,7 @@ def es_blanco_puro(fila):
 
 def quitar_blancos_puros(filas):
     """
-    Quitar blancos puros (R37, R39, D20). Solo afecta a CAT048.
+    Quitar blancos puros. Solo afecta a CAT048.
     Columna: I048_020_TYP. Criterio: es_blanco_puro().
     """
     resultado = []
@@ -72,7 +72,7 @@ def es_transponder_fijo(fila):
 
 def quitar_transponder_fijo(filas):
     """
-    Quitar transponder fijo (R37, D19). CAT048 y CAT021.
+    Quitar transponder fijo. CAT048 y CAT021.
     Columnas: MODE3A, I048_020_RAB e I021_040_RAB. Criterio: es_transponder_fijo().
     """
     resultado = []
@@ -84,7 +84,7 @@ def quitar_transponder_fijo(filas):
 
 def quitar_en_tierra(filas):
     """
-    Quitar aeronaves en tierra (optativo "Ground" de la D19). Solo afecta a CAT048
+    Quitar aeronaves en tierra (filtro optativo "Ground" del enunciado). Solo afecta a CAT048
     (los CAT021 en tierra ya se descartaron al decodificar, por el bit GBS).
     Columna: I048_230_STAT. Se quita la fila si STAT es 1 o 3 ("aircraft on ground").
     Si el mensaje no trae I048/230, se queda: no consta que esté en tierra.
@@ -140,7 +140,7 @@ def filtrar_altitud_maxima(filas, altitud_maxima_ft):
 
 def buscar_aeronave(filas, texto):
     """
-    Aeronave (optativo "trayectoria" de la D19). CAT048 y CAT021.
+    Aeronave (filtro optativo "trayectoria" del enunciado). CAT048 y CAT021.
     Columnas: TI (callsign), TA (dirección Modo S) y MODE3A.
     Se quedan las filas en las que el texto aparece dentro de alguna de las tres,
     sin distinguir mayúsculas. Por ejemplo, "RYR" encuentra todos los Ryanair.
@@ -191,7 +191,7 @@ def describir_filtros(opciones):
 
 def aplicar_filtros(filas, opciones):
     """
-    Aplica uno detrás de otro los filtros activos (R36) y devuelve las filas que quedan.
+    Aplica uno detrás de otro los filtros activos y devuelve las filas que quedan.
     'opciones' es el diccionario que arma la ventana:
         "categoria":               None (ambas), 48 o 21
         "quitar_blancos_puros":    True / False
