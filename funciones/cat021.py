@@ -13,7 +13,7 @@ Para que vaya rápido, cada registro se trata en dos pasos:
        para saber dónde empieza cada uno y dónde acaba el registro.
     2. Decodificar: primero I021/040 (bit GBS) y I021/131 (posición). Si el
        mensaje se descarta (en tierra, sin posición o fuera de zona), no se
-       decodifica nada más. Solo se queda 1 de cada 10 mensajes.
+       decodifica nada más. En los ficheros de la asignatura se queda alrededor de 1 de cada 10 mensajes.
 
 Numeración de bits: como en la especificación, en un DI de n octetos el bit
 n x 8 es el MSB del primer octeto y el bit 1 es el LSB del último.
@@ -261,7 +261,7 @@ def longitud_i021_271(datos, posicion):
     """
     I021/271 Surface Capabilities and Characteristics. CAT021 v2.1, §5.2.40.
     Primario de 1 octeto con FX y, como mucho, 1 extensión (Length/Width).
-    TRAMPA: según la nota de la especificación, el bit 1 de la extensión
+    Ojo: según la nota de la especificación, el bit 1 de la extensión
     NO es FX. Por eso no se usa longitud_fx: como mucho son 2 octetos.
     """
     if datos[posicion] & 0x01:

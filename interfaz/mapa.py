@@ -585,5 +585,5 @@ def texto_informacion(avion, identificador):
         lineas.append("  BAR             " + texto_numero(valor(fila, "BDS60_BAR"), 0, "ft/min"))
         lineas.append("  IVV             " + texto_numero(valor(fila, "BDS60_IVV"), 0, "ft/min"))
     else:
-        lineas.append("Velocidad y rumbo: no disponibles en CAT021.")
+        lineas.append("Velocidad y rumbo: no se decodifican en CAT021.")
     return "\n".join(lineas)

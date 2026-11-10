@@ -229,21 +229,16 @@
   <h2 style="margin-top: 7mm;">2. Abrir la aplicación</h2>
 
   <h3>Opción A (recomendada): el ejecutable</h3>
-  <p>El .zip de la entrega no trae el ejecutable: se crea en tu equipo con <b>crear_exe.bat</b>. Solo hace falta tener Python 3 instalado.</p>
   <div class="paso">
     <div class="numero">1</div>
-    <div class="contenido"><p>Descomprime el .zip de la entrega en cualquier carpeta.</p></div>
+    <div class="contenido"><p>Descomprime el .zip de la entrega. <b>DecodificadorASTERIX.exe</b> está en la raíz, junto a este manual.</p></div>
   </div>
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>Haz doble clic en <b>crear_exe.bat</b>. Prepara lo necesario y crea <b>DecodificadorASTERIX.exe</b> en esa misma carpeta. La primera vez tarda unos minutos y necesita internet; las siguientes va directo.</p></div>
+    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>. No hace falta instalar nada (Windows de 64 bits). Tarda unos segundos en abrirse.</p></div>
   </div>
   <div class="paso">
     <div class="numero">3</div>
-    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>.</p></div>
-  </div>
-  <div class="paso">
-    <div class="numero">4</div>
     <div class="contenido">
       <p>Si Windows muestra el aviso <b>«Windows protegió su PC»</b>, pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</p>
     </div>
@@ -251,11 +246,12 @@
 
   <div class="nota">
     <p><b>Ficheros .ast.</b> No van en la entrega. Son los de la asignatura: <span class="mono">asterix_radar.ast</span>, <span class="mono">asterix_adsb.ast</span> y <span class="mono">asterix_combinado.ast</span>. Pueden estar en cualquier carpeta del equipo.</p>
-    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet, y <b>crear_exe.bat</b> también la primera vez. El resto funciona sin conexión.</p>
+    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet. El resto funciona sin conexión.</p>
+    <p><b>Volver a generar el ejecutable.</b> Doble clic en <b>Codigo\crear_exe.bat</b> (hace falta Python 3). La primera vez tarda unos minutos y necesita internet.</p>
   </div>
 
   <h3>Opción B: con Python</h3>
-  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta descomprimida y escribe:</p>
+  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta <b>Codigo</b> y escribe:</p>
   <div class="consola">
     <ol>
       <li>Crear el entorno virtual:<code>python -m venv .venv</code></li>
@@ -386,12 +382,13 @@
 
   <h3>Cómo es el CSV</h3>
   <ul>
-    <li>Separador <b>;</b> y coma decimal.</li>
-    <li>Una fila por mensaje y una columna por dato (97 columnas). La celda queda vacía si el mensaje no trae ese dato.</li>
+    <li>Separador <b>;</b> y coma decimal, para que Excel en español lo abra bien con doble clic.</li>
+    <li>Una fila por mensaje, en el orden del fichero. Siempre las mismas 97 columnas, en el mismo orden, para cualquier fichero; la celda queda vacía si el mensaje no trae ese dato.</li>
     <li>Columnas extra: <b>LAT</b>, <b>LON</b> y <b>H</b> en WGS84, y <b>ALT_CORREGIDA_FT</b> (altitud corregida por QNH por debajo de 6000 ft).</li>
   </ul>
 
   <div class="nota">
+    <p><b>«#######» en Excel.</b> La columna es demasiado estrecha (pasa con la hora, TIME). Ensánchala: doble clic en el borde derecho de su cabecera, o Formato &gt; Autoajustar ancho de columna.</p>
     <p><b>Excel.</b> Si abres el CSV con doble clic, Excel quita el cero inicial del Modo 3/A (por ejemplo, <span class="mono">0437</span> pasa a <span class="mono">437</span>) y puede leer alguna dirección Modo S (TA) como número.</p>
     <p>Para verlas igual que en la aplicación, importa el CSV desde Excel y pon las columnas <b>MODE3A</b> y <b>TA</b> como <b>Texto</b>.</p>
   </div>
@@ -432,7 +429,7 @@
   <h3>El mapa</h3>
   <ul>
     <li>Arrastra el mapa para moverte. Acerca o aleja con la rueda del ratón o con los botones <b>+</b> y <b>−</b>.</li>
-    <li>La silueta de cada avión apunta a su rumbo.</li>
+    <li>La silueta de cada avión apunta a su rumbo (si aún no se conoce, mira al norte).</li>
     <li>Un avión desaparece si pasa más de 12 s sin mensajes.</li>
   </ul>
 </section>
@@ -449,7 +446,7 @@
           <p>Haz clic en un avión. Se pone en <span class="punto rojo"></span>rojo <span class="marca">1</span> y, si el otro sistema también lo ve, su pareja también <span class="marca">2</span>.</p>
           <p>En el ejemplo, 1 es el radar y 2 el ADS-B del mismo avión (VLG8FU).</p>
           <p>Colores: <span class="punto radar"></span>azul, radar; <span class="punto adsb"></span>naranja, ADS-B; <span class="punto rojo"></span>rojo, el avión seleccionado y su pareja.</p>
-          <p>A la derecha, de arriba abajo: la <b>Leyenda</b> (recogida al empezar; se despliega pulsando su cabecera), cuántos hay <b>En el mapa</b> (radar, ADS-B y blancos puros) y el <b>Avión seleccionado</b> con sus datos (callsign, dirección Modo S, FL, posición, velocidades y rumbo); si no caben, el panel baja con la rueda del ratón. Con su selector <b>Radar / ADS-B</b> pasas a los datos del mismo avión en el otro sistema, sin tocar el mapa (en gris si no está en el mapa por ese sistema).</p>
+          <p>A la derecha, de arriba abajo: la <b>Leyenda</b> (recogida al empezar; se despliega pulsando su cabecera), cuántos hay <b>En el mapa</b> (radar, ADS-B y blancos puros) y el <b>Avión seleccionado</b> con sus datos (callsign, dirección Modo S, Modo 3/A, FL, posición y, en radar, velocidades y rumbo); si no caben, el panel baja con la rueda del ratón o el panel táctil. Con su selector <b>Radar / ADS-B</b> pasas a los datos del mismo avión en el otro sistema, sin tocar el mapa (en gris si no está en el mapa por ese sistema).</p>
         </div>
       </div>
     </div>
@@ -464,8 +461,8 @@
       <td>Es el aviso de SmartScreen, porque el ejecutable no está firmado. Pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</td>
     </tr>
     <tr>
-      <td>El .exe tarda en abrirse la primera vez.</td>
-      <td>Es normal: el .exe lleva dentro todo lo que necesita y lo descomprime al arrancar. Espera unos segundos y no lo abras dos veces.</td>
+      <td>El .exe tarda en abrirse.</td>
+      <td>Es normal: se descomprime al arrancar. No lo abras dos veces.</td>
     </tr>
     <tr>
       <td>El mapa se ve gris.</td>
@@ -473,15 +470,15 @@
     </tr>
     <tr>
       <td>En la simulación no se ve nada.</td>
-      <td>Revisa los filtros de la pestaña Datos (el aviso azul encima del mapa dice cuáles hay) y el selector <b>Sistema</b>. Si sale un mensaje en el centro del mapa, dice qué hacer.</td>
+      <td>Revisa los filtros de Datos (los dice el aviso azul) y el selector <b>Sistema</b>. Si sale un mensaje en el mapa, dice qué hacer.</td>
     </tr>
     <tr>
       <td>Aparecen puntos grises que desaparecen enseguida.</td>
-      <td>Son blancos puros (ecos del radar primario). Se quitan con el filtro <b>«Quitar blancos puros»</b>.</td>
+      <td>Son blancos puros (ecos de radar primario o secundario, sin Modo S). Se quitan con el filtro <b>«Quitar blancos puros»</b>.</td>
     </tr>
     <tr>
-      <td>Excel quita los ceros del Modo 3/A.</td>
-      <td>Importa el CSV desde Excel y pon las columnas <b>MODE3A</b> y <b>TA</b> como <b>Texto</b> (apartado 6).</td>
+      <td>Excel muestra «#####» o quita ceros.</td>
+      <td>Ensancha la columna o importa como texto (apartado 6).</td>
     </tr>
   </table>
 </section>

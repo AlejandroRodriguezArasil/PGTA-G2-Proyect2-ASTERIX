@@ -27,6 +27,7 @@ en el mapa, en interfaz/mapa.py; y la lógica (decodificar, filtrar, exportar y 
 en la carpeta funciones/.
 """
 
+import math
 import os
 import sys
 import threading
@@ -72,6 +73,9 @@ class Aplicacion:
         self.filas_visibles = []        # las que quedan tras los filtros (las mismas tuplas, sin copiar)
         self.recuentos = None           # recuentos de la decodificación
         self.nombre_fichero = ""
+        self.fichero_decodificando = ""     # el que se está decodificando ("" si ninguno)
+        self.ruta_exportando = None         # el CSV que se está escribiendo (None si ninguno)
+        self.cancelar_exportacion = False   # True si se ha cerrado la ventana a media exportación
         self.opciones_filtros = None    # filtros aplicados; None si no hay ninguno
         self.pagina_actual = 0
 
@@ -100,6 +104,7 @@ class Aplicacion:
         self.raiz = ventana.crear_ventana_principal()
         # Un error no previsto se muestra en un diálogo y no como traza
         self.raiz.report_callback_exception = self.mostrar_error_inesperado
+        self.raiz.protocol("WM_DELETE_WINDOW", self.al_cerrar_ventana)
         mapa.crear_iconos(self)
         ventana.crear_cabecera(self)
         ventana.crear_barra_estado(self)
@@ -128,30 +133,29 @@ class Aplicacion:
     # =========================================================================
 
     def decodificar_en_segundo_plano(self, ruta):
-        """Suelta los datos anteriores y lanza la decodificación en otro hilo."""
-        # Los datos del fichero anterior se sueltan antes de cargar el nuevo
-        self.filas_todas = []
-        self.filas_visibles = []
-        self.recuentos = None
-        self.opciones_filtros = None
-        self.pagina_actual = 0
-
-        self.nombre_fichero = os.path.basename(ruta)
-        self.etiqueta_fichero.configure(text=self.nombre_fichero)
+        """
+        Lanza la decodificación en otro hilo. Los datos que ya hubiera cargados se quedan hasta que el
+        fichero nuevo se haya decodificado bien: si falla, la tabla, los filtros y la simulación siguen
+        como estaban (ver revisar_decodificacion).
+        """
+        self.pausa()
+        self.fichero_decodificando = os.path.basename(ruta)
+        self.etiqueta_fichero.configure(text=self.fichero_decodificando)
         self.mostrar_resumen(None)
+        self.etiqueta_detalle_resumen.configure(text="Decodificando el fichero...")
 
         self.porcentaje = 0
         self.registros_leidos = 0
         self.barra_progreso_tabla.set(0)
-        ventana.cambiar_texto(self.etiqueta_progreso_tabla, "Decodificando " + self.nombre_fichero + "...  0 %")
+        ventana.cambiar_texto(self.etiqueta_progreso_tabla, "Decodificando " + self.fichero_decodificando + "...  0 %")
         self.resultado_hilo = None
         self.error_hilo = None
         self.hilo = threading.Thread(target=self.tarea_decodificar, args=(ruta,), daemon=True)
         self.hilo.start()
 
-        self.invalidar_simulacion()
         self.mostrar_pagina()
-        self.poner_estado("Decodificando " + self.nombre_fichero + "...", estilo.ESTADO_TRABAJANDO)
+        self.actualizar_panel_simulacion()
+        self.poner_estado("Decodificando " + self.fichero_decodificando + "...", estilo.ESTADO_TRABAJANDO)
         self.poner_progreso(0)
         self.raiz.after(INTERVALO_REVISION_MS, self.revisar_decodificacion)
 
@@ -161,8 +165,10 @@ class Aplicacion:
             self.resultado_hilo = decodificar.decodificar_fichero(ruta, self.guardar_progreso_decodificacion)
         except ValueError as error:
             self.error_hilo = "El fichero no es ASTERIX o está dañado:\n" + str(error) + "."
-        except OSError as error:
-            self.error_hilo = "No se ha podido leer el fichero:\n" + str(error.strerror) + "."
+        except PermissionError:
+            self.error_hilo = "No se ha podido leer el fichero: no hay permiso para abrirlo."
+        except OSError:
+            self.error_hilo = "No se ha podido leer el fichero (puede que se haya movido o borrado)."
         except MemoryError:
             self.error_hilo = "No hay memoria suficiente para decodificar este fichero."
         except Exception as error:
@@ -174,7 +180,12 @@ class Aplicacion:
         self.registros_leidos = registros_leidos
 
     def guardar_porcentaje(self, porcentaje):
-        """La llama la exportación desde el hilo para informar del progreso."""
+        """
+        La llama la exportación desde el hilo para informar del progreso. Si se ha cerrado la ventana
+        a medias (al_cerrar_ventana), lanza ExportacionCancelada para que la escritura pare ahí.
+        """
+        if self.cancelar_exportacion:
+            raise ExportacionCancelada()
         self.porcentaje = porcentaje
 
     def revisar_decodificacion(self):
@@ -184,18 +195,25 @@ class Aplicacion:
             # Progreso grande en el sitio de la tabla
             self.barra_progreso_tabla.set(self.porcentaje / 100)
             ventana.cambiar_texto(self.etiqueta_progreso_tabla,
-                                  "Decodificando " + self.nombre_fichero + "...  " + str(self.porcentaje) + " %  ·  "
+                                  "Decodificando " + self.fichero_decodificando + "...  " + str(self.porcentaje) + " %  ·  "
                                   + con_miles(self.registros_leidos) + " registros leídos")
             self.raiz.after(INTERVALO_REVISION_MS, self.revisar_decodificacion)
             return
 
         self.hilo = None
+        fichero_nuevo = self.fichero_decodificando
+        self.fichero_decodificando = ""
         if self.error_hilo is not None:
-            self.nombre_fichero = ""
-            self.etiqueta_fichero.configure(text="Ningún fichero cargado")
+            # Los datos que había se quedan como estaban: se vuelve a poner su nombre y su resumen
+            self.mostrar_resumen(self.recuentos)
             self.poner_progreso(0)
-            self.poner_estado("No se ha podido decodificar el fichero", estilo.TEXTO_SUAVE)
-            self.etiqueta_detalle_resumen.configure(text="No se ha podido decodificar el fichero.")
+            if self.nombre_fichero == "":
+                self.etiqueta_fichero.configure(text="Ningún fichero cargado")
+                self.poner_estado("No se ha podido decodificar " + fichero_nuevo, estilo.TEXTO_SUAVE)
+            else:
+                self.etiqueta_fichero.configure(text=self.nombre_fichero)
+                self.poner_estado("No se ha podido decodificar " + fichero_nuevo + "; siguen los datos de "
+                                  + self.nombre_fichero, estilo.TEXTO_SUAVE)
             self.mostrar_pagina()
             self.actualizar_panel_simulacion()
             messagebox.showerror("Error al decodificar", self.error_hilo)
@@ -203,17 +221,22 @@ class Aplicacion:
 
         filas, recuentos = self.resultado_hilo
         self.resultado_hilo = None
+        self.nombre_fichero = fichero_nuevo
         self.mostrar_datos(filas, recuentos)
+        # Si se estaba en la pestaña Simulación, el mapa se prepara ya (si no, se hace al entrar)
+        if self.selector_pestana.get() == "Simulación":
+            self.cambiar_pestana("Simulación")
 
     # =========================================================================
     # 3. Mostrar los datos: resumen y tabla por páginas
     # =========================================================================
 
     def mostrar_datos(self, filas, recuentos):
-        """Guarda las filas decodificadas, muestra el resumen y la primera página."""
+        """Guarda las filas decodificadas (en lugar de las del fichero anterior), muestra el resumen y la primera página."""
         self.filas_todas = filas
         self.filas_visibles = filas
         self.recuentos = recuentos
+        self.opciones_filtros = None
         self.pagina_actual = 0
         self.mostrar_resumen(recuentos)
 
@@ -230,11 +253,11 @@ class Aplicacion:
                           + con_miles(len(filas)) + " mensajes", estilo.ESTADO_LISTO)
 
     def mostrar_resumen(self, recuentos):
-        """Rellena la tarjeta de resumen; con None la deja vacía (mientras se decodifica)."""
+        """Rellena la tarjeta de resumen; con None la deja vacía (sin fichero o mientras se decodifica)."""
         if recuentos is None:
             for cifra in (self.cifra_leidos, self.cifra_filas, self.cifra_descartados, self.cifra_tiempo):
                 cifra.configure(text="—")
-            self.etiqueta_detalle_resumen.configure(text="Decodificando el fichero...")
+            self.etiqueta_detalle_resumen.configure(text="Abre un fichero .ast para ver el resumen.")
             return
 
         leidos = recuentos["registros_048"] + recuentos["registros_021"]
@@ -257,6 +280,8 @@ class Aplicacion:
             + con_miles(sin_posicion) + " sin posición",
             "Bloques desincronizados: " + con_miles(recuentos["bloques_desincronizados"]),
         ]
+        if recuentos["ultimo_bloque_cortado"]:
+            lineas.append("El fichero está incompleto: el último bloque estaba cortado y no se ha leído.")
         self.etiqueta_detalle_resumen.configure(text="\n".join(lineas))
 
     def numero_de_paginas(self):
@@ -301,7 +326,7 @@ class Aplicacion:
         Si la tabla no tiene filas, pone encima lo que corresponde: la barra de progreso grande
         mientras se decodifica, o un mensaje que explica por qué está vacía y qué hacer.
         """
-        if self.recuentos is None and self.hilo is not None:
+        if self.fichero_decodificando != "":
             self.estado_vacio_tabla.place_forget()
             self.progreso_tabla.place(relx=0.5, rely=0.45, anchor="center")
             return
@@ -312,7 +337,8 @@ class Aplicacion:
             mensaje = "Abre un fichero .ast para empezar.\nSe decodificarán sus mensajes CAT048 y CAT021."
             boton = "abrir"
         elif len(self.filas_todas) == 0:
-            mensaje = "El fichero no tiene ningún mensaje dentro de la zona del filtro geográfico."
+            mensaje = ("Ningún mensaje del fichero pasa los descartes obligatorios\n"
+                       "(sin posición, fuera de la zona geográfica o CAT021 en tierra).")
         elif len(self.filas_visibles) == 0:
             mensaje = "Ningún mensaje cumple los filtros."
             boton = "quitar"
@@ -372,11 +398,15 @@ class Aplicacion:
             opciones["altitud_maxima_ft"] = None
         else:
             try:
-                opciones["altitud_maxima_ft"] = float(texto_altitud.replace(",", "."))
+                altitud = float(texto_altitud.replace(",", "."))
             except ValueError:
+                altitud = None
+            # float() también acepta "nan" o "inf", que no son una altitud
+            if altitud is None or not math.isfinite(altitud):
                 messagebox.showwarning("Altitud no válida",
                                        "La altitud máxima tiene que ser un número en ft, por ejemplo 6000.")
                 return None
+            opciones["altitud_maxima_ft"] = altitud
 
         opciones["aeronave"] = self.entrada_aeronave.get().strip()
         return opciones
@@ -398,8 +428,8 @@ class Aplicacion:
                           + con_miles(len(self.filas_todas)) + " mensajes", estilo.ESTADO_LISTO)
 
     def aplicar_filtros_con_intro(self, evento):
-        """Pulsar Intro en un campo de texto del panel de filtros equivale a "Aplicar filtros"."""
-        if len(self.filas_todas) > 0 and self.hilo is None:
+        """Pulsar Intro en un campo de texto del panel de filtros equivale a "Aplicar filtros" (si está activo)."""
+        if ventana.esta_activo(self.boton_aplicar):
             self.aplicar_filtros()
 
     def quitar_filtros(self):
@@ -447,6 +477,8 @@ class Aplicacion:
         self.porcentaje = 0
         self.resultado_hilo = None
         self.error_hilo = None
+        self.ruta_exportando = ruta
+        self.cancelar_exportacion = False
         self.hilo = threading.Thread(target=self.tarea_exportar, args=(ruta, filas), daemon=True)
         self.hilo.start()
         self.actualizar_botones()
@@ -460,9 +492,14 @@ class Aplicacion:
         try:
             exportar_csv.exportar(ruta, filas, self.guardar_porcentaje)
             self.resultado_hilo = (ruta, len(filas), time.time() - instante_inicio)
-        except OSError as error:
-            self.error_hilo = ("No se ha podido guardar el CSV (" + str(error.strerror) + ").\n"
-                               "Si el fichero está abierto en Excel, ciérralo y vuelve a intentarlo.")
+        except ExportacionCancelada:
+            return              # se ha cerrado la ventana: revisar_exportacion borra el CSV a medias
+        except PermissionError:
+            self.error_hilo = ("No se ha podido guardar el CSV: el fichero está abierto en otro programa\n"
+                               "o no hay permiso para escribir en esa carpeta. Si está abierto en Excel,\n"
+                               "ciérralo y vuelve a intentarlo.")
+        except OSError:
+            self.error_hilo = "No se ha podido guardar el CSV en esa carpeta. Prueba con otra."
         except Exception as error:
             self.error_hilo = "Error inesperado al exportar:\n" + str(error)
 
@@ -474,6 +511,16 @@ class Aplicacion:
             return
 
         self.hilo = None
+        ruta_exportada = self.ruta_exportando
+        self.ruta_exportando = None
+        if self.cancelar_exportacion:
+            # Se ha cerrado la ventana a medias: se borra el CSV incompleto (el hilo ya lo ha cerrado) y se sale
+            try:
+                os.remove(ruta_exportada)
+            except OSError:
+                pass                    # si no se puede borrar (otro programa lo tiene abierto), se cierra igual
+            self.raiz.destroy()
+            return
         self.actualizar_botones()
         if self.error_hilo is not None:
             self.poner_progreso(0)
@@ -513,7 +560,7 @@ class Aplicacion:
     def invalidar_simulacion(self):
         """
         Los datos o los filtros han cambiado: se para la simulación y se vacía el mapa.
-        Se vuelve a preparar al entrar en la pestaña Simulación o al pulsar Reproducir.
+        Se vuelve a preparar al entrar en la pestaña Simulación o al usar un control de la simulación.
         """
         self.pausa()
         mapa.borrar_todos(self)
@@ -573,7 +620,7 @@ class Aplicacion:
         self.dar_un_salto()
         if simulacion.ha_terminado(self.estado_simulacion):
             self.pausa()
-            self.poner_estado("Fin de los datos. Pulsa Reset para volver a empezar.", estilo.TEXTO_SUAVE)
+            self.poner_estado("Fin de los datos: pulsa Reset para volver a empezar", estilo.TEXTO_SUAVE)
             return
 
         ahora = time.perf_counter()
@@ -622,7 +669,8 @@ class Aplicacion:
             self.preparar_simulacion()
         inicio = self.estado_simulacion["inicio"]
         fin = self.estado_simulacion["fin"]
-        if segundo < inicio or segundo > fin:
+        # La hora se escribe en minutos: vale el minuto en que empiezan los datos (08:00 si empiezan a las 08:00:03)
+        if segundo < inicio - inicio % 60 or segundo > fin:
             messagebox.showwarning("Hora fuera de los datos",
                                    "Los datos van de las " + hora_sin_decimales(inicio) + " a las "
                                    + hora_sin_decimales(fin) + " UTC.")
@@ -630,8 +678,8 @@ class Aplicacion:
         self.saltar_a_segundo(segundo)
 
     def ir_a_hora_con_intro(self, evento):
-        """Pulsar Intro en el campo de la hora equivale al botón "Ir"."""
-        if len(self.filas_todas) > 0 and self.hilo is None:
+        """Pulsar Intro en el campo de la hora equivale al botón "Ir" (si está activo)."""
+        if ventana.esta_activo(self.boton_ir):
             self.ir_a_hora()
 
     def saltar_a_segundo(self, segundo):
@@ -768,7 +816,7 @@ class Aplicacion:
     def actualizar_mensaje_mapa(self):
         """Si en el mapa no hay nada que ver, pone en el centro un mensaje que explica por qué y qué hacer."""
         mensaje = ""
-        if self.recuentos is None and self.hilo is not None:
+        if self.fichero_decodificando != "":
             mensaje = "Decodificando el fichero..."
         elif len(self.filas_todas) == 0:
             mensaje = "No hay ningún fichero cargado.\nAbre un fichero .ast con el botón de arriba a la derecha."
@@ -810,12 +858,13 @@ class Aplicacion:
     def actualizar_botones(self):
         """
         Activa o desactiva cada control según la situación: sin datos no se puede filtrar,
-        exportar ni simular, y mientras se decodifica o se exporta no se puede tocar nada.
+        exportar ni simular, y mientras se decodifica o se exporta no se puede pulsar ningún botón.
         """
         trabajando = self.hilo is not None
         hay_datos = len(self.filas_todas) > 0 and not trabajando
 
         ventana.cambiar_estado(self.boton_abrir, not trabajando)
+        ventana.cambiar_estado(self.boton_vacio_tabla, not trabajando)    # el del centro de la tabla vacía
 
         controles_datos = [self.selector_categoria, self.casilla_blancos_puros, self.casilla_transponder_fijo,
                            self.casilla_en_tierra, self.casilla_solo_fl, self.entrada_altitud,
@@ -839,11 +888,33 @@ class Aplicacion:
         ventana.cambiar_estado(self.boton_play, hay_simulacion and not self.reproduciendo)
         ventana.cambiar_estado(self.boton_pausa, hay_simulacion and self.reproduciendo)
 
+    def al_cerrar_ventana(self):
+        """
+        Botón de cerrar la ventana. Si se está exportando, pregunta antes, porque el CSV quedaría
+        incompleto. Si se cierra igualmente, se pide al hilo que pare y revisar_exportacion borra el
+        CSV a medias y cierra. Durante la decodificación se cierra sin más: no se escribe nada.
+        """
+        if self.ruta_exportando is None:
+            self.raiz.destroy()
+            return
+        cerrar = messagebox.askyesno("Exportación en curso", "Se está exportando el CSV. Si cierras ahora "
+                                                             "quedará incompleto.\n¿Cerrar igualmente?")
+        if not cerrar:
+            return
+        if self.ruta_exportando is None:
+            self.raiz.destroy()                 # la exportación ha terminado mientras se preguntaba
+        else:
+            self.cancelar_exportacion = True
+
     def mostrar_error_inesperado(self, tipo, valor, traza):
         """Cualquier error no previsto en un botón se muestra en un diálogo, sin traza."""
         messagebox.showerror("Error inesperado",
                              "Ha ocurrido un error inesperado:\n" + str(valor)
                              + "\n\nLos datos cargados siguen disponibles.")
+
+
+class ExportacionCancelada(Exception):
+    """La lanza guardar_porcentaje para parar la escritura del CSV cuando se cierra la ventana a medias."""
 
 
 def con_miles(numero):

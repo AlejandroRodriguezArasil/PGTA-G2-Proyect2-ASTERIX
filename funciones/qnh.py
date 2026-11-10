@@ -25,7 +25,7 @@ Ejemplo del enunciado (un avión despegando):
 
 Como hay que recordar el último BP de cada avión, se guarda un estado por
 dirección Modo S (TA). Hay un estado para CAT048 y otro para CAT021, y solo
-se actualiza con los mensajes que se quedan en el CSV.
+se actualiza con los mensajes que se quedan en la tabla.
 """
 
 from funciones import decisiones

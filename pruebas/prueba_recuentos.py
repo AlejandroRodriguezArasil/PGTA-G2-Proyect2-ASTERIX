@@ -31,7 +31,7 @@ PRUEBAS = [
 def probar_fichero(nombre_fichero, esperado_048, esperado_021):
     """Decodifica un fichero y compara sus recuentos con los esperados. Devuelve True si cuadran todos."""
     print(nombre_fichero)
-    filas, recuentos = decodificar_fichero(os.path.join(CARPETA_AST, nombre_fichero))
+    _, recuentos = decodificar_fichero(os.path.join(CARPETA_AST, nombre_fichero))
 
     esperado = {"bloques_desincronizados": 0}
     esperado.update(esperado_048)

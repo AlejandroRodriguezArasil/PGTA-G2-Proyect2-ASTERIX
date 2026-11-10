@@ -77,6 +77,13 @@ def leer_cabecera_bloque(datos, posicion):
     return categoria, longitud_bloque
 
 
+def bloque_cortado(datos, posicion):
+    """True si el bloque que empieza en 'posicion' no cabe entero en el fichero (el fichero se corta)."""
+    if posicion + LONGITUD_CABECERA_BLOQUE > len(datos):
+        return True
+    return posicion + leer_entero(datos, posicion + 1, 2) > len(datos)
+
+
 def leer_fspec(datos, posicion):
     """
     Lee el FSPEC de un registro y devuelve (lista_frn, posicion_siguiente).

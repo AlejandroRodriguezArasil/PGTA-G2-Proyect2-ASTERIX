@@ -58,6 +58,15 @@ MARGEN_CUADRO_INFO = 20
 FLECHA_RECOGIDA = "▸"
 FLECHA_DESPLEGADA = "▾"
 
+# Desplazamiento (ver Desplazador): delta que equivale a una unidad. En la tabla, un clic de la
+# rueda (120) baja una fila, como hace Tk; en los paneles, cada 6 de delta es un píxel, como hace
+# customtkinter (20 píxeles por clic).
+PASO_DESPLAZAMIENTO_TABLA = 120
+PASO_DESPLAZAMIENTO_PANEL = 6
+# En horizontal la unidad de la tabla es un píxel: con 120 por unidad (lo que hace Tk) un clic solo
+# movía 1 píxel. Con 3 por píxel, un clic mueve 40 píxeles y el panel táctil se nota.
+PASO_DESPLAZAMIENTO_TABLA_HORIZONTAL = 3
+
 # Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
 COLOR_ORIGINAL_BOTONES = {}
 
@@ -311,6 +320,77 @@ class Tooltip:
             self.ventana_ayuda = None
 
 
+# =============================================================================
+# Desplazamiento con la rueda del ratón y con el panel táctil
+# =============================================================================
+
+class Desplazador:
+    """
+    Cuenta cuánto hay que desplazar con la rueda del ratón o con el panel táctil (Windows).
+    Cada clic de la rueda llega con delta = 120, pero el panel táctil manda muchos eventos con
+    deltas pequeños (10, 20...). Si cada delta se divide por separado, como hacen Tk y
+    customtkinter, los pequeños se pierden y el panel táctil no mueve nada. Aquí se van sumando
+    y se desplaza una unidad cada vez que la suma llega a 'paso': con la rueda el resultado es el
+    mismo de siempre y con el panel táctil el movimiento es suave.
+    """
+
+    def __init__(self, paso):
+        self.paso = paso
+        self.acumulado = 0
+
+    def unidades(self, delta):
+        """Suma el delta y devuelve cuántas unidades hay que desplazar (positivo: hacia abajo o a la derecha)."""
+        self.acumulado = self.acumulado - delta     # delta negativo = rueda hacia uno mismo = bajar
+        unidades = int(self.acumulado / self.paso)
+        self.acumulado = self.acumulado - unidades * self.paso
+        return unidades
+
+
+def activar_desplazamiento_tabla(tabla):
+    """
+    Rueda y panel táctil en la tabla: <MouseWheel> en vertical y <Shift-MouseWheel> en horizontal
+    (así llega en Windows el desplazamiento lateral del panel táctil).
+    """
+    vertical = Desplazador(PASO_DESPLAZAMIENTO_TABLA)
+    horizontal = Desplazador(PASO_DESPLAZAMIENTO_TABLA_HORIZONTAL)
+
+    def al_mover_vertical(evento):
+        unidades = vertical.unidades(evento.delta)
+        if unidades != 0:
+            tabla.yview_scroll(unidades, "units")
+        return "break"          # "break": que no actúe además el desplazamiento propio de Tk
+
+    def al_mover_horizontal(evento):
+        unidades = horizontal.unidades(evento.delta)
+        if unidades != 0:
+            tabla.xview_scroll(unidades, "units")
+        return "break"
+
+    tabla.bind("<MouseWheel>", al_mover_vertical)
+    tabla.bind("<Shift-MouseWheel>", al_mover_horizontal)
+
+
+class PanelDesplazable(ctk.CTkScrollableFrame):
+    """
+    CTkScrollableFrame que también se desplaza con el panel táctil. customtkinter recibe la rueda
+    en toda la ventana y, si el ratón está encima del panel (o de algo de dentro, como el texto
+    del avión), lo desplaza con el delta dividido entre 6 y sin decimales. Aquí se sustituye ese
+    método por uno que acumula el delta con un Desplazador.
+    """
+
+    def __init__(self, padre, **opciones):
+        super().__init__(padre, **opciones)
+        self.desplazador = Desplazador(PASO_DESPLAZAMIENTO_PANEL)
+
+    def _mouse_wheel_all(self, evento):
+        """Rueda o panel táctil en cualquier parte de la ventana: solo se mueve si es encima de este panel."""
+        if not self.check_if_master_is_canvas(evento.widget):
+            return
+        unidades = self.desplazador.unidades(evento.delta)
+        if unidades != 0 and self._parent_canvas.yview() != (0.0, 1.0):
+            self._parent_canvas.yview_scroll(unidades, "units")
+
+
 def cambiar_estado(elemento, activo):
     """
     Activa o desactiva un control. Los botones desactivados se ponen en gris para que se vea
@@ -338,6 +418,11 @@ def cambiar_estado(elemento, activo):
         elemento.configure(state="disabled")
         if es_boton:
             elemento.configure(fg_color=estilo.DESACTIVADO_FONDO)
+
+
+def esta_activo(elemento):
+    """True si el control está activo (el último cambiar_estado; al crearse, todos lo están)."""
+    return ESTADO_CONTROLES.get(elemento, True)
 
 
 def cambiar_texto(etiqueta, texto):
@@ -480,7 +565,7 @@ def crear_tarjeta_filtros(app, padre):
     app.casilla_blancos_puros = crear_casilla(tarjeta, "Quitar blancos puros (CAT048)", None)
     app.casilla_blancos_puros.pack(fill="x", padx=16, pady=4)
     Tooltip(app.casilla_blancos_puros, "Quita los mensajes CAT048 que no vienen de una interrogación "
-                                       "Modo S: I048/020 TYP = 0, 1, 2 o 3 (sin detección, PSR, SSR, SSR + PSR).")
+                                       "Modo S: I048/020 TYP = 0, 1, 2 o 3 (sin detección, PSR, SSR o PSR+SSR).")
     app.casilla_transponder_fijo = crear_casilla(tarjeta, "Quitar transponder fijo (7777)", None)
     app.casilla_transponder_fijo.pack(fill="x", padx=16, pady=4)
     Tooltip(app.casilla_transponder_fijo, "Quita los mensajes con Modo 3/A 7777 o con el bit RAB = 1: "
@@ -595,6 +680,7 @@ def crear_tabla(app, marco):
         app.tabla.column(columna, minwidth=40, stretch=False, anchor="center")
     ajustar_anchos_columnas(app, [])
     app.tabla.tag_configure("alterna", background=estilo.TABLA_FILA_ALTERNA)
+    activar_desplazamiento_tabla(app.tabla)
 
     barra_vertical = ctk.CTkScrollbar(marco, orientation="vertical", command=app.tabla.yview)
     barra_horizontal = ctk.CTkScrollbar(marco, orientation="horizontal", command=app.tabla.xview)
@@ -676,7 +762,7 @@ def crear_pestana_datos(app):
     pestana.grid_rowconfigure(0, weight=1)
     pestana.grid_columnconfigure(1, weight=1)
 
-    panel = ctk.CTkScrollableFrame(pestana, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
+    panel = PanelDesplazable(pestana, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
     panel.grid(row=0, column=0, sticky="ns", padx=(0, estilo.MARGEN))
     crear_tarjeta_resumen(app, panel)
     crear_tarjeta_filtros(app, panel)
@@ -753,7 +839,8 @@ def crear_casillas_simulacion(app, fila_2):
     app.casilla_etiquetas = crear_casilla(fila_2, "Etiquetas", app.cambiar_etiquetas)
     app.casilla_etiquetas.select()
     app.casilla_etiquetas.pack(side="left")
-    Tooltip(app.casilla_etiquetas, "Callsign de cada avión (o su dirección Modo S si no tiene).")
+    Tooltip(app.casilla_etiquetas, "Callsign de cada avión (o su dirección Modo S si no tiene). Los blancos puros "
+                                   "llevan su tipo y número, por ejemplo PSR 45.")
     app.casilla_estelas = crear_casilla(fila_2, "Estelas", app.cambiar_estelas)
     app.casilla_estelas.select()
     app.casilla_estelas.pack(side="left", padx=(16, 0))
@@ -843,7 +930,7 @@ def crear_panel_simulacion(app, padre):
     pulsado. En pantallas bajas (portátiles) el panel se desplaza con la rueda del ratón, como
     el de la pestaña Datos.
     """
-    panel = ctk.CTkScrollableFrame(padre, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
+    panel = PanelDesplazable(padre, width=estilo.ANCHO_PANEL_LATERAL, fg_color="transparent")
     panel.grid(row=1, column=1, sticky="nsew")
     crear_tarjeta_leyenda(app, panel)
     crear_tarjeta_en_el_mapa(app, panel)

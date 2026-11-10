@@ -11,7 +11,7 @@ las columnas extra (posición WGS84 y altitud corregida). Cada registro que se
 queda produce una fila (diccionario columna -> valor), y decodificar_fichero la
 guarda en la lista que devuelve, ya como tupla (ver exportar_csv.py).
 
-Descartes obligatorios (no aparecen en el CSV):
+Descartes obligatorios (no entran en la tabla ni en el CSV):
     - CAT048 y CAT021 fuera de 40,9-41,7° N y 1,5-2,6° E (filtro geográfico del enunciado)
     - CAT021 con GBS = 1, en tierra
     - mensajes sin posición (duda 10)
@@ -46,7 +46,7 @@ def crear_recuentos():
         "filas_048_sin_fl": 0,
         "filas_021": 0,
         "bloques_desincronizados": 0,
-        "bloques_otra_categoria": 0,
+        "ultimo_bloque_cortado": False,     # True si el fichero se corta en mitad del último bloque
         "segundos": 0.0,
     }
 
@@ -162,7 +162,8 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
         recuentos: diccionario con los contadores del resumen
     informar_progreso, si se da, es una función que recibe el porcentaje del fichero leído (0-100)
     y los registros leídos hasta ahora. La ventana la usa para mover la barra de progreso.
-    Lanza ValueError si el fichero no es ASTERIX.
+    Lanza ValueError si el fichero no es ASTERIX. Si se corta en mitad del último bloque, lee hasta el
+    bloque anterior y lo indica con recuentos["ultimo_bloque_cortado"] = True.
     """
     instante_inicio = time.time()
 
@@ -177,8 +178,14 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
     posicion = 0
     siguiente_aviso = 0
     while posicion < len(datos):
+        # Fichero cortado: si el último bloque no está entero, se para aquí y el resumen lo avisa.
+        # Si ya el primero no cabe, no es un fichero ASTERIX y leer_cabecera_bloque lo rechaza.
+        if posicion > 0 and lector.bloque_cortado(datos, posicion):
+            recuentos["ultimo_bloque_cortado"] = True
+            break
         categoria, longitud_bloque = lector.leer_cabecera_bloque(datos, posicion)
 
+        # Un bloque de otra categoría no es un error: se salta entero
         if categoria == CATEGORIA_048 or categoria == CATEGORIA_021:
             filas_bloque = decodificar_bloque(datos, posicion, longitud_bloque, categoria,
                                               estados_qnh, recuentos)
@@ -190,9 +197,6 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
                 else:
                     recuentos["filas_021"] += 1
                 filas.append(exportar_csv.fila_a_tupla(fila))
-        else:
-            # Bloque de otra categoría: no es un error, se salta entero
-            recuentos["bloques_otra_categoria"] += 1
 
         posicion = posicion + longitud_bloque
 

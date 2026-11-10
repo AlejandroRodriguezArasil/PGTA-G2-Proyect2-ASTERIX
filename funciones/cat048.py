@@ -341,7 +341,7 @@ def saltar_i048_120(datos, posicion):
 
 
 def saltar_item_048(frn, datos, posicion):
-    """Salta un DI en rojo y devuelve la posición del DI siguiente."""
+    """Salta un DI que el enunciado no pide y devuelve la posición del DI siguiente."""
     if frn in LONGITUD_FIJA_A_SALTAR:
         return posicion + LONGITUD_FIJA_A_SALTAR[frn]
     if frn == FRN_I048_030:
@@ -378,7 +378,7 @@ def decodificar_registro(datos, posicion, lista_frn):
             funcion = DECODIFICADORES_048[frn]
             posicion = funcion(datos, posicion, fila)
         else:
-            # DI en rojo: solo se calcula su longitud para pasar al siguiente.
+            # DI que el enunciado no pide: solo se calcula su longitud para pasar al siguiente.
             posicion = saltar_item_048(frn, datos, posicion)
 
     return fila, posicion

@@ -4,6 +4,9 @@ geo.py
 Paso 3 del flujo: COORDENADAS.
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
+Es la traducción a Python de GeoUtils.cs, la librería de transformaciones de coordenadas que da la
+asignatura. La proyección estereográfica no se usa en este proyecto, pero se usará en el Proyecto 3.
+
 Port a Python de las funciones de GeoUtils.cs (código de la asignatura,
 carpeta Coordinate-transform) que hacen falta. Se mantienen los nombres del
 original para poder compararlos línea a línea. Cada función indica su

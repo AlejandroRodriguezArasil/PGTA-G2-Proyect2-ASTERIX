@@ -5,9 +5,9 @@ REM Genera el ejecutable de la aplicacion: un unico .exe aislado, como pide el e
 REM
 REM Uso: doble clic en este fichero. Solo hace falta tener Python 3 instalado.
 REM   1. Busca Python: primero el lanzador "py -3" y, si no esta, "python".
-REM   2. Si no existe el entorno .venv, lo crea e instala requirements.txt y
-REM      PyInstaller (la primera vez tarda unos minutos y necesita internet).
-REM      Si .venv ya existe pero le falta PyInstaller, instala solo PyInstaller.
+REM   2. Si no existe el entorno .venv, lo crea. Despues instala siempre
+REM      requirements.txt y PyInstaller: la primera vez tarda unos minutos y
+REM      necesita internet; las siguientes, pip solo comprueba que este todo.
 REM   3. Ejecuta PyInstaller y deja DecodificadorASTERIX.exe en esta carpeta,
 REM      junto a main.py. Lo que PyInstaller genera de paso (la carpeta build y
 REM      el .spec) va a una carpeta temporal de %TEMP% que se borra al acabar.
@@ -63,27 +63,17 @@ echo       Se usa: %PYTHON%
 REM --- 2. Entorno .venv con las librerias y PyInstaller ------------------------
 echo [2/4] Preparando el entorno .venv...
 if exist "%PYTHON_VENV%" goto venv_existe
-
-echo       No existe: se crea y se instalan requirements.txt y PyInstaller %VERSION_PYINSTALLER%.
-echo       La primera vez tarda unos minutos y necesita internet.
+echo       No existe: se crea. La primera vez tarda unos minutos y necesita internet.
 %PYTHON% -m venv .venv
 if errorlevel 1 goto error_venv
 set "VENV_NUEVO=1"
-"%PYTHON_VENV%" -m pip install --disable-pip-version-check -r requirements.txt pyinstaller==%VERSION_PYINSTALLER%
-if errorlevel 1 goto error_instalar
-goto venv_listo
 
 :venv_existe
-"%PYTHON_VENV%" -m PyInstaller --version >nul 2>&1
-if not errorlevel 1 (
-    echo       Ya existe y tiene PyInstaller.
-    goto venv_listo
-)
-echo       Ya existe, pero le falta PyInstaller: se instala %VERSION_PYINSTALLER%.
-"%PYTHON_VENV%" -m pip install --disable-pip-version-check pyinstaller==%VERSION_PYINSTALLER%
+REM Siempre se instalan las dos cosas: si ya estan, pip solo lo comprueba y va rapido.
+REM Asi un .venv a medias (por ejemplo, de un pip install que fallo) se completa.
+echo       Instalando requirements.txt y PyInstaller %VERSION_PYINSTALLER% (si ya estan, solo se comprueba)...
+"%PYTHON_VENV%" -m pip install --disable-pip-version-check -r requirements.txt pyinstaller==%VERSION_PYINSTALLER%
 if errorlevel 1 goto error_instalar
-
-:venv_listo
 
 REM --- 3. PyInstaller ----------------------------------------------------------
 echo [3/4] Generando DecodificadorASTERIX.exe con PyInstaller...

@@ -16,7 +16,6 @@ from funciones import decisiones
 from funciones.exportar_csv import valor
 
 CATEGORIA_048 = 48
-CATEGORIA_021 = 21
 ESTADOS_EN_TIERRA = (1, 3)      # I048/230 STAT: 1 y 3 = "aircraft on ground" (CAT048 v1.31, §5.2.23)
 PIES_POR_FL = 100
 
@@ -36,7 +35,7 @@ def filtrar_por_categoria(filas, categoria):
 def es_blanco_puro(fila):
     """
     True si el mensaje es un blanco puro (duda 13): CAT048 con el TYP de I048/020 en
-    decisiones.TIPOS_BLANCO_PURO (0, 1, 2 o 3: sin detección, PSR, SSR y SSR + PSR).
+    decisiones.TIPOS_BLANCO_PURO (0, 1, 2 o 3: sin detección, PSR, SSR y PSR+SSR).
     Los TYP 4 a 7 vienen de una interrogación Modo S y no lo son. También lo usa el mapa.
     """
     if valor(fila, "CAT") != CATEGORIA_048:
