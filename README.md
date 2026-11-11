@@ -4,16 +4,21 @@ PGTA · Proyecto 2 · Grupo G2 · Repositorio: https://github.com/AlejandroRodri
 
 Aplicación de escritorio que decodifica ficheros ASTERIX con mensajes CAT048 (radar de Barcelona) y CAT021 (ADS-B). Muestra los mensajes en una tabla, permite filtrarlos, exportarlos a CSV y simular las trayectorias en un mapa.
 
-- **Manual de uso** (guía visual, paso a paso): `manual/Manual_de_uso.pdf`.
+- **Manual de uso** (guía visual, paso a paso): `manual/Manual_de_uso.pdf` (en la entrega, también en `report/`).
 - **Este README:** la parte técnica, es decir, de qué dato sale cada funcionalidad, qué criterio aplica y en qué parte del código está.
 
 ## Entrega
 
 ```
-DecodificadorASTERIX.exe    el ejecutable (lo genera crear_exe.bat)
-Manual_de_uso.pdf           el manual de uso (copia de manual/Manual_de_uso.pdf)
-Codigo/                     el proyecto, igual que el repositorio de GitHub (con los .bat)
-Documentacion/              la planificación y el flujo del motor de decodificación
+Group_02_P2.zip
+├── DecodificadorASTERIX.exe           el ejecutable
+├── code/                              este proyecto, igual que el repositorio de GitHub
+├── report/
+│   ├── Flujo_motor_decodificacion.pdf  explicación del código de la decodificación
+│   ├── Manual_de_uso.pdf               guía de uso
+│   ├── README.md                       este mismo README
+│   └── Planificacion.pdf               planificación del proyecto
+└── Enlace_GitHub.txt                  enlace al repositorio
 ```
 
 Los ficheros .ast no van en la entrega: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
