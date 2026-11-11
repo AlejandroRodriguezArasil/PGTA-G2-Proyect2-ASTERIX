@@ -280,8 +280,11 @@ class Aplicacion:
             + con_miles(sin_posicion) + " sin posición",
             "Bloques desincronizados: " + con_miles(recuentos["bloques_desincronizados"]),
         ]
-        if recuentos["ultimo_bloque_cortado"]:
+        if recuentos["lectura_parada"] == lector.BLOQUE_CORTADO:
             lineas.append("El fichero está incompleto: el último bloque estaba cortado y no se ha leído.")
+        elif recuentos["lectura_parada"] == lector.LEN_NO_VALIDO:
+            lineas.append("El fichero tiene un bloque dañado (LEN no válido) en el octeto "
+                          + con_miles(recuentos["octeto_parada"]) + ": se ha leído hasta ahí.")
         self.etiqueta_detalle_resumen.configure(text="\n".join(lineas))
 
     def numero_de_paginas(self):

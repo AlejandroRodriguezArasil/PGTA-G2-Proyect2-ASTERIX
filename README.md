@@ -75,10 +75,16 @@ Al ejecutar `crear_exe.bat` aparecen además `.venv/` y `DecodificadorASTERIX.ex
 | CAT021 | Los 9 DI que pide el enunciado, incluido el BPS del Reserved Expansion Field | `funciones/cat021.py` |
 | Fichero completo | Une los pasos, aplica los descartes y cuenta los recuentos del resumen. Se ejecuta en un hilo aparte, con barra de progreso | `funciones/decodificar.py`, `main.decodificar_en_segundo_plano` |
 
-- **Bloque desincronizado:** si las longitudes de los registros de un bloque no cuadran con su LEN, el bloque se cuenta como «desincronizado» en el resumen y se sigue con el siguiente.
-- **Fichero cortado:** si se corta en mitad del último bloque, se lee hasta el bloque anterior y el resumen lo avisa (`lector.bloque_cortado`).
 - **Fichero vacío o que no es ASTERIX:** se rechaza con un mensaje.
 - **Si falla al abrir otro fichero:** se mantienen los datos que había cargados (tabla, filtros y simulación).
+
+### Ficheros dañados
+
+- **Fichero cortado:** si se corta en mitad del último bloque, se lee hasta el bloque anterior y el resumen lo avisa.
+- **Bloque de otra categoría:** no es un error; se salta entero y se sigue con el siguiente.
+- **Registro mal formado:** si las longitudes de los registros de un bloque no cuadran con su LEN, el bloque se cuenta como «desincronizado» en el resumen y se sigue con el siguiente.
+- **LEN no válido (menor que 3):** en el primer bloque, el fichero se rechaza; más adelante, se para en ese bloque, se queda todo lo leído y el resumen dice en qué octeto está. Este caso y el del fichero cortado los comprueba `lector.problema_bloque`.
+- **Límites:** ASTERIX no tiene marcas de sincronización ni suma de control. Si un LEN está mal, lo que viene detrás no se puede recuperar de forma fiable, y un valor cambiado dentro de un registro de longitud correcta no se puede detectar. No se usan heurísticas que la norma no define.
 
 ### Descartes obligatorios
 

@@ -46,7 +46,8 @@ def crear_recuentos():
         "filas_048_sin_fl": 0,
         "filas_021": 0,
         "bloques_desincronizados": 0,
-        "ultimo_bloque_cortado": False,     # True si el fichero se corta en mitad del último bloque
+        "lectura_parada": "",       # si se para antes del final: lector.BLOQUE_CORTADO o lector.LEN_NO_VALIDO
+        "octeto_parada": 0,         # octeto donde empieza el bloque en el que se ha parado
         "segundos": 0.0,
     }
 
@@ -162,8 +163,9 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
         recuentos: diccionario con los contadores del resumen
     informar_progreso, si se da, es una función que recibe el porcentaje del fichero leído (0-100)
     y los registros leídos hasta ahora. La ventana la usa para mover la barra de progreso.
-    Lanza ValueError si el fichero no es ASTERIX. Si se corta en mitad del último bloque, lee hasta el
-    bloque anterior y lo indica con recuentos["ultimo_bloque_cortado"] = True.
+    Lanza ValueError si el fichero no es ASTERIX. Si se corta en mitad del último bloque o un bloque
+    tiene un LEN no válido, lee hasta el bloque anterior y lo indica en recuentos["lectura_parada"]
+    (el motivo) y recuentos["octeto_parada"] (dónde).
     """
     instante_inicio = time.time()
 
@@ -178,10 +180,13 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
     posicion = 0
     siguiente_aviso = 0
     while posicion < len(datos):
-        # Fichero cortado: si el último bloque no está entero, se para aquí y el resumen lo avisa.
-        # Si ya el primero no cabe, no es un fichero ASTERIX y leer_cabecera_bloque lo rechaza.
-        if posicion > 0 and lector.bloque_cortado(datos, posicion):
-            recuentos["ultimo_bloque_cortado"] = True
+        # Bloque que no se puede leer (fichero cortado o LEN no válido): se para aquí, se queda todo
+        # lo leído y el resumen lo avisa. Si es el primero, no es un fichero ASTERIX y
+        # leer_cabecera_bloque lo rechaza.
+        problema = lector.problema_bloque(datos, posicion)
+        if posicion > 0 and problema != "":
+            recuentos["lectura_parada"] = problema
+            recuentos["octeto_parada"] = posicion
             break
         categoria, longitud_bloque = lector.leer_cabecera_bloque(datos, posicion)
 

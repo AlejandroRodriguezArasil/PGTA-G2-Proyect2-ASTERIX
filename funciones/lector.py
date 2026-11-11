@@ -20,6 +20,10 @@ LONGITUD_CABECERA_BLOQUE = 3   # CAT (1 octeto) + LEN (2 octetos)
 BIT_FX = 0x01                  # bit 1 de un octeto: FX (Field Extension)
 FRN_POR_OCTETO_FSPEC = 7       # cada octeto del FSPEC indica 7 FRN (bits 8 a 2)
 
+# Problemas que puede tener un bloque (los devuelve problema_bloque)
+BLOQUE_CORTADO = "cortado"     # el bloque no cabe entero en el fichero
+LEN_NO_VALIDO = "len"          # LEN menor que la cabecera (3 octetos)
+
 
 def leer_fichero(ruta):
     """Devuelve todo el contenido del fichero .ast como bytes."""
@@ -57,31 +61,40 @@ def longitud_fx(datos, posicion):
     return longitud
 
 
+def problema_bloque(datos, posicion):
+    """
+    Comprueba si el bloque que empieza en 'posicion' se puede leer. Devuelve:
+        ""              si el bloque está bien
+        BLOQUE_CORTADO  si no cabe entero en el fichero (el fichero se corta)
+        LEN_NO_VALIDO   si su LEN es menor que la cabecera: no puede ser un bloque ASTERIX
+    """
+    if posicion + LONGITUD_CABECERA_BLOQUE > len(datos):
+        return BLOQUE_CORTADO
+
+    longitud_bloque = leer_entero(datos, posicion + 1, 2)
+    if longitud_bloque < LONGITUD_CABECERA_BLOQUE:
+        return LEN_NO_VALIDO
+    if posicion + longitud_bloque > len(datos):
+        return BLOQUE_CORTADO
+    return ""
+
+
 def leer_cabecera_bloque(datos, posicion):
     """
     Lee CAT y LEN del bloque que empieza en 'posicion'.
     Devuelve (categoria, longitud_bloque).
     Lanza ValueError si los octetos no pueden ser un bloque ASTERIX.
     """
-    if posicion + LONGITUD_CABECERA_BLOQUE > len(datos):
-        raise ValueError("el fichero se corta en mitad de un bloque (octeto " + str(posicion) + ")")
+    problema = problema_bloque(datos, posicion)
+    if problema == BLOQUE_CORTADO:
+        raise ValueError("el bloque del octeto " + str(posicion) + " no cabe entero en el fichero")
+    if problema == LEN_NO_VALIDO:
+        raise ValueError("bloque con LEN = " + str(leer_entero(datos, posicion + 1, 2))
+                         + " en el octeto " + str(posicion))
 
     categoria = datos[posicion]
     longitud_bloque = leer_entero(datos, posicion + 1, 2)
-
-    if longitud_bloque < LONGITUD_CABECERA_BLOQUE:
-        raise ValueError("bloque con LEN = " + str(longitud_bloque) + " en el octeto " + str(posicion))
-    if posicion + longitud_bloque > len(datos):
-        raise ValueError("el LEN del bloque del octeto " + str(posicion) + " se sale del fichero")
-
     return categoria, longitud_bloque
-
-
-def bloque_cortado(datos, posicion):
-    """True si el bloque que empieza en 'posicion' no cabe entero en el fichero (el fichero se corta)."""
-    if posicion + LONGITUD_CABECERA_BLOQUE > len(datos):
-        return True
-    return posicion + leer_entero(datos, posicion + 1, 2) > len(datos)
 
 
 def leer_fspec(datos, posicion):
