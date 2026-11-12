@@ -4,13 +4,15 @@ exportar_csv.py
 Paso 5 del flujo: CSV.
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
-Define las 97 columnas, cómo se guarda una fila en memoria (una tupla con un
+Define las 82 columnas, cómo se guarda una fila en memoria (una tupla con un
 valor por columna) y cómo se escribe el CSV con el formato que pide el enunciado:
     - delimitador punto y coma (;) y separador decimal coma (,)
     - una columna por subcampo y una fila por mensaje, en el orden del fichero
     - celda vacía cuando el mensaje no trae ese dato
 
-Todos los CSV tienen las mismas columnas, sea cual sea el fichero (duda 11).
+Todos los CSV tienen las mismas columnas, sea cual sea el fichero. El fichero combinado da
+un solo CSV, con CAT048 y CAT021 mezclados en el orden del fichero: la columna CAT dice de
+qué categoría es cada fila.
 """
 
 import csv
@@ -23,8 +25,9 @@ COLUMNAS = [
     "CAT",
     "SAC", "SIC",                       # I048/010 - I021/010
     "TIME", "TIME_S",                   # I048/140 - I021/073
-    "LAT", "LON", "H",                  # WGS84: calculada (CAT048) o I021/131 + FL (CAT021)
-    "H_SIN_FL",                         # 1 si no había FL para calcular H (dudas 8 y 9)
+    "LAT", "LON",                       # WGS84: calculadas (CAT048) o de I021/131 (CAT021)
+    "H",                                # altura WGS84, solo CAT048 (CAT021 no la tiene)
+    "H_SIN_FL",                         # solo CAT048: 1 si no había FL y H se calculó con altura 0
     "TA",                               # I048/220 - I021/080
     "TI",                               # I048/240 - I021/170
     "MODE3A",                           # I048/070 - I021/070
@@ -61,12 +64,6 @@ COLUMNAS = [
     "I048_170_TRE", "I048_170_GHO", "I048_170_SUP", "I048_170_TCC",
     "I048_230_COM", "I048_230_STAT", "I048_230_SI", "I048_230_MSSC",
     "I048_230_ARC", "I048_230_AIC", "I048_230_B1A", "I048_230_B1B",
-
-    # --- CAT021: I021/040 Target Report Descriptor ---
-    "I021_040_ATP", "I021_040_ARC", "I021_040_RC", "I021_040_RAB",
-    "I021_040_DCR", "I021_040_GBS", "I021_040_SIM", "I021_040_TST",
-    "I021_040_SAA", "I021_040_CL",
-    "I021_040_IPC", "I021_040_NOGO", "I021_040_CPR", "I021_040_LDPJ", "I021_040_RCF",
 ]
 
 # Valores calculados: se escriben con un número fijo de decimales.
@@ -100,7 +97,7 @@ def formatear_valor(columna, valor):
 # Cómo se guarda una fila en memoria
 # -----------------------------------------------------------------------------
 # Al decodificar, cada mensaje es un diccionario (columna -> valor). Para guardarlo se
-# pasa a una tupla con los 97 valores en el orden de COLUMNAS (None si no hay dato),
+# pasa a una tupla con los 82 valores en el orden de COLUMNAS (None si no hay dato),
 # que ocupa menos RAM que el diccionario. Un valor se lee con valor(fila, "FL").
 
 # Posición de cada columna dentro de la tupla: "CAT" -> 0, "SAC" -> 1, ...

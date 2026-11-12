@@ -166,6 +166,7 @@
   th { background: var(--tabla-cabecera); font-weight: 600; }
   tr:nth-child(even) td { background: var(--tabla-alterna); }
   td.control { white-space: nowrap; font-weight: 600; }
+  td.evento-icono { text-align: center; font-weight: 700; font-size: 11pt; }
 
   /* Punto de color delante del nombre del color (el texto sigue en oscuro para que se lea bien) */
   .punto { display: inline-block; width: 3mm; height: 3mm; border-radius: 50%; margin: 0 1mm 0 0.5mm; vertical-align: -0.2mm; }
@@ -293,7 +294,7 @@
       <div class="texto">
         <p>Al acabar, <b>Resumen del fichero</b> muestra los registros leídos, los mensajes que hay en la tabla, los descartados y los segundos que ha tardado.</p>
         <p>Debajo está el detalle por categoría y por motivo de descarte.</p>
-        <p>No entran en la tabla los mensajes fuera de 40,9–41,7° N y 1,5–2,6° E, los CAT021 en tierra y los mensajes sin posición.</p>
+        <p>No entran en la tabla los mensajes fuera de 40,9–41,7° N y 1,5–2,6° E, los CAT021 en tierra y los mensajes sin posición (sin ella no se puede comprobar la zona).</p>
       </div>
       <img class="captura" src="capturas/resumen.png" style="width: 58mm;" alt="Resumen del fichero">
     </div>
@@ -307,7 +308,7 @@
   <img class="captura" src="capturas/tabla.png" alt="Tabla de mensajes">
   <ul class="marcas">
     <li><span class="marca">1</span><b>Contador:</b> qué mensajes se ven y cuántos hay en total.</li>
-    <li><span class="marca">2</span><b>Barra horizontal:</b> hay una columna por dato (97 en total). Arrástrala para ver el resto de columnas.</li>
+    <li><span class="marca">2</span><b>Barra horizontal:</b> hay una columna por dato (82 en total). Arrástrala para ver el resto de columnas.</li>
     <li><span class="marca">3</span><b>Anterior / Siguiente:</b> la tabla va en páginas de 500 mensajes.</li>
   </ul>
   <div class="nota">
@@ -347,7 +348,7 @@
   <h3>Los otros filtros</h3>
   <ul>
     <li><b>Quitar blancos puros (CAT048):</b> quita los mensajes que no vienen de una interrogación Modo S.</li>
-    <li><b>Quitar transponder fijo (7777):</b> quita los mensajes con Modo 3/A 7777 o con RAB = 1.</li>
+    <li><b>Quitar transponder fijo (7777):</b> quita los mensajes con Modo 3/A 7777.</li>
     <li><b>Aeronave:</b> busca el texto en el callsign, la dirección Modo S o el Modo 3/A.</li>
   </ul>
 </section>
@@ -383,8 +384,8 @@
   <h3>Cómo es el CSV</h3>
   <ul>
     <li>Separador <b>;</b> y coma decimal, para que Excel en español lo abra bien con doble clic.</li>
-    <li>Una fila por mensaje, en el orden del fichero. Siempre las mismas 97 columnas, en el mismo orden, para cualquier fichero; la celda queda vacía si el mensaje no trae ese dato.</li>
-    <li>Columnas extra: <b>LAT</b>, <b>LON</b> y <b>H</b> en WGS84, y <b>ALT_CORREGIDA_FT</b> (altitud corregida por QNH por debajo de 6000 ft).</li>
+    <li>Una fila por mensaje, en el orden del fichero. Siempre las mismas 82 columnas, en el mismo orden, para cualquier fichero; la celda queda vacía si el mensaje no trae ese dato.</li>
+    <li>Columnas extra: <b>LAT</b>, <b>LON</b> y <b>H</b> en WGS84 (H solo en CAT048), y <b>ALT_CORREGIDA_FT</b> (altitud corregida por QNH por debajo de 6000 ft).</li>
   </ul>
 
   <div class="nota">
@@ -409,49 +410,79 @@
 
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>Usa los controles de encima del mapa. A su derecha está la <b>Hora de la simulación (UTC)</b>.</p></div>
+    <div class="contenido"><p>Usa los controles de encima del mapa. A su derecha está la <b>Hora de la simulación (UTC)</b>, con <b>Ir a la hora</b> y la barra de tiempo.</p></div>
   </div>
   <img class="captura" src="capturas/controles.png" alt="Controles de la simulación">
 
   <table>
-    <tr><th style="width: 9mm;"></th><th style="width: 32mm;">Control</th><th>Qué hace</th></tr>
+    <tr><th style="width: 9mm;"></th><th style="width: 30mm;">Control</th><th>Qué hace</th></tr>
     <tr><td><span class="marca">1</span></td><td class="control">Reproducir</td><td>Avanza la simulación de 1 s en 1 s de hora del día.</td></tr>
     <tr><td><span class="marca">2</span></td><td class="control">Pausa</td><td>Para la simulación. Al cambiar a la pestaña Datos, la simulación se pausa.</td></tr>
     <tr><td><span class="marca">3</span></td><td class="control">+1 s</td><td>Avanza un solo salto de 1 s.</td></tr>
     <tr><td><span class="marca">4</span></td><td class="control">Reset</td><td>Para la simulación y vuelve a la primera hora de los datos.</td></tr>
     <tr><td><span class="marca">5</span></td><td class="control">Velocidad</td><td>De x1 a x60. Cada salto es siempre de 1 s; la velocidad solo cambia cada cuánto se dibuja (x1: un salto por segundo; x60: 60 saltos por segundo).</td></tr>
-    <tr><td><span class="marca">6</span></td><td class="control">Sistema</td><td><b>Ambos</b>, <b>Radar</b> (CAT048) o <b>ADS-B</b> (CAT021). Con Ambos, un avión que ven los dos sistemas sale dos veces.</td></tr>
-    <tr><td><span class="marca">7</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
-    <tr><td><span class="marca">8</span></td><td class="control">Etiquetas</td><td>Muestra u oculta el callsign de cada avión (o su dirección Modo S si no tiene).</td></tr>
-    <tr><td><span class="marca">9</span></td><td class="control">Estelas</td><td>Muestra u oculta la línea con las últimas posiciones de cada avión.</td></tr>
+    <tr><td><span class="marca">6</span></td><td class="control">Etiquetas</td><td>Muestra u oculta el bloque de datos de cada avión (ver la página siguiente).</td></tr>
+    <tr><td><span class="marca">7</span></td><td class="control">Estelas</td><td>Muestra u oculta la línea con las últimas posiciones de cada avión.</td></tr>
+    <tr><td><span class="marca">8</span></td><td class="control">Seguir</td><td>Mantiene el avión seleccionado en el centro del mapa, sin cambiar el zoom. Si el avión desaparece, se deja de seguir.</td></tr>
+    <tr><td><span class="marca">9</span></td><td class="control">Sistema</td><td><b>Ambos</b>, <b>Radar</b> (CAT048) o <b>ADS-B</b> (CAT021). Con Ambos, un avión que ven los dos sistemas sale dos veces en el mapa. También filtra las listas de tráfico.</td></tr>
+    <tr><td><span class="marca">10</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
+    <tr><td><span class="marca">11</span></td><td class="control">Barra de tiempo</td><td>Va de la primera a la última hora de los datos y avanza sola al reproducir. Arrástrala: el reloj enseña la hora y, al soltar, la simulación salta a esa hora.</td></tr>
   </table>
+  <p>Al ir a otra hora (Ir a la hora, la barra o Reset), el registro de eventos se vacía y los totales vuelven a cero.</p>
+</section>
 
-  <h3>El mapa</h3>
+<!-- ============================== 7 (cont.) ============================== -->
+<section class="pagina">
+  <h3 style="margin-top: 0;">El mapa y las etiquetas</h3>
+  <div class="lado-a-lado">
+    <img class="captura" src="capturas/mapa_avion.png" style="width: 92mm;" alt="Avión seleccionado y su pareja">
+    <div class="texto">
+      <div class="paso">
+        <div class="numero">3</div>
+        <div class="contenido">
+          <p>Haz clic en un avión. Se pone en <span class="punto rojo"></span>rojo <span class="marca">1</span> y, si el otro sistema también lo ve, su pareja también <span class="marca">2</span>. En el ejemplo, 1 es el radar y 2 el ADS-B del mismo avión (TVF32ER).</p>
+          <p>Colores: <span class="punto radar"></span>radar; <span class="punto adsb"></span>ADS-B; <span class="punto rojo"></span>el avión seleccionado y su pareja.</p>
+        </div>
+      </div>
+    </div>
+  </div>
   <ul>
+    <li><b>Etiqueta:</b> el callsign y, debajo, el nivel en cientos de pies con su tendencia (↑ sube, ↓ baja, → nivelado) y la velocidad respecto al suelo en nudos. «147↑ 338» es nivel 147 subiendo a 338 kt. En ADS-B no hay velocidad. Un avión que ven los dos sistemas lleva una sola etiqueta. Los aviones en tierra no llevan etiqueta, salvo el seleccionado.</li>
     <li>Arrastra el mapa para moverte. Acerca o aleja con la rueda del ratón o con los botones <b>+</b> y <b>−</b>.</li>
-    <li>La silueta de cada avión apunta a su rumbo (si aún no se conoce, mira al norte).</li>
-    <li>Un avión desaparece si pasa más de 12 s sin mensajes.</li>
+    <li>La silueta de cada avión apunta a su rumbo (si aún no se conoce, mira al norte). Un avión desaparece si pasa más de 12 s sin mensajes.</li>
   </ul>
+
+  <h3>Tráfico y avión seleccionado</h3>
+  <div class="lado-a-lado">
+    <div class="texto">
+      <p>A la derecha del mapa, de arriba abajo: <b>Tráfico</b>, <b>Avión seleccionado</b> y la <b>Leyenda</b> (recogida al empezar; se despliega pulsando su cabecera). Si no caben, el panel baja con la rueda del ratón o el panel táctil.</p>
+      <ul class="marcas">
+        <li><span class="marca">1</span><b>En vuelo:</b> callsign, nivel y sistemas que lo ven. El nivel es <b>A030</b> (altitud corregida, 3.000 ft) o <b>FL147</b> (nivel de vuelo), con su tendencia. Sist.: <b>R</b> radar, <b>A</b> ADS-B, <b>RA</b> los dos.</li>
+        <li><span class="marca">2</span><b>En tierra:</b> según el radar (dato STAT). Los aviones en tierra vistos solo por ADS-B no salen: se descartan al decodificar.</li>
+        <li><span class="marca">3</span><b>Avión seleccionado:</b> sus datos, con su estado y su tendencia. Con <b>Radar / ADS-B</b> pasas al mismo avión en el otro sistema (en gris si no está en el mapa por ese sistema).</li>
+      </ul>
+      <p>Haz clic en una fila de las listas para seleccionar ese avión: el mapa se centra en él. Debajo de las listas, cuántos aviones hay dibujados en el mapa: radar, ADS-B y blancos puros.</p>
+      <div class="nota">
+        <p>Un avión pasa de una lista a la otra cuando 2 mensajes seguidos lo confirman. Hasta entonces, o si es un blanco puro o el transponder fijo, no sale en las listas.</p>
+      </div>
+    </div>
+    <img class="captura" src="capturas/panel.png" style="width: 50mm;" alt="Panel de tráfico y avión seleccionado">
+  </div>
 </section>
 
 <!-- ============================== 7 (cont.) y 8 ============================== -->
 <section class="pagina">
-  <h3 style="margin-top: 0;">Leyenda y clic en un avión</h3>
-  <div class="lado-a-lado">
-    <div class="texto">
-      <img class="captura" src="capturas/mapa_avion.png" style="width: 96mm;" alt="Avión seleccionado y su pareja">
-      <div class="paso" style="margin-top: 4mm;">
-        <div class="numero">3</div>
-        <div class="contenido">
-          <p>Haz clic en un avión. Se pone en <span class="punto rojo"></span>rojo <span class="marca">1</span> y, si el otro sistema también lo ve, su pareja también <span class="marca">2</span>.</p>
-          <p>En el ejemplo, 1 es el radar y 2 el ADS-B del mismo avión (VLG8FU).</p>
-          <p>Colores: <span class="punto radar"></span>azul, radar; <span class="punto adsb"></span>naranja, ADS-B; <span class="punto rojo"></span>rojo, el avión seleccionado y su pareja.</p>
-          <p>A la derecha, de arriba abajo: la <b>Leyenda</b> (recogida al empezar; se despliega pulsando su cabecera), cuántos hay <b>En el mapa</b> (radar, ADS-B y blancos puros) y el <b>Avión seleccionado</b> con sus datos (callsign, dirección Modo S, Modo 3/A, FL, posición y, en radar, velocidades y rumbo); si no caben, el panel baja con la rueda del ratón o el panel táctil. Con su selector <b>Radar / ADS-B</b> pasas a los datos del mismo avión en el otro sistema, sin tocar el mapa (en gris si no está en el mapa por ese sistema).</p>
-        </div>
-      </div>
-    </div>
-    <img class="captura" src="capturas/panel.png" style="width: 42mm;" alt="Panel de la simulación">
-  </div>
+  <h3 style="margin-top: 0;">Registro de eventos</h3>
+  <p>Debajo del mapa, lo que va pasando, con lo más reciente arriba: hora, tipo, callsign y sistema (R o A). A la derecha, los totales de despegues y aterrizajes.</p>
+  <img class="captura" src="capturas/eventos.png" alt="Registro de eventos">
+  <table>
+    <tr><th style="width: 9mm;"></th><th style="width: 42mm;">Evento</th><th>Cuándo sale</th></tr>
+    <tr><td class="evento-icono" style="color: #1F5FAD;">+</td><td class="control">Nuevo contacto</td><td>Aparece un avión, o vuelve después de haber desaparecido.</td></tr>
+    <tr><td class="evento-icono" style="color: #2E7D46;">↗</td><td class="control">Despega</td><td>Pasa de en tierra a en vuelo.</td></tr>
+    <tr><td class="evento-icono" style="color: #7A4E12;">↘</td><td class="control">Aterriza</td><td>Pasa de en vuelo a en tierra.</td></tr>
+    <tr><td class="evento-icono" style="color: #7A8594;">×</td><td class="control">Pérdida de contacto</td><td>Pasa más de 12 s sin mensajes de ningún sistema.</td></tr>
+  </table>
+  <p>Los eventos salen al reproducir o al avanzar 1 s. Haz clic en uno para seleccionar su avión y centrar el mapa en él, si sigue a la vista.</p>
 
   <h2 style="margin-top: 6mm;">8. Problemas frecuentes</h2>
   <table>
@@ -471,6 +502,10 @@
     <tr>
       <td>En la simulación no se ve nada.</td>
       <td>Revisa los filtros de Datos (los dice el aviso azul) y el selector <b>Sistema</b>. Si sale un mensaje en el mapa, dice qué hacer.</td>
+    </tr>
+    <tr>
+      <td>Un avión del mapa no sale en las listas de tráfico.</td>
+      <td>Aún no hay 2 mensajes seguidos que digan si está en tierra o en vuelo, o es un blanco puro o el transponder fijo, que no cuentan como tráfico. Mira también el selector <b>Sistema</b>.</td>
     </tr>
     <tr>
       <td>Aparecen puntos grises que desaparecen enseguida.</td>

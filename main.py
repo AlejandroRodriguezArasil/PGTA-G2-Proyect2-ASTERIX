@@ -12,7 +12,8 @@ Flujo del programa. Los métodos de la clase Aplicacion están en este mismo ord
     4. Filtrar             aplicar_filtros, quitar_filtros
     5. Exportar            exportar_todo, exportar_filtrado
     6. Simular             preparar_simulacion, play, tic_reloj, dar_un_salto
-                           (mapa con los mensajes filtrados en Datos)
+                           (mapa con los mensajes filtrados en Datos, panel de tráfico y
+                           registro de eventos: actualizar_panel_simulacion)
 
 Los datos se decodifican una sola vez y se guardan en memoria (self.filas_todas).
 Filtrar, cambiar de página, exportar y simular trabajan sobre esa lista sin volver a
@@ -97,6 +98,9 @@ class Aplicacion:
         self.avion_seleccionado = None
         self.aviones_resaltados = set() # el seleccionado y su pareja del otro sistema
         self.mapa_encuadrado = False
+        self.arrastrando_barra = False  # True mientras se arrastra la barra de tiempo
+        self.segundo_barra = 0          # hora a la que se saltará al soltar la barra
+        self.ultimo_evento_mostrado = 0 # número del último evento puesto en el registro de la ventana
 
         # --- Ventana ---
         # Las funciones de ventana.py crean los elementos y los guardan en la aplicación
@@ -562,7 +566,8 @@ class Aplicacion:
 
     def invalidar_simulacion(self):
         """
-        Los datos o los filtros han cambiado: se para la simulación y se vacía el mapa.
+        Los datos o los filtros han cambiado: se para la simulación y se vacían el mapa, las listas
+        de tráfico, el registro de eventos y la selección (y con ella, el seguimiento).
         Se vuelve a preparar al entrar en la pestaña Simulación o al usar un control de la simulación.
         """
         self.pausa()
@@ -570,12 +575,22 @@ class Aplicacion:
         self.estado_simulacion = None
         self.avion_seleccionado = None
         self.aviones_resaltados = set()
-        ventana.escribir_texto(self.cuadro_info, "Haz clic en un avión del mapa para ver su información.")
+        self.casilla_seguir.deselect()
+        self.vaciar_registro_eventos()
+        self.lista_en_vuelo.vaciar()
+        self.lista_en_tierra.vaciar()
+        ventana.configurar_barra_tiempo(self, 0, 1, "--:--", "--:--")
+        ventana.escribir_texto(self.cuadro_info, ventana.TEXTO_SIN_AVION)
         self.actualizar_panel_simulacion()
 
     def preparar_simulacion(self):
         """Ordena por hora los mensajes filtrados en la pestaña Datos y dibuja el primer segundo."""
         self.estado_simulacion = simulacion.preparar(self.filas_visibles)
+        inicio = self.estado_simulacion["inicio"]
+        fin = self.estado_simulacion["fin"]
+        ventana.configurar_barra_tiempo(self, inicio, fin, hora_sin_decimales(inicio)[:5],
+                                        hora_sin_decimales(fin)[:5])
+        self.vaciar_registro_eventos()
         mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
         mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
         self.actualizar_panel_simulacion()
@@ -636,7 +651,10 @@ class Aplicacion:
         self.id_reloj = self.raiz.after(espera_ms, self.tic_reloj)
 
     def dar_un_salto(self):
-        """Avanza la simulación 1 s: mueve los aviones con mensaje nuevo y quita los que han caducado."""
+        """
+        Avanza la simulación 1 s: mueve los aviones con mensaje nuevo, quita los que han caducado,
+        sigue al avión seleccionado si "Seguir" está marcada y pone al día los paneles.
+        """
         cambiados, caducados = simulacion.avanzar_un_segundo(self.estado_simulacion)
         for identificador in caducados:
             mapa.borrar_avion(self, identificador)
@@ -644,8 +662,30 @@ class Aplicacion:
         for identificador in cambiados:
             if mapa.sistema_visible(self, identificador[0]):
                 mapa.dibujar_avion(self, identificador, aviones[identificador])
+        # Si ha aparecido o desaparecido una silueta, o el avión ha despegado o aterrizado, su
+        # etiqueta puede pasar a la otra silueta, ponerse o quitarse: solo se repasan esos aviones
+        direcciones = set()
+        for identificador in cambiados:
+            direcciones.add(identificador[1])
+        for identificador in caducados:
+            direcciones.add(identificador[1])
+        mapa.actualizar_etiquetas_de(self, aviones, direcciones)
         mapa.actualizar_resaltado(self, aviones)
+        self.seguir_avion(cambiados)
         self.actualizar_panel_simulacion()
+
+    def seguir_avion(self, cambiados):
+        """
+        Casilla "Seguir": centra el mapa en el avión seleccionado cuando se ha movido (solo entonces,
+        para no mover el mapa sin necesidad). Si ya no está en el mapa, se deja de seguir.
+        """
+        if self.casilla_seguir.get() == 0 or self.avion_seleccionado is None:
+            return
+        if self.avion_seleccionado not in self.marcadores:
+            self.casilla_seguir.deselect()
+            return
+        if self.avion_seleccionado in cambiados:
+            mapa.centrar_en_avion(self, self.estado_simulacion["aviones"][self.avion_seleccionado])
 
     def avanzar_un_segundo(self):
         """Botón +1 s: un solo salto, con la simulación en pausa o en marcha."""
@@ -685,12 +725,47 @@ class Aplicacion:
         if ventana.esta_activo(self.boton_ir):
             self.ir_a_hora()
 
+    def mover_barra_tiempo(self, valor):
+        """
+        Barra de tiempo, mientras se arrastra: el reloj enseña la hora a la que se va a saltar.
+        El salto no se hace aquí, sino al soltar (soltar_barra_tiempo): saltar en cada movimiento
+        recalcularía la simulación decenas de veces por segundo y la barra se trabaría.
+        """
+        self.arrastrando_barra = True
+        self.segundo_barra = int(valor)
+        ventana.cambiar_texto(self.etiqueta_reloj, hora_sin_decimales(self.segundo_barra))
+
+    def soltar_barra_tiempo(self, evento):
+        """
+        Barra de tiempo, al soltar el ratón: salta a la hora que enseñaba el reloj al arrastrar.
+        Si estaba en marcha, sigue en marcha.
+        """
+        if not self.arrastrando_barra:
+            return                          # clic sin mover nada o con la barra desactivada
+        self.arrastrando_barra = False
+        if self.estado_simulacion is None:
+            self.preparar_simulacion()
+            return
+        self.saltar_a_segundo(self.segundo_barra)
+
     def saltar_a_segundo(self, segundo):
-        """Lleva la simulación a esa hora y redibuja el mapa. Si estaba en marcha, sigue en marcha."""
+        """
+        Lleva la simulación a esa hora y redibuja el mapa. Si estaba en marcha, sigue en marcha.
+        El estado de los aviones se recalcula sin eventos (simulacion.ir_a_segundo), así que el
+        registro de eventos se vacía. Si el avión seleccionado sigue a la vista, sigue seleccionado.
+        """
         simulacion.ir_a_segundo(self.estado_simulacion, segundo)
+        self.vaciar_registro_eventos()
         mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
         mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
+        if self.casilla_seguir.get() == 1 and self.avion_seleccionado in self.marcadores:
+            mapa.centrar_en_avion(self, self.estado_simulacion["aviones"][self.avion_seleccionado])
         self.actualizar_panel_simulacion()
+
+    def vaciar_registro_eventos(self):
+        """Vacía el registro de eventos de la ventana (la simulación ya ha vaciado su lista)."""
+        self.registro_eventos.vaciar()
+        self.ultimo_evento_mostrado = 0
 
     def cambiar_velocidad(self, velocidad):
         """Selector de velocidad: cambia la espera entre saltos, no el tamaño del salto."""
@@ -700,14 +775,17 @@ class Aplicacion:
             self.poner_estado("Reproduciendo a " + velocidad, estilo.ESTADO_LISTO)
 
     def cambiar_sistema(self, sistema):
-        """Selector Radar / ADS-B / Ambos: vuelve a dibujar solo los aviones del sistema elegido."""
+        """
+        Selector Radar / ADS-B / Ambos: vuelve a dibujar solo los aviones del sistema elegido. Las
+        listas de tráfico y los contadores se ponen al día en actualizar_panel_simulacion.
+        """
         if self.estado_simulacion is not None:
             mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
             mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
         self.actualizar_panel_simulacion()
 
     def cambiar_etiquetas(self):
-        """Casilla Etiquetas: muestra u oculta el callsign junto a cada avión."""
+        """Casilla Etiquetas: muestra u oculta el bloque de datos junto a cada avión."""
         if self.estado_simulacion is not None:
             mapa.actualizar_etiquetas(self, self.estado_simulacion["aviones"])
 
@@ -717,19 +795,63 @@ class Aplicacion:
             mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
             mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
 
+    def cambiar_seguir(self):
+        """Casilla Seguir: al marcarla, el mapa se centra ya en el avión seleccionado (si está en el mapa)."""
+        if self.casilla_seguir.get() == 1 and self.avion_seleccionado in self.marcadores:
+            mapa.centrar_en_avion(self, self.estado_simulacion["aviones"][self.avion_seleccionado])
+
     def cambiar_leyenda(self):
         """Cabecera de la leyenda del panel de la simulación: la despliega si está recogida y al revés."""
         ventana.mostrar_leyenda(self, not self.leyenda_desplegada)
 
+    def seleccionar_avion(self, identificador, centrar):
+        """
+        Selecciona un avión del mapa: lo resalta junto a su pareja del otro sistema y muestra su
+        información en el panel. Si 'centrar' es True, o si "Seguir" está marcada, el mapa se centra en él.
+        """
+        anterior = self.avion_seleccionado
+        self.avion_seleccionado = identificador
+        aviones = self.estado_simulacion["aviones"]
+        # Un avión en tierra solo lleva etiqueta si está seleccionado: se repasan el de antes y el nuevo
+        direcciones = {identificador[1]}
+        if anterior is not None:
+            direcciones.add(anterior[1])
+        mapa.actualizar_etiquetas_de(self, aviones, direcciones)
+        mapa.actualizar_resaltado(self, aviones)
+        if centrar or self.casilla_seguir.get() == 1:
+            mapa.centrar_en_avion(self, aviones[identificador])
+        self.actualizar_panel_simulacion()
+
     def al_pulsar_avion(self, marcador):
         """
-        Clic en un avión del mapa: lo selecciona, lo resalta junto a su pareja del otro sistema
-        y muestra su información en el panel. El selector Radar / ADS-B del panel se pone en
+        Clic en un avión del mapa: lo selecciona. El selector Radar / ADS-B del panel se pone en
         el sistema de ese avión.
         """
-        self.avion_seleccionado = marcador.data
-        mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
-        self.actualizar_panel_simulacion()
+        self.seleccionar_avion(marcador.data, False)
+
+    def al_pulsar_fila_trafico(self, evento):
+        """
+        Clic en una fila de las listas En vuelo / En tierra: selecciona ese avión como si se pulsara
+        en el mapa (su silueta de radar si la tiene y, si no, la de ADS-B) y centra el mapa en él una vez.
+        """
+        direccion_modo_s = evento.widget.identify_row(evento.y)     # "" si no se ha pulsado una fila
+        if direccion_modo_s == "" or self.estado_simulacion is None:
+            return
+        identificador = mapa.avion_en_mapa_por_ta(self, direccion_modo_s)
+        if identificador is not None:
+            self.seleccionar_avion(identificador, True)
+
+    def al_pulsar_evento(self, evento):
+        """Clic en un evento del registro: selecciona su avión y centra el mapa en él, si sigue a la vista."""
+        fila = evento.widget.identify_row(evento.y)
+        direccion_modo_s = self.registro_eventos.ta_de_fila(fila)
+        if direccion_modo_s is None or self.estado_simulacion is None:
+            return
+        identificador = mapa.avion_en_mapa_por_ta(self, direccion_modo_s)
+        if identificador is None:
+            self.poner_estado("Ese avión ya no está a la vista.", estilo.TEXTO_SUAVE)
+            return
+        self.seleccionar_avion(identificador, True)
 
     def cambiar_sistema_avion(self, sistema):
         """
@@ -774,9 +896,9 @@ class Aplicacion:
 
     def actualizar_panel_simulacion(self):
         """
-        Pone al día el reloj, el aviso de qué se simula, el contador, el panel del avión con
-        su selector Radar / ADS-B y el mensaje del mapa. Se llama en cada salto: solo se cambia lo
-        que es distinto.
+        Pone al día el reloj y la barra de tiempo, el aviso de qué se simula, el panel de tráfico,
+        el registro de eventos, el panel del avión con su selector Radar / ADS-B y el mensaje del
+        mapa. Se llama en cada salto: cada parte solo cambia lo que es distinto.
         """
         self.actualizar_aviso_simulacion()
         self.actualizar_mensaje_mapa()
@@ -787,22 +909,59 @@ class Aplicacion:
             ventana.cambiar_texto(self.cifra_radar, "0")
             ventana.cambiar_texto(self.cifra_adsb, "0")
             ventana.cambiar_texto(self.cifra_blancos_puros, "0")
+            ventana.escribir_contadores_trafico(self, 0, 0)
+            ventana.cambiar_texto(self.etiqueta_totales_eventos, "Despegues: 0 · Aterrizajes: 0")
             return
 
-        ventana.cambiar_texto(self.etiqueta_reloj, hora_sin_decimales(estado["segundo"]))
+        # Mientras se arrastra la barra de tiempo, el reloj enseña la hora a la que se va a saltar
+        if not self.arrastrando_barra:
+            ventana.cambiar_texto(self.etiqueta_reloj, hora_sin_decimales(estado["segundo"]))
+            self.barra_tiempo.set(estado["segundo"])
+        self.actualizar_trafico()
+        self.actualizar_registro_eventos()
+
+        if self.avion_seleccionado is None:
+            return
+        if self.avion_seleccionado in estado["aviones"]:
+            texto = mapa.texto_informacion(estado["aviones"][self.avion_seleccionado], self.avion_seleccionado,
+                                           simulacion.texto_estado_avion(estado, self.avion_seleccionado))
+        else:
+            texto = ("El avión seleccionado ya no está a la vista (más de "
+                     + str(simulacion.SEGUNDOS_PARA_CADUCAR) + " s sin mensajes).")
+        ventana.escribir_texto(self.cuadro_info, texto)
+
+    def actualizar_trafico(self):
+        """
+        Panel de tráfico: las listas En vuelo y En tierra (solo con los sistemas que deja ver el
+        selector Sistema), sus contadores, las cifras de lo que hay en el mapa y la fila del avión
+        seleccionado marcada en su lista.
+        """
+        estado = self.estado_simulacion
+        en_vuelo, en_tierra = simulacion.filas_trafico(estado, mapa.categorias_visibles(self))
+        self.lista_en_vuelo.actualizar(en_vuelo)
+        self.lista_en_tierra.actualizar(en_tierra)
+        ventana.escribir_contadores_trafico(self, len(en_vuelo), len(en_tierra))
+
         radar, adsb, blancos_puros = mapa.contar_en_mapa(self, estado["aviones"])
         ventana.cambiar_texto(self.cifra_radar, str(radar))
         ventana.cambiar_texto(self.cifra_adsb, str(adsb))
         ventana.cambiar_texto(self.cifra_blancos_puros, str(blancos_puros))
 
-        if self.avion_seleccionado is None:
-            return
-        if self.avion_seleccionado in estado["aviones"]:
-            texto = mapa.texto_informacion(estado["aviones"][self.avion_seleccionado], self.avion_seleccionado)
-        else:
-            texto = ("El avión seleccionado ya no está a la vista (más de "
-                     + str(simulacion.SEGUNDOS_PARA_CADUCAR) + " s sin mensajes).")
-        ventana.escribir_texto(self.cuadro_info, texto)
+        direccion_seleccionada = None
+        if self.avion_seleccionado is not None:
+            direccion_seleccionada = self.avion_seleccionado[1]
+        self.lista_en_vuelo.seleccionar(direccion_seleccionada)
+        self.lista_en_tierra.seleccionar(direccion_seleccionada)
+
+    def actualizar_registro_eventos(self):
+        """Añade al registro los eventos que aún no se han mostrado y pone al día los totales."""
+        estado = self.estado_simulacion
+        nuevos = simulacion.eventos_nuevos(estado, self.ultimo_evento_mostrado)
+        if len(nuevos) > 0:
+            self.registro_eventos.anadir(nuevos)
+            self.ultimo_evento_mostrado = nuevos[-1]["numero"]
+        ventana.cambiar_texto(self.etiqueta_totales_eventos, "Despegues: " + str(estado["despegues"])
+                              + " · Aterrizajes: " + str(estado["aterrizajes"]))
 
     def actualizar_aviso_simulacion(self):
         """Aviso encima del mapa: cuántos mensajes se simulan y con qué filtros de la pestaña Datos."""
@@ -885,7 +1044,7 @@ class Aplicacion:
         hay_simulacion = hay_datos and len(self.filas_visibles) > 0
         controles_simulacion = [self.boton_paso, self.boton_reset, self.selector_velocidad,
                                 self.selector_sistema, self.casilla_etiquetas, self.casilla_estelas,
-                                self.entrada_hora, self.boton_ir]
+                                self.casilla_seguir, self.entrada_hora, self.boton_ir, self.barra_tiempo]
         for control in controles_simulacion:
             ventana.cambiar_estado(control, hay_simulacion)
         ventana.cambiar_estado(self.boton_play, hay_simulacion and not self.reproduciendo)

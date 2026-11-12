@@ -12,12 +12,19 @@ hace aplicar_filtros().
 Los filtros nunca vuelven a leer el .ast: trabajan sobre la lista en memoria.
 """
 
-from funciones import decisiones
 from funciones.exportar_csv import valor
 
 CATEGORIA_048 = 48
 ESTADOS_EN_TIERRA = (1, 3)      # I048/230 STAT: 1 y 3 = "aircraft on ground" (CAT048 v1.31, §5.2.23)
 PIES_POR_FL = 100
+
+# Blanco puro: TYP de I048/020 = 0, 1, 2 o 3 (sin detección, PSR, SSR y PSR+SSR). Ninguno viene
+# de una interrogación Modo S; TYP = 0 también cuenta, porque tampoco es una detección Modo S.
+TIPOS_BLANCO_PURO = (0, 1, 2, 3)
+
+# Transponder fijo: se identifica solo por su Modo 3/A 7777, el del transponder de referencia en
+# tierra. El bit RAB de I048/020 no se usa para esto.
+MODO_3A_TRANSPONDER_FIJO = "7777"
 
 
 def filtrar_por_categoria(filas, categoria):
@@ -34,13 +41,13 @@ def filtrar_por_categoria(filas, categoria):
 
 def es_blanco_puro(fila):
     """
-    True si el mensaje es un blanco puro (duda 13): CAT048 con el TYP de I048/020 en
-    decisiones.TIPOS_BLANCO_PURO (0, 1, 2 o 3: sin detección, PSR, SSR y PSR+SSR).
+    True si el mensaje es un blanco puro: CAT048 con el TYP de I048/020 en TIPOS_BLANCO_PURO
+    (0, 1, 2 o 3: sin detección, PSR, SSR y PSR+SSR).
     Los TYP 4 a 7 vienen de una interrogación Modo S y no lo son. También lo usa el mapa.
     """
     if valor(fila, "CAT") != CATEGORIA_048:
         return False
-    return valor(fila, "I048_020_TYP") in decisiones.TIPOS_BLANCO_PURO
+    return valor(fila, "I048_020_TYP") in TIPOS_BLANCO_PURO
 
 
 def quitar_blancos_puros(filas):
@@ -57,22 +64,16 @@ def quitar_blancos_puros(filas):
 
 def es_transponder_fijo(fila):
     """
-    True si el mensaje es del transponder fijo (duda 14): Modo 3/A 7777 o RAB = 1
-    ("report from field monitor") en I048/020 o I021/040. También lo usa el mapa.
+    True si el mensaje es del transponder fijo: Modo 3/A igual a MODO_3A_TRANSPONDER_FIJO (7777).
+    También lo usa el mapa.
     """
-    if valor(fila, "MODE3A") == decisiones.MODO_3A_TRANSPONDER_FIJO:
-        return True
-    if valor(fila, "I048_020_RAB") == decisiones.RAB_TRANSPONDER_FIJO:
-        return True
-    if valor(fila, "I021_040_RAB") == decisiones.RAB_TRANSPONDER_FIJO:
-        return True
-    return False
+    return valor(fila, "MODE3A") == MODO_3A_TRANSPONDER_FIJO
 
 
 def quitar_transponder_fijo(filas):
     """
     Quitar transponder fijo. CAT048 y CAT021.
-    Columnas: MODE3A, I048_020_RAB e I021_040_RAB. Criterio: es_transponder_fijo().
+    Columna: MODE3A. Criterio: es_transponder_fijo().
     """
     resultado = []
     for fila in filas:

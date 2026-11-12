@@ -6,7 +6,8 @@ Lo que se dibuja en el mapa de la pestaña Simulación (tkintermapview, teselas 
     - los iconos: siluetas de avión giradas según su rumbo, blancos puros, transponder fijo y
       radar de BCN; también los de las pestañas Datos y Simulación de la cabecera
     - la zona del filtro geográfico y el radar de Barcelona
-    - el marcador de cada avión, su etiqueta y su estela
+    - el marcador de cada avión, su etiqueta tipo radar (callsign, nivel y velocidad) y su estela
+    - mover el mapa para centrarlo en un avión (al pulsarlo en una lista o con "Seguir")
     - el texto del panel con la información del avión seleccionado
 
 La lógica de la simulación (qué aviones hay y dónde) está en simulacion.py.
@@ -23,6 +24,7 @@ from PIL import Image, ImageDraw, ImageTk
 
 from funciones import filtros
 from funciones import geo
+from funciones import simulacion
 from funciones.exportar_csv import valor
 from interfaz import estilo
 
@@ -296,6 +298,32 @@ def encuadrar_zona(app):
     app.mapa.fit_bounding_box(ESQUINA_NOROESTE, ESQUINA_SURESTE)
 
 
+def centrar_en(app, latitud, longitud):
+    """
+    Centra el mapa en esa posición sin cambiar el zoom.
+    tkintermapview guarda qué parte del mundo se ve con las esquinas superior izquierda e inferior
+    derecha, en coordenadas de tesela. Aquí se desplazan las dos esquinas lo que haga falta para que
+    el centro quede en la posición y se redibuja con draw_move, lo mismo que hace la librería al
+    arrastrar el mapa con el ratón. set_position también centraría, pero vuelve a crear todas las
+    teselas y, con "Seguir" a x60, se notaría.
+    """
+    mapa = app.mapa
+    destino_x, destino_y = tkintermapview.decimal_to_osm(latitud, longitud, round(mapa.zoom))
+    centro_x = (mapa.upper_left_tile_pos[0] + mapa.lower_right_tile_pos[0]) / 2
+    centro_y = (mapa.upper_left_tile_pos[1] + mapa.lower_right_tile_pos[1]) / 2
+    mover_x = destino_x - centro_x
+    mover_y = destino_y - centro_y
+    mapa.upper_left_tile_pos = (mapa.upper_left_tile_pos[0] + mover_x, mapa.upper_left_tile_pos[1] + mover_y)
+    mapa.lower_right_tile_pos = (mapa.lower_right_tile_pos[0] + mover_x, mapa.lower_right_tile_pos[1] + mover_y)
+    mapa.check_map_border_crossing()
+    mapa.draw_move()
+
+
+def centrar_en_avion(app, avion):
+    """Centra el mapa en la última posición del avión."""
+    centrar_en(app, valor(avion["fila"], "LAT"), valor(avion["fila"], "LON"))
+
+
 # =============================================================================
 # Aviones
 # =============================================================================
@@ -322,6 +350,18 @@ def pareja_otro_sistema(identificador):
     if categoria == CATEGORIA_048:
         return (CATEGORIA_021, nombre)
     return (CATEGORIA_048, nombre)
+
+
+def avion_en_mapa_por_ta(app, direccion_modo_s):
+    """
+    Silueta del mapa de un avión del tráfico (por su TA): la de radar si está dibujada y, si no,
+    la de ADS-B. Devuelve su identificador, o None si el avión no está en el mapa (ha desaparecido
+    o el selector Sistema oculta los sistemas que lo ven).
+    """
+    for categoria in (CATEGORIA_048, CATEGORIA_021):
+        if (categoria, direccion_modo_s) in app.marcadores:
+            return (categoria, direccion_modo_s)
+    return None
 
 
 def rumbo_para_dibujar(identificador, avion):
@@ -372,33 +412,81 @@ def icono_de_avion(app, identificador, avion):
     return app.siluetas[(identificador[0], resaltado, giro)]
 
 
-def texto_etiqueta(app, fila):
+def texto_velocidad(fila):
     """
-    Etiqueta del marcador: el callsign o, si no hay, la TA. Los blancos puros llevan su tipo y
-    el Modo 3/A o, si no hay, el track number (por ejemplo "PSR 45"). Vacía si las etiquetas están ocultas.
+    Velocidad respecto al suelo (GS) en nudos, sin decimales: la de I048/200 o, si no viene, la
+    del BDS 5.0. En ADS-B no hay, porque no se decodifica: devuelve "".
+    """
+    velocidad = valor(fila, "I048_200_GS_KT")
+    if velocidad is None:
+        velocidad = valor(fila, "BDS50_GS")
+    if velocidad is None:
+        return ""
+    return str(int(round(velocidad)))
+
+
+def lleva_etiqueta(app, identificador):
+    """
+    False si este avión del tráfico se dibuja sin etiqueta:
+        - si también se ve por radar, solo lleva etiqueta la silueta de radar (las dos etiquetas
+          casi se superponen y no se leería ninguna), así que la de ADS-B va sin texto;
+        - los aviones en tierra van sin etiqueta, porque en el aeropuerto se amontonan y lo tapan;
+          el avión seleccionado sí la lleva.
+    """
+    direccion_modo_s = identificador[1]
+    if identificador[0] == CATEGORIA_021 and (CATEGORIA_048, direccion_modo_s) in app.marcadores:
+        return False
+    if simulacion.esta_en_tierra(app.estado_simulacion, direccion_modo_s):
+        return app.avion_seleccionado is not None and app.avion_seleccionado[1] == direccion_modo_s
+    return True
+
+
+def texto_etiqueta(app, identificador, avion):
+    """
+    Etiqueta del marcador, como el bloque de datos de una pantalla radar de control:
+        línea 1: callsign o, si no hay, la TA (o el track number si tampoco hay TA)
+        línea 2: nivel en cientos de pies con su tendencia y la velocidad GS, por ejemplo "045↑ 210".
+                 El nivel es el de simulacion.texto_nivel sin el prefijo A o FL, para que sea corto.
+    Los blancos puros llevan su tipo y el Modo 3/A o, si no hay, el track number (por ejemplo
+    "PSR 45"), y el transponder fijo, su Modo 3/A (7777). Vacía si las etiquetas están ocultas o si el
+    avión no lleva etiqueta (lleva_etiqueta).
     """
     if app.casilla_etiquetas.get() == 0:
         return ""
+    fila = avion["fila"]
     if filtros.es_transponder_fijo(fila):
-        return "Transponder fijo (7777)"
+        # Solo el código: el nombre entero tapaba "Radar BCN" y los despegues en LEBL (la leyenda explica la antena)
+        return filtros.MODO_3A_TRANSPONDER_FIJO
     if filtros.es_blanco_puro(fila):
         tipo = TIPO_BLANCO_PURO_ETIQUETA[valor(fila, "I048_020_TYP")]
         if valor(fila, "MODE3A") is not None:
             return tipo + " " + valor(fila, "MODE3A")
         return tipo + " " + str(valor(fila, "I048_161_TRACK_NUMBER"))
+    if not lleva_etiqueta(app, identificador):
+        return ""
+
     if valor(fila, "TI") is not None and valor(fila, "TI") != "":
-        return valor(fila, "TI")
-    if valor(fila, "TA") is not None:
-        return valor(fila, "TA")
-    return "TN " + str(valor(fila, "I048_161_TRACK_NUMBER"))
+        nombre = valor(fila, "TI")
+    elif valor(fila, "TA") is not None:
+        nombre = valor(fila, "TA")
+    else:
+        nombre = "TN " + str(valor(fila, "I048_161_TRACK_NUMBER"))
+    segunda_linea = simulacion.texto_nivel(fila, avion["tendencia"], False)
+    velocidad = texto_velocidad(fila)
+    if velocidad != "":
+        segunda_linea = segunda_linea + " " + velocidad
+    return nombre + "\n" + segunda_linea
 
 
 def dibujar_avion(app, identificador, avion):
-    """Crea el marcador del avión si aún no lo tiene o lo mueve a su última posición. También su estela."""
+    """
+    Crea el marcador del avión si aún no lo tiene o lo mueve a su última posición. También su estela.
+    El texto de la etiqueta solo se cambia si es distinto del que ya tenía.
+    """
     fila = avion["fila"]
     latitud = valor(fila, "LAT")
     longitud = valor(fila, "LON")
-    etiqueta = texto_etiqueta(app, fila)
+    etiqueta = texto_etiqueta(app, identificador, avion)
     icono = icono_de_avion(app, identificador, avion)
 
     if identificador in app.marcadores:
@@ -467,19 +555,46 @@ def borrar_todos(app):
 
 
 def redibujar_todos(app, aviones):
-    """Quita todos los aviones y vuelve a dibujar los que están a la vista y son de un sistema visible."""
+    """
+    Quita todos los aviones y vuelve a dibujar los que están a la vista y son de un sistema visible.
+    Al final se repasan las etiquetas: al dibujar una silueta ADS-B aún no se sabe si después
+    se dibujará la de radar del mismo avión.
+    """
     borrar_todos(app)
     for identificador in aviones:
         if sistema_visible(app, identificador[0]):
             dibujar_avion(app, identificador, aviones[identificador])
+    actualizar_etiquetas(app, aviones)
+
+
+def poner_etiqueta(app, identificador, aviones):
+    """Vuelve a calcular la etiqueta de un marcador y solo la cambia si es distinta."""
+    marcador = app.marcadores[identificador]
+    texto = texto_etiqueta(app, identificador, aviones[identificador])
+    if marcador.text != texto:
+        # Para ocultarla se pone texto vacío: con None, tkintermapview no la vuelve a mostrar
+        marcador.set_text(texto)
 
 
 def actualizar_etiquetas(app, aviones):
-    """Muestra u oculta la etiqueta de todos los marcadores, según la casilla Etiquetas."""
+    """Repasa la etiqueta de todos los marcadores (casilla Etiquetas o después de redibujar)."""
     for identificador in app.marcadores:
         if identificador in aviones:
-            # Para ocultarla se pone texto vacío: con None, tkintermapview no la vuelve a mostrar
-            app.marcadores[identificador].set_text(texto_etiqueta(app, aviones[identificador]["fila"]))
+            poner_etiqueta(app, identificador, aviones)
+
+
+def actualizar_etiquetas_de(app, aviones, direcciones):
+    """
+    Repasa la etiqueta de las dos siluetas (radar y ADS-B) de los aviones con esas TA. Se usa en
+    cada salto con los aviones que han cambiado o desaparecido: si una silueta de radar aparece o
+    desaparece, la etiqueta pasa de una silueta a la otra; si el avión aterriza o despega, se quita
+    o se pone. Así solo se tocan las etiquetas de esos aviones, y solo si cambia su texto.
+    """
+    for direccion_modo_s in direcciones:
+        for categoria in (CATEGORIA_048, CATEGORIA_021):
+            identificador = (categoria, direccion_modo_s)
+            if identificador in app.marcadores and identificador in aviones:
+                poner_etiqueta(app, identificador, aviones)
 
 
 def actualizar_resaltado(app, aviones):
@@ -500,6 +615,15 @@ def actualizar_resaltado(app, aviones):
             icono = icono_de_avion(app, identificador, aviones[identificador])
             if marcador.icon is not icono:
                 marcador.change_icon(icono)
+
+
+def categorias_visibles(app):
+    """Categorías que deja ver el selector Sistema: (48, 21), (48,) o (21,)."""
+    visibles = []
+    for categoria in (CATEGORIA_048, CATEGORIA_021):
+        if sistema_visible(app, categoria):
+            visibles.append(categoria)
+    return tuple(visibles)
 
 
 def contar_en_mapa(app, aviones):
@@ -546,10 +670,11 @@ def texto_o_guion(texto):
     return texto
 
 
-def texto_informacion(avion, identificador):
+def texto_informacion(avion, identificador, texto_estado):
     """
     Texto del panel con los datos del último mensaje del avión seleccionado. Si el avión también
     está en el mapa por el otro sistema lo indica el selector Radar / ADS-B del panel, no este texto.
+    texto_estado es el de simulacion.texto_estado_avion ("en vuelo", "en tierra"...).
     """
     fila = avion["fila"]
     lineas = []
@@ -561,11 +686,13 @@ def texto_informacion(avion, identificador):
         lineas.append("Sistema     Radar (CAT048)")
     else:
         lineas.append("Sistema     ADS-B (CAT021)")
+    lineas.append("Estado      " + texto_estado)
     lineas.append("Callsign    " + texto_o_guion(valor(fila, "TI")))
     lineas.append("TA          " + texto_o_guion(valor(fila, "TA")))
     lineas.append("Modo 3/A    " + texto_o_guion(valor(fila, "MODE3A")))
     lineas.append("FL          " + texto_numero(valor(fila, "FL"), 2, ""))
     lineas.append("Alt. corr.  " + texto_numero(valor(fila, "ALT_CORREGIDA_FT"), 0, "ft"))
+    lineas.append("Tendencia   " + simulacion.texto_tendencia(avion["tendencia"]))
     lineas.append("Latitud     " + texto_numero(valor(fila, "LAT"), 5, "°"))
     lineas.append("Longitud    " + texto_numero(valor(fila, "LON"), 5, "°"))
     lineas.append("Último msg  " + str(valor(fila, "TIME")))

@@ -4,14 +4,16 @@ cat021.py
 Paso 2 del flujo: DECODIFICACIÓN de CAT021 (ADS-B, especificación v2.1).
     lectura -> decodificación -> coordenadas -> QNH -> CSV
 
-Se decodifican los 9 DI que pide el enunciado: I021/010, /131, /080, /073, /070,
-/145, /170, el BPS del RE y el I021/040 (duda 12). Los otros DI
-de la UAP se saltan sumando su longitud (CAT021 v2.1, §5.3, Tabla 2).
+Se decodifican los 8 DI que el enunciado marca en verde: I021/010, /131, /080,
+/073, /070, /145, /170 y el BPS del RE. I021/040 no está en verde: de él solo se
+lee el bit GBS, que hace falta para descartar los aviones en tierra. El resto de
+I021/040 y los otros DI de la UAP se saltan sumando su longitud (CAT021 v2.1,
+§5.3, Tabla 2).
 
 Para que vaya rápido, cada registro se trata en dos pasos:
     1. Localizar: se recorre el registro solo calculando la longitud de cada DI,
        para saber dónde empieza cada uno y dónde acaba el registro.
-    2. Decodificar: primero I021/040 (bit GBS) y I021/131 (posición). Si el
+    2. Decodificar: primero el GBS de I021/040 y I021/131 (posición). Si el
        mensaje se descarta (en tierra, sin posición o fuera de zona), no se
        decodifica nada más. En los ficheros de la asignatura se queda alrededor de 1 de cada 10 mensajes.
 
@@ -59,39 +61,17 @@ def decode_i021_010(datos, posicion, fila):
     fila["SIC"] = datos[posicion + 1]      # bits 8-1: System Identification Code
 
 
-def decode_i021_040(datos, posicion, fila):
+def leer_gbs_i021_040(datos, posicion):
     """
     I021/040 Target Report Descriptor. 1 octeto + extensiones con FX. CAT021 v2.1, §5.2.6.
-    Columnas: ATP, ARC, RC, RAB (primer octeto);
-              DCR, GBS, SIM, TST, SAA, CL (extensión 1);
-              IPC, NOGO, CPR, LDPJ, RCF (extensión 2).
-    Las extensiones solo se envían si alguno de sus bits vale 1. Si no vienen,
-    sus celdas quedan vacías y, a efectos del descarte, GBS se considera 0.
+    No es un DI en verde del enunciado: solo se lee el bit GBS (Ground Bit Setting), que va en
+    el bit 7 de la primera extensión, y se devuelve (1 = en tierra). No genera columnas.
+    Las extensiones solo se envían si alguno de sus bits vale 1: si no viene la primera
+    extensión, GBS es 0.
     """
-    longitud = longitud_fx(datos, posicion)
-
-    octeto = datos[posicion]
-    fila["I021_040_ATP"] = (octeto >> 5) & 0x07    # bits 8-6: tipo de dirección
-    fila["I021_040_ARC"] = (octeto >> 3) & 0x03    # bits 5-4: resolución de altitud
-    fila["I021_040_RC"] = (octeto >> 2) & 0x01     # bit 3: range check
-    fila["I021_040_RAB"] = (octeto >> 1) & 0x01    # bit 2: 1 = field monitor (transponder fijo)
-
-    if longitud >= 2:
-        octeto = datos[posicion + 1]
-        fila["I021_040_DCR"] = (octeto >> 7) & 0x01    # bit 8: corrección diferencial
-        fila["I021_040_GBS"] = (octeto >> 6) & 0x01    # bit 7: Ground Bit Setting (1 = en tierra)
-        fila["I021_040_SIM"] = (octeto >> 5) & 0x01    # bit 6: simulado
-        fila["I021_040_TST"] = (octeto >> 4) & 0x01    # bit 5: test
-        fila["I021_040_SAA"] = (octeto >> 3) & 0x01    # bit 4: selected altitude available
-        fila["I021_040_CL"] = (octeto >> 1) & 0x03     # bits 3-2: nivel de confianza
-
-    if longitud >= 3:
-        octeto = datos[posicion + 2]                   # bits 8-7: spare
-        fila["I021_040_IPC"] = (octeto >> 5) & 0x01    # bit 6: independent position check
-        fila["I021_040_NOGO"] = (octeto >> 4) & 0x01   # bit 5: NOGO
-        fila["I021_040_CPR"] = (octeto >> 3) & 0x01    # bit 4: validación CPR fallida
-        fila["I021_040_LDPJ"] = (octeto >> 2) & 0x01   # bit 3: local decoding position jump
-        fila["I021_040_RCF"] = (octeto >> 1) & 0x01    # bit 2: range check fallido
+    if longitud_fx(datos, posicion) < 2:
+        return 0
+    return (datos[posicion + 1] >> 6) & 0x01
 
 
 def decode_i021_131(datos, posicion, fila):
@@ -340,11 +320,11 @@ def decodificar_registro(datos, posicion, lista_frn):
 
     # Paso 2a: descarte obligatorio de aeronaves y vehículos en tierra, bit GBS de I021/040
     if FRN_I021_040 in posiciones:
-        decode_i021_040(datos, posiciones[FRN_I021_040], fila)
-    if fila.get("I021_040_GBS") == 1:
-        return None, posicion_siguiente, MOTIVO_EN_TIERRA
+        if leer_gbs_i021_040(datos, posiciones[FRN_I021_040]) == 1:
+            return None, posicion_siguiente, MOTIVO_EN_TIERRA
 
-    # Paso 2b: descarte sin posición (duda 10) y fuera del filtro geográfico, con I021/131
+    # Paso 2b: descarte sin posición (sin ella no se puede aplicar el filtro geográfico
+    # obligatorio) y fuera del filtro geográfico, con I021/131
     if FRN_I021_131 not in posiciones:
         return None, posicion_siguiente, MOTIVO_SIN_POSICION
     decode_i021_131(datos, posiciones[FRN_I021_131], fila)

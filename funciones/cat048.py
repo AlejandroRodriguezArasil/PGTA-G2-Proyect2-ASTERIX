@@ -77,7 +77,7 @@ def decode_i048_020(datos, posicion, fila):
     fila["I048_020_SIM"] = (octeto >> 4) & 0x01     # bit 5: simulado
     fila["I048_020_RDP"] = (octeto >> 3) & 0x01     # bit 4: cadena RDP 1 o 2
     fila["I048_020_SPI"] = (octeto >> 2) & 0x01     # bit 3: Special Position Identification
-    fila["I048_020_RAB"] = (octeto >> 1) & 0x01     # bit 2: 1 = field monitor (transponder fijo)
+    fila["I048_020_RAB"] = (octeto >> 1) & 0x01     # bit 2: 1 = report from field monitor
 
     if longitud >= 2:
         octeto = datos[posicion + 1]

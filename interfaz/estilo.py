@@ -68,6 +68,23 @@ ZONA_FILTRO = "#5F6B7A"
 BORDE_ICONO = "#FFFFFF"
 FONDO_ATRIBUCION = "#FFFFFF"
 
+# --- Panel de tráfico de la simulación ---
+TRAFICO_EN_VUELO = "#1F5FAD"
+TRAFICO_EN_TIERRA = "#5F6B7A"
+ICONO_EN_VUELO = "✈"
+ICONO_EN_TIERRA = "▣"
+
+# --- Registro de eventos de la simulación: un icono de texto y un color sobrio por tipo ---
+# (símbolos de texto normales; los emojis no se ven igual en todos los Windows)
+EVENTO_CONTACTO_ICONO = "+"
+EVENTO_CONTACTO_COLOR = "#1F5FAD"
+EVENTO_DESPEGA_ICONO = "↗"
+EVENTO_DESPEGA_COLOR = "#2E7D46"
+EVENTO_ATERRIZA_ICONO = "↘"
+EVENTO_ATERRIZA_COLOR = "#7A4E12"
+EVENTO_PERDIDA_ICONO = "×"
+EVENTO_PERDIDA_COLOR = "#7A8594"        # gris neutro: es lo normal al salir de cobertura (el rojo es el resaltado)
+
 # --- Tipografía (Segoe UI viene con Windows; Consolas, de ancho fijo, para cifras) ---
 FAMILIA = "Segoe UI"
 FAMILIA_NUMEROS = "Consolas"
@@ -76,14 +93,18 @@ TAMANO_SECCION = 14
 TAMANO_TEXTO = 13
 TAMANO_AYUDA = 11
 TAMANO_CIFRA = 26
-TAMANO_RELOJ = 34
+TAMANO_RELOJ = 28
 TAMANO_TABLA = 10           # tkinter normal, en puntos
 TAMANO_ETIQUETA_MAPA = 9
+TAMANO_CONTADOR = 15
 
 # --- Tamaños ---
 RADIO_TARJETA = 10
 MARGEN = 12
 ANCHO_PANEL_LATERAL = 320
+# El panel de la simulación es más ancho para que las listas En vuelo y En tierra quepan una al
+# lado de la otra. A 1280 píxeles de ancho el mapa sigue teniendo más del doble.
+ANCHO_PANEL_SIMULACION = 400
 ALTO_BOTON = 32
 
 

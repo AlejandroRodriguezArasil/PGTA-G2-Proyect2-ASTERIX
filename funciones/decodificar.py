@@ -14,7 +14,7 @@ guarda en la lista que devuelve, ya como tupla (ver exportar_csv.py).
 Descartes obligatorios (no entran en la tabla ni en el CSV):
     - CAT048 y CAT021 fuera de 40,9-41,7° N y 1,5-2,6° E (filtro geográfico del enunciado)
     - CAT021 con GBS = 1, en tierra
-    - mensajes sin posición (duda 10)
+    - mensajes sin posición: sin ella no se puede aplicar el filtro geográfico obligatorio
 """
 
 import time
@@ -24,13 +24,16 @@ from funciones import cat048
 from funciones import cat021
 from funciones import geo
 from funciones import qnh
-from funciones import decisiones
 from funciones import exportar_csv
 
 CATEGORIA_048 = 48
 CATEGORIA_021 = 21
 PIES_POR_FL = 100
 PASO_PROGRESO = 1           # se informa del progreso cada 1 %
+
+# CAT048 sin FL: no se conoce la altura del blanco, y la transformación necesita una.
+# Se usa 0 m y la columna H_SIN_FL lo marca con un 1.
+ALTURA_SI_NO_HAY_FL_M = 0.0
 
 def crear_recuentos():
     """Contadores que se muestran en el resumen final."""
@@ -59,17 +62,18 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     """
     fila, posicion = cat048.decodificar_registro(datos, posicion, lista_frn)
 
-    # Sin I048/040 no hay posición: se descarta (duda 10)
+    # Sin I048/040 no hay posición ni, por tanto, filtro geográfico: se descarta
     if "I048_040_RHO_NM" not in fila:
         recuentos["descartados_048_sin_posicion"] += 1
         return None, posicion
 
-    # Altura para la transformación: FL sin corregir (duda 7) o, si no hay FL, la de la duda 8
+    # Altura para la transformación: FL x 100 ft sin corregir, el dato que da el radar
+    # (la altitud corregida solo existe por debajo de 6000 ft). Sin FL, ALTURA_SI_NO_HAY_FL_M.
     if "FL" in fila:
         altura_m = fila["FL"] * PIES_POR_FL * geo.GeoUtils.FEET2METERS
         fila["H_SIN_FL"] = 0
     else:
-        altura_m = decisiones.ALTURA_SI_NO_HAY_FL_M
+        altura_m = ALTURA_SI_NO_HAY_FL_M
         fila["H_SIN_FL"] = 1
 
     latitud, longitud, altura_wgs84 = geo.posicion_wgs84_048(fila["I048_040_RHO_NM"],
@@ -86,16 +90,17 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     fila["H"] = altura_wgs84
 
     # Corrección QNH, solo con los mensajes que se quedan
-    fl_dudoso = fila.get("I048_090_V") == 1 or fila.get("I048_090_G") == 1
     fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
-                                                    fila.get("BP"), CATEGORIA_048, fl_dudoso)
+                                                    fila.get("BP"), CATEGORIA_048)
     return fila, posicion
 
 
 def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
     """
-    Decodifica un registro CAT021 y calcula sus columnas extra.
+    Decodifica un registro CAT021 y calcula su altitud corregida.
     Devuelve (fila, posicion_siguiente); fila es None si el mensaje se descarta.
+    LAT y LON vienen ya en WGS84 (I021/131). CAT021 no tiene altura WGS84: no se decodifica
+    I021/140 (Geometric Height), así que H y H_SIN_FL quedan vacías.
     """
     fila, posicion, motivo = cat021.decodificar_registro(datos, posicion, lista_frn)
 
@@ -104,16 +109,9 @@ def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
         recuentos["descartados_021_" + motivo] += 1
         return None, posicion
 
-    # Altura WGS84: FL x 100 ft pasado a metros (duda 9)
-    if "FL" in fila:
-        fila["H"] = fila["FL"] * PIES_POR_FL * geo.GeoUtils.FEET2METERS
-        fila["H_SIN_FL"] = 0
-    else:
-        fila["H_SIN_FL"] = 1
-
-    # Corrección QNH, solo con los mensajes que se quedan. I021/145 no tiene bits V ni G.
+    # Corrección QNH, solo con los mensajes que se quedan
     fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
-                                                    fila.get("BP"), CATEGORIA_021, False)
+                                                    fila.get("BP"), CATEGORIA_021)
     return fila, posicion
 
 
