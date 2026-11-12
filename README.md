@@ -210,6 +210,12 @@ Entrada del P3: Categoría CAT048 + Quitar aeronaves en tierra + Solo mensajes c
 
 **Mapa:** usa las teselas de OpenStreetMap. Su [política de uso](https://operations.osmfoundation.org/policies/tiles/) bloquea la identificación genérica de tkintermapview, por eso `interfaz/mapa.py` pide las teselas con un User-Agent propio. Se muestra la atribución, solo se descargan las teselas que se ven y no se guardan para usarlas sin conexión.
 
+**Mapa oscuro:** cada tesela, al descargarla, se pasa a gris, se invierte y se tiñe de azul noche (`mapa.oscurecer_tesela`); se guarda ya oscurecida, así que se hace una sola vez y la simulación va igual de fluida. El selector «Mapa: Oscuro | Claro» cambia entre este mapa y el original y vuelve a pedir las teselas.
+
+### Aspecto
+
+Tema oscuro de sala de control, con todos los colores en `interfaz/estilo.py`: fondo azul noche, tarjetas algo más claras, un solo color de acento (cian) para las acciones principales y radar y ADS-B en azul y naranja, como siempre. customtkinter va en modo oscuro; las tablas (ttk) y la barra de título de Windows se oscurecen a mano (`ventana.configurar_estilo_tabla`, `ventana.poner_barra_titulo_oscura`). Todos los textos tienen un contraste WCAG de al menos 4,5:1 sobre su fondo.
+
 ## En qué orden leer el código
 
 1. `main.py`: la aplicación. Los métodos van en el orden del flujo: elegir fichero → decodificar → mostrar → filtrar → exportar → simular.

@@ -9,22 +9,24 @@
   Las capturas están en capturas/ y son de la ventana de la aplicación.
 -->
 <style>
+  /* Colores del documento, que es claro para leerlo e imprimirlo (las capturas son de la
+     aplicación, con su tema oscuro). Radar y ADS-B, en azul y naranja, como en la aplicación. */
   :root {
-    --fondo: #F2F4F7;            /* estilo.FONDO */
-    --tarjeta: #FFFFFF;          /* estilo.TARJETA */
-    --borde: #DCE1E8;            /* estilo.BORDE */
-    --texto: #1B2430;            /* estilo.TEXTO */
-    --texto-secundario: #5F6B7A; /* estilo.TEXTO_SECUNDARIO */
-    --cabecera: #14243A;         /* estilo.CABECERA */
-    --cabecera-suave: #A9B6C8;   /* estilo.CABECERA_TEXTO_SUAVE */
-    --principal: #1F5FAD;        /* estilo.PRINCIPAL */
-    --aviso-fondo: #E8F1FC;      /* estilo.AVISO_FONDO */
-    --aviso-texto: #1F4E8C;      /* estilo.AVISO_TEXTO */
-    --resaltado: #D62828;        /* estilo.RESALTADO: color de las marcas numeradas */
-    --radar: #1F6FEB;            /* estilo.RADAR */
-    --adsb: #E8890C;             /* estilo.ADSB */
-    --tabla-cabecera: #E7ECF2;   /* estilo.TABLA_CABECERA */
-    --tabla-alterna: #F7F9FB;    /* estilo.TABLA_FILA_ALTERNA */
+    --fondo: #F2F4F7;
+    --tarjeta: #FFFFFF;
+    --borde: #DCE1E8;
+    --texto: #1B2430;
+    --texto-secundario: #5F6B7A;
+    --cabecera: #14243A;
+    --cabecera-suave: #A9B6C8;
+    --principal: #1F5FAD;
+    --aviso-fondo: #E8F1FC;
+    --aviso-texto: #1F4E8C;
+    --resaltado: #D62828;        /* color de las marcas numeradas, el mismo que en las capturas */
+    --radar: #1F6FEB;
+    --adsb: #E8890C;
+    --tabla-cabecera: #E7ECF2;
+    --tabla-alterna: #F7F9FB;
   }
 
   @page {
@@ -271,7 +273,7 @@
     <div class="numero">1</div>
     <div class="contenido">
       <p>Pulsa <b>Abrir fichero .ast</b> <span class="marca">1</span>. Está arriba a la derecha y, al empezar, también en el centro de la tabla.</p>
-      <img class="captura" src="capturas/inicio.png" style="width: 128mm;" alt="Aplicación recién abierta">
+      <img class="captura" src="capturas/inicio.png" style="width: 118mm;" alt="Aplicación recién abierta">
     </div>
   </div>
 
@@ -284,7 +286,7 @@
     <div class="numero">3</div>
     <div class="contenido">
       <p>Espera a que se decodifique. La barra grande <span class="marca">1</span> y la de abajo <span class="marca">2</span> muestran el avance. En nuestro equipo, el fichero combinado tarda unos 20 s.</p>
-      <img class="captura" src="capturas/progreso.png" style="width: 128mm;" alt="Decodificación en curso">
+      <img class="captura" src="capturas/progreso.png" style="width: 118mm;" alt="Decodificación en curso">
     </div>
   </div>
 
@@ -296,7 +298,7 @@
         <p>Debajo está el detalle por categoría y por motivo de descarte.</p>
         <p>No entran en la tabla los mensajes fuera de 40,9–41,7° N y 1,5–2,6° E, los CAT021 en tierra y los mensajes sin posición (sin ella no se puede comprobar la zona).</p>
       </div>
-      <img class="captura" src="capturas/resumen.png" style="width: 58mm;" alt="Resumen del fichero">
+      <img class="captura" src="capturas/resumen.png" style="width: 54mm;" alt="Resumen del fichero">
     </div>
   </div>
 </section>
@@ -425,8 +427,9 @@
     <tr><td><span class="marca">7</span></td><td class="control">Estelas</td><td>Muestra u oculta la línea con las últimas posiciones de cada avión.</td></tr>
     <tr><td><span class="marca">8</span></td><td class="control">Seguir</td><td>Mantiene el avión seleccionado en el centro del mapa, sin cambiar el zoom. Si el avión desaparece, se deja de seguir.</td></tr>
     <tr><td><span class="marca">9</span></td><td class="control">Sistema</td><td><b>Ambos</b>, <b>Radar</b> (CAT048) o <b>ADS-B</b> (CAT021). Con Ambos, un avión que ven los dos sistemas sale dos veces en el mapa. También filtra las listas de tráfico.</td></tr>
-    <tr><td><span class="marca">10</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
-    <tr><td><span class="marca">11</span></td><td class="control">Barra de tiempo</td><td>Va de la primera a la última hora de los datos y avanza sola al reproducir. Arrástrala: el reloj enseña la hora y, al soltar, la simulación salta a esa hora.</td></tr>
+    <tr><td><span class="marca">10</span></td><td class="control">Mapa</td><td><b>Oscuro</b> (el mapa de OpenStreetMap oscurecido, para que destaquen los aviones) o <b>Claro</b> (el original).</td></tr>
+    <tr><td><span class="marca">11</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
+    <tr><td><span class="marca">12</span></td><td class="control">Barra de tiempo</td><td>Va de la primera a la última hora de los datos y avanza sola al reproducir. Arrástrala: el reloj enseña la hora y, al soltar, la simulación salta a esa hora.</td></tr>
   </table>
   <p>Al ir a otra hora (Ir a la hora, la barra o Reset), el registro de eventos se vacía y los totales vuelven a cero.</p>
 </section>
@@ -496,7 +499,7 @@
       <td>Es normal: se descomprime al arrancar. No lo abras dos veces.</td>
     </tr>
     <tr>
-      <td>El mapa se ve gris.</td>
+      <td>El mapa no muestra la costa ni las calles.</td>
       <td>No hay conexión a internet. El mapa descarga sus imágenes de OpenStreetMap: conéctate y mueve un poco el mapa.</td>
     </tr>
     <tr>

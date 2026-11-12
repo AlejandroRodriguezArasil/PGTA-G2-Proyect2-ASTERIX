@@ -58,6 +58,9 @@ INTERVALO_CAMBIO_DE_HILO_S = 0.0005
 ESPERA_POR_VELOCIDAD_MS = {"x1": 1000, "x2": 500, "x5": 200, "x10": 100, "x30": 33, "x60": 17}
 RETRASO_MAXIMO_S = 1.0      # retraso del reloj de la simulación que se intenta recuperar (ver tic_reloj)
 
+# Sangría de las líneas del resumen que dependen de la de encima (por ejemplo, "12.318 de ellos sin FL")
+SANGRIA_RESUMEN = "      "
+
 # Ayuda de la opción Radar / ADS-B del panel cuando no se puede pulsar
 AYUDA_SIN_PAREJA = "Este avión no está en el mapa por el otro sistema."
 
@@ -274,21 +277,26 @@ class Aplicacion:
         self.cifra_descartados.configure(text=con_miles(leidos - filas))
         self.cifra_tiempo.configure(text=format(recuentos["segundos"], ".1f").replace(".", ","))
 
+        # Una línea por concepto y cortas, para que ninguna se parta a mitad de un dato: las más largas
+        # caben en el ancho del panel aunque las cifras tengan 7 dígitos. Las que dependen de la línea
+        # de encima van con SANGRIA_RESUMEN.
         lineas = [
-            "CAT048: " + con_miles(recuentos["registros_048"]) + " leídos, " + con_miles(recuentos["filas_048"])
-            + " en la tabla (" + con_miles(recuentos["filas_048_sin_fl"]) + " sin FL)",
-            "CAT021: " + con_miles(recuentos["registros_021"]) + " leídos, " + con_miles(recuentos["filas_021"])
+            "CAT048: " + con_miles(recuentos["registros_048"]) + " leídos · " + con_miles(recuentos["filas_048"])
             + " en la tabla",
-            "Descartados: " + con_miles(fuera_de_zona) + " fuera de zona, "
-            + con_miles(recuentos["descartados_021_en_tierra"]) + " en tierra (GBS), "
-            + con_miles(sin_posicion) + " sin posición",
+            SANGRIA_RESUMEN + con_miles(recuentos["filas_048_sin_fl"]) + " de ellos sin FL",
+            "CAT021: " + con_miles(recuentos["registros_021"]) + " leídos · " + con_miles(recuentos["filas_021"])
+            + " en la tabla",
+            "Descartados: " + con_miles(fuera_de_zona) + " fuera de zona",
+            SANGRIA_RESUMEN + con_miles(recuentos["descartados_021_en_tierra"]) + " CAT021 en tierra (GBS)",
+            SANGRIA_RESUMEN + con_miles(sin_posicion) + " sin posición",
             "Bloques desincronizados: " + con_miles(recuentos["bloques_desincronizados"]),
         ]
         if recuentos["lectura_parada"] == lector.BLOQUE_CORTADO:
-            lineas.append("El fichero está incompleto: el último bloque estaba cortado y no se ha leído.")
+            lineas.append("Fichero incompleto: el último bloque estaba")
+            lineas.append("cortado y no se ha leído.")
         elif recuentos["lectura_parada"] == lector.LEN_NO_VALIDO:
-            lineas.append("El fichero tiene un bloque dañado (LEN no válido) en el octeto "
-                          + con_miles(recuentos["octeto_parada"]) + ": se ha leído hasta ahí.")
+            lineas.append("Bloque dañado (LEN no válido) en el octeto")
+            lineas.append(con_miles(recuentos["octeto_parada"]) + ": se ha leído hasta ahí.")
         self.etiqueta_detalle_resumen.configure(text="\n".join(lineas))
 
     def numero_de_paginas(self):
@@ -794,6 +802,10 @@ class Aplicacion:
         if self.estado_simulacion is not None:
             mapa.redibujar_todos(self, self.estado_simulacion["aviones"])
             mapa.actualizar_resaltado(self, self.estado_simulacion["aviones"])
+
+    def cambiar_mapa(self, aspecto):
+        """Selector Mapa: oscurece el mapa o lo deja como el original (vuelve a pedir las teselas)."""
+        mapa.cambiar_aspecto_mapa(self, aspecto == "Oscuro")
 
     def cambiar_seguir(self):
         """Casilla Seguir: al marcarla, el mapa se centra ya en el avión seleccionado (si está en el mapa)."""

@@ -15,6 +15,7 @@ usa después, por ejemplo app.boton_abrir o app.tabla.
     barra de estado:  qué está pasando y barra de progreso
 """
 
+import ctypes
 import tkinter
 import tkinter.font
 from tkinter import ttk
@@ -103,6 +104,10 @@ PASO_DESPLAZAMIENTO_PANEL = 6
 # movía 1 píxel. Con 3 por píxel, un clic mueve 40 píxeles y el panel táctil se nota.
 PASO_DESPLAZAMIENTO_TABLA_HORIZONTAL = 3
 
+# Barra de título oscura de Windows (ver poner_barra_titulo_oscura)
+DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+DWMWA_USE_IMMERSIVE_DARK_MODE_ANTIGUO = 19
+
 # Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
 COLOR_ORIGINAL_BOTONES = {}
 
@@ -115,14 +120,35 @@ ESTADO_CONTROLES = {}
 # =============================================================================
 
 def crear_ventana_principal():
-    """Crea la ventana principal en modo claro, maximizada."""
-    ctk.set_appearance_mode("light")
+    """Crea la ventana principal en modo oscuro, maximizada y con la barra de título oscura."""
+    ctk.set_appearance_mode("dark")
     raiz = ctk.CTk(fg_color=estilo.FONDO)
     raiz.title(TITULO)
     raiz.minsize(ANCHO_MINIMO, ALTO_MINIMO)
     # "zoomed" maximiza la ventana en Windows; con after() se aplica cuando ya existe
     raiz.after(0, raiz.state, "zoomed")
+    raiz.after(0, poner_barra_titulo_oscura, raiz)
     return raiz
+
+
+def poner_barra_titulo_oscura(raiz):
+    """
+    Pide a Windows la barra de título oscura, para que no quede una franja blanca encima del tema
+    oscuro. Se hace con la función DwmSetWindowAttribute de Windows (dwmapi.dll), llamada con ctypes,
+    con el atributo DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (en Windows 10 anteriores a la versión 20H1
+    el mismo atributo era el 19). Si no funciona (otro sistema o un Windows antiguo), la barra se
+    queda como esté: no es un error.
+    """
+    try:
+        ventana_windows = int(raiz.wm_frame(), 16)      # identificador de la ventana para Windows
+        valor = ctypes.c_int(1)                          # 1 = barra oscura
+        for atributo in (DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_ANTIGUO):
+            resultado = ctypes.windll.dwmapi.DwmSetWindowAttribute(ventana_windows, atributo,
+                                                                  ctypes.byref(valor), ctypes.sizeof(valor))
+            if resultado == 0:                           # 0 = S_OK: Windows lo ha aceptado
+                break
+    except Exception:
+        pass
 
 
 # =============================================================================
@@ -130,7 +156,7 @@ def crear_ventana_principal():
 # =============================================================================
 
 def crear_tarjeta(padre, titulo):
-    """Tarjeta blanca con borde suave y, si se da, un título de sección."""
+    """Tarjeta con borde suave y, si se da, un título de sección."""
     tarjeta = ctk.CTkFrame(padre, fg_color=estilo.TARJETA, corner_radius=estilo.RADIO_TARJETA,
                            border_width=1, border_color=estilo.BORDE)
     if titulo != "":
@@ -146,10 +172,10 @@ def crear_etiqueta(padre, texto, tamano, color):
 
 
 def crear_boton_principal(padre, texto, comando, ancho):
-    """Botón de la acción principal de cada zona: relleno azul."""
+    """Botón de la acción principal de cada zona: relleno del color de acento."""
     return ctk.CTkButton(padre, text=texto, command=comando, width=ancho, height=estilo.ALTO_BOTON,
                          font=estilo.fuente(estilo.TAMANO_TEXTO, True), fg_color=estilo.PRINCIPAL,
-                         hover_color=estilo.PRINCIPAL_HOVER, text_color="white",
+                         hover_color=estilo.PRINCIPAL_HOVER, text_color=estilo.TEXTO_SOBRE_PRINCIPAL,
                          text_color_disabled=estilo.DESACTIVADO_TEXTO)
 
 
@@ -158,7 +184,7 @@ def crear_boton_secundario(padre, texto, comando, ancho):
     return ctk.CTkButton(padre, text=texto, command=comando, width=ancho, height=estilo.ALTO_BOTON,
                          font=estilo.fuente(estilo.TAMANO_TEXTO), fg_color="transparent",
                          hover_color=estilo.SECUNDARIO_HOVER, border_width=1,
-                         border_color=estilo.BORDE, text_color=estilo.PRINCIPAL,
+                         border_color=estilo.CONTROL_BORDE, text_color=estilo.PRINCIPAL,
                          text_color_disabled=estilo.DESACTIVADO_TEXTO)
 
 
@@ -281,23 +307,26 @@ class Pestanas(Selector):
         self.botones[valores[-1]].pack_configure(padx=(SEPARACION_OPCIONES, MARGEN_PESTANAS))
 
     def pintar(self):
-        """La pestaña elegida, en el azul principal con texto blanco; la otra, del color de la cápsula."""
+        """La pestaña elegida, en el color de acento con texto oscuro; la otra, del color de la cápsula."""
         for valor in self.botones:
             boton = self.botones[valor]
             if valor == self.elegido:
                 boton.configure(fg_color=estilo.PRINCIPAL, hover_color=estilo.PRINCIPAL_HOVER,
-                                text_color=estilo.CABECERA_TEXTO, image=self.iconos[valor][0])
+                                text_color=estilo.TEXTO_SOBRE_PRINCIPAL, image=self.iconos[valor][0])
             else:
                 boton.configure(fg_color=estilo.CABECERA_PESTANA, hover_color=estilo.CABECERA_PESTANA_HOVER,
                                 text_color=estilo.CABECERA_PESTANA_TEXTO, image=self.iconos[valor][1])
 
 
 def crear_iconos_pestanas():
-    """Iconos de las pestañas: blancos para la elegida y del color suave para la otra (dibujados en mapa.py)."""
+    """
+    Iconos de las pestañas: del color del texto sobre el acento para la elegida y del color suave
+    para la otra (dibujados en mapa.py).
+    """
     tamano = TAMANO_ICONO_PESTANA
-    tabla = mapa.dibujar_icono_tabla(estilo.CABECERA_TEXTO, tamano)
+    tabla = mapa.dibujar_icono_tabla(estilo.TEXTO_SOBRE_PRINCIPAL, tamano)
     tabla_suave = mapa.dibujar_icono_tabla(estilo.CABECERA_PESTANA_TEXTO, tamano)
-    avion = mapa.dibujar_icono_avion(estilo.CABECERA_TEXTO, tamano)
+    avion = mapa.dibujar_icono_avion(estilo.TEXTO_SOBRE_PRINCIPAL, tamano)
     avion_suave = mapa.dibujar_icono_avion(estilo.CABECERA_PESTANA_TEXTO, tamano)
     return {
         "Datos": (ctk.CTkImage(light_image=tabla, size=(tamano, tamano)),
@@ -317,13 +346,22 @@ def crear_casilla(padre, texto, comando):
     return ctk.CTkCheckBox(padre, text=texto, command=comando, font=estilo.fuente(estilo.TAMANO_TEXTO),
                            text_color=estilo.TEXTO, fg_color=estilo.PRINCIPAL,
                            hover_color=estilo.PRINCIPAL_HOVER, border_color=estilo.TEXTO_SUAVE,
+                           checkmark_color=estilo.CASILLA_MARCA, text_color_disabled=estilo.DESACTIVADO_TEXTO,
                            checkbox_width=20, checkbox_height=20)
 
 
 def crear_entrada(padre, ancho, ejemplo):
     """Campo de texto con un ejemplo en gris mientras está vacío."""
     return ctk.CTkEntry(padre, width=ancho, placeholder_text=ejemplo, font=estilo.fuente(estilo.TAMANO_TEXTO),
-                        fg_color=estilo.TARJETA, border_color=estilo.BORDE, text_color=estilo.TEXTO)
+                        fg_color=estilo.CAMPO_FONDO, border_color=estilo.CONTROL_BORDE, text_color=estilo.TEXTO,
+                        placeholder_text_color=estilo.TEXTO_SUAVE)
+
+
+def crear_barra_desplazamiento(padre, orientacion, comando):
+    """Barra de desplazamiento con los colores de la aplicación (el tamaño, el de customtkinter)."""
+    return ctk.CTkScrollbar(padre, orientation=orientacion, command=comando, fg_color="transparent",
+                            button_color=estilo.BARRA_DESPLAZAMIENTO,
+                            button_hover_color=estilo.BARRA_DESPLAZAMIENTO_HOVER)
 
 
 class Tooltip:
@@ -416,6 +454,8 @@ class PanelDesplazable(ctk.CTkScrollableFrame):
 
     def __init__(self, padre, **opciones):
         super().__init__(padre, **opciones)
+        self.configure(scrollbar_button_color=estilo.BARRA_DESPLAZAMIENTO,
+                       scrollbar_button_hover_color=estilo.BARRA_DESPLAZAMIENTO_HOVER)
         self.desplazador = Desplazador(PASO_DESPLAZAMIENTO_PANEL)
 
     def _mouse_wheel_all(self, evento):
@@ -785,8 +825,10 @@ def crear_tarjeta_exportar(app, padre):
 
 def configurar_estilo_tabla(app):
     """
-    Fuente, alto de fila y colores de la tabla (ttk.Treeview): cabecera gris azulada,
-    filas alternas y selección en azul claro.
+    Fuente, alto de fila y colores de las tablas (ttk.Treeview) de Datos y del panel de tráfico:
+    cabecera un poco más clara que la tarjeta, filas alternas y selección en azul petróleo.
+    El tema "clam" de ttk dibuja los bordes con tres colores (bordercolor, lightcolor y darkcolor)
+    que por defecto son claros: se les ponen los de la paleta para que no quede ninguna línea blanca.
     Guarda: app.fuente_tabla y app.fuente_cabecera, que se usan para calcular los anchos.
     """
     app.fuente_tabla = tkinter.font.Font(family=estilo.FAMILIA, size=estilo.TAMANO_TABLA)
@@ -798,11 +840,13 @@ def configurar_estilo_tabla(app):
     tabla.theme_use("clam")
     tabla.configure("Asterix.Treeview", font=app.fuente_tabla, rowheight=alto_fila,
                     background=estilo.TARJETA, fieldbackground=estilo.TARJETA,
-                    foreground=estilo.TEXTO, borderwidth=0)
+                    foreground=estilo.TEXTO, borderwidth=0, bordercolor=estilo.BORDE,
+                    lightcolor=estilo.TARJETA, darkcolor=estilo.TARJETA)
     tabla.map("Asterix.Treeview", background=[("selected", estilo.TABLA_SELECCION)],
               foreground=[("selected", estilo.TEXTO)])
     tabla.configure("Asterix.Treeview.Heading", font=app.fuente_cabecera, background=estilo.TABLA_CABECERA,
-                    foreground=estilo.TEXTO, relief="flat", padding=(6, 8))
+                    foreground=estilo.TEXTO, relief="flat", padding=(6, 8), bordercolor=estilo.BORDE,
+                    lightcolor=estilo.TABLA_CABECERA, darkcolor=estilo.TABLA_CABECERA)
     tabla.map("Asterix.Treeview.Heading", background=[("active", estilo.TABLA_CABECERA)])
 
 
@@ -846,8 +890,8 @@ def crear_tabla(app, marco):
     app.tabla.tag_configure("alterna", background=estilo.TABLA_FILA_ALTERNA)
     activar_desplazamiento_tabla(app.tabla)
 
-    barra_vertical = ctk.CTkScrollbar(marco, orientation="vertical", command=app.tabla.yview)
-    barra_horizontal = ctk.CTkScrollbar(marco, orientation="horizontal", command=app.tabla.xview)
+    barra_vertical = crear_barra_desplazamiento(marco, "vertical", app.tabla.yview)
+    barra_horizontal = crear_barra_desplazamiento(marco, "horizontal", app.tabla.xview)
     app.tabla.configure(yscrollcommand=barra_vertical.set, xscrollcommand=barra_horizontal.set)
     app.tabla.grid(row=0, column=0, sticky="nsew")
     barra_vertical.grid(row=0, column=1, sticky="ns")
@@ -958,6 +1002,7 @@ def crear_controles_simulacion(app, padre):
     fila_2.pack(fill="x", padx=16, pady=(5, 12))
     crear_casillas_simulacion(app, fila_2)
     crear_selector_sistema(app, fila_2)
+    crear_selector_mapa(app, fila_2)
 
 
 def crear_botones_reproduccion(app, fila_1):
@@ -997,6 +1042,16 @@ def crear_selector_sistema(app, fila_2):
                               "También filtra las listas de tráfico.")
     app.selector_sistema = crear_selector(fila_2, ["Ambos", "Radar", "ADS-B"], app.cambiar_sistema)
     app.selector_sistema.pack(side="left")
+
+
+def crear_selector_mapa(app, fila_2):
+    """Selector del aspecto del mapa: Oscuro (el de la aplicación) o Claro (el original). Guarda: app.selector_mapa."""
+    etiqueta_mapa = crear_etiqueta(fila_2, "Mapa", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_mapa.pack(side="left", padx=(20, 6))
+    Tooltip(etiqueta_mapa, "Oscuro: el mapa de OpenStreetMap oscurecido, para que destaquen los aviones. "
+                           "Claro: el mapa original.")
+    app.selector_mapa = crear_selector(fila_2, ["Oscuro", "Claro"], app.cambiar_mapa)
+    app.selector_mapa.pack(side="left")
 
 
 def crear_casillas_simulacion(app, fila_2):
@@ -1131,7 +1186,8 @@ def configurar_estilo_eventos(app):
     eventos = ttk.Style(app.raiz)
     eventos.configure("Eventos.Treeview", font=app.fuente_eventos, rowheight=alto_fila,
                       background=estilo.TARJETA, fieldbackground=estilo.TARJETA,
-                      foreground=estilo.TEXTO, borderwidth=0)
+                      foreground=estilo.TEXTO, borderwidth=0, bordercolor=estilo.BORDE,
+                      lightcolor=estilo.TARJETA, darkcolor=estilo.TARJETA)
     eventos.map("Eventos.Treeview", background=[("selected", estilo.TABLA_SELECCION)])
 
 
@@ -1161,8 +1217,8 @@ def crear_registro_eventos(app, zona):
         color = ESTILO_EVENTO[tipo][2]
         tabla.tag_configure(etiqueta, foreground=color)
     tabla.grid(row=0, column=0, sticky="nsew", padx=(12, 0), pady=8)
-    barra = ctk.CTkScrollbar(franja, orientation="vertical", command=tabla.yview, width=ANCHO_BARRA_LISTA,
-                             height=ALTO_MINIMO_BARRA_LISTA)
+    barra = crear_barra_desplazamiento(franja, "vertical", tabla.yview)
+    barra.configure(width=ANCHO_BARRA_LISTA, height=ALTO_MINIMO_BARRA_LISTA)
     tabla.configure(yscrollcommand=barra.set)
     barra.grid(row=0, column=1, sticky="ns", pady=8)
     activar_desplazamiento_lista(tabla)
@@ -1232,8 +1288,8 @@ def crear_lista_trafico(app, padre, columna, columnas, titulos, anchos):
                      anchor="center")
     tabla.column("callsign", anchor="w", stretch=True)
     tabla.heading("callsign", anchor="w")
-    barra = ctk.CTkScrollbar(marco, orientation="vertical", command=tabla.yview, width=ANCHO_BARRA_LISTA,
-                             height=ALTO_MINIMO_BARRA_LISTA)
+    barra = crear_barra_desplazamiento(marco, "vertical", tabla.yview)
+    barra.configure(width=ANCHO_BARRA_LISTA, height=ALTO_MINIMO_BARRA_LISTA)
     tabla.configure(yscrollcommand=barra.set)
     tabla.pack(side="left", fill="both", expand=True)
     barra.pack(side="left", fill="y")

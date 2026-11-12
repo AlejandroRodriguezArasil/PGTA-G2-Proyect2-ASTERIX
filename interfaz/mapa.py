@@ -2,7 +2,7 @@
 mapa.py
 
 Lo que se dibuja en el mapa de la pestaña Simulación (tkintermapview, teselas de OpenStreetMap):
-    - el propio mapa (MapaOSM), que pide las teselas con nuestro User-Agent
+    - el propio mapa (MapaOSM), que pide las teselas con nuestro User-Agent y, en modo oscuro, las oscurece
     - los iconos: siluetas de avión giradas según su rumbo, blancos puros, transponder fijo y
       radar de BCN; también los de las pestañas Datos y Simulación de la cabecera
     - la zona del filtro geográfico y el radar de Barcelona
@@ -20,7 +20,7 @@ import math
 import PIL
 import requests
 import tkintermapview
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw, ImageEnhance, ImageOps, ImageTk
 
 from funciones import filtros
 from funciones import geo
@@ -41,6 +41,10 @@ ZOOM_MAXIMO_SERVIDOR = 19
 USER_AGENT = "DecodificadorASTERIX-PGTA-G2/1.0 (proyecto universitario UPC)"
 ATRIBUCION_MAPA = "© OpenStreetMap contributors"
 TIEMPO_MAXIMO_TESELA_S = 10     # si el servidor no responde en este tiempo, se deja de esperar esa tesela
+
+# Mapa oscuro (oscurecer_tesela): factores de Pillow, donde 1 deja la imagen igual
+CONTRASTE_MAPA_OSCURO = 0.85
+BRILLO_MAPA_OSCURO = 0.9
 
 # Tamaño de los iconos en píxeles
 TAMANO_SILUETA = 22
@@ -79,34 +83,90 @@ ESQUINA_SURESTE = (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MAXIMA_DEG)
 
 
 # =============================================================================
-# Mapa que se identifica con nuestro User-Agent
+# Mapa que se identifica con nuestro User-Agent y que se puede oscurecer
 # =============================================================================
+
+def oscurecer_tesela(imagen):
+    """
+    Convierte una tesela de OpenStreetMap (clara) en una oscura, del azul noche de la aplicación.
+    Si solo se invirtiera, quedaría como un negativo fotográfico; con los pasos 3 a 5 queda en pocos
+    tonos de azul, con la costa, las carreteras principales y los nombres a la vista, pero apagados
+    para que no compitan con los aviones.
+    """
+    # 1. Gris: el color de OpenStreetMap (verde de los parques, naranja de las carreteras...) ya no hace falta
+    gris = imagen.convert("L")
+    # 2. Invertida: el suelo, que era casi blanco, pasa a casi negro, y los nombres, negros, pasan a claros
+    invertida = ImageOps.invert(gris)
+    # 3. Menos contraste, para que los nombres no deslumbren y el suelo no sea negro del todo
+    suave = ImageEnhance.Contrast(invertida).enhance(CONTRASTE_MAPA_OSCURO)
+    # 4. Un poco más oscura, para que los aviones sean lo más claro del mapa
+    apagada = ImageEnhance.Brightness(suave).enhance(BRILLO_MAPA_OSCURO)
+    # 5. Tono azul: cada gris pasa a un color entre MAPA_OSCURO_NEGRO, MAPA_OSCURO_MEDIO y MAPA_OSCURO_BLANCO
+    return ImageOps.colorize(apagada, black=estilo.MAPA_OSCURO_NEGRO, mid=estilo.MAPA_OSCURO_MEDIO,
+                             white=estilo.MAPA_OSCURO_BLANCO)
+
 
 class MapaOSM(tkintermapview.TkinterMapView):
     """
-    El mapa de tkintermapview, pero pidiendo las teselas con nuestro User-Agent.
-    tkintermapview 1.29 escribe el User-Agent "TkinterMapView" dentro de request_image y no
-    permite cambiarlo, así que esta clase hija sobrescribe ese método.
+    El mapa de tkintermapview, con dos cambios:
+      - pide las teselas con nuestro User-Agent. tkintermapview 1.29 escribe el User-Agent
+        "TkinterMapView" dentro de request_image y no permite cambiarlo, así que esta clase hija
+        sobrescribe ese método;
+      - en modo oscuro (self.oscuro), cada tesela se oscurece al descargarla (oscurecer_tesela). Se
+        guarda ya oscurecida en la caché, así que se oscurece una sola vez y no frena la simulación.
     """
+
+    def __init__(self, padre, **opciones):
+        # Antes de crear el mapa: al crearse, tkintermapview ya empieza a pedir teselas
+        self.oscuro = True
+        super().__init__(padre, **opciones)
+        self.poner_teselas_vacias()
+
+    def poner_teselas_vacias(self):
+        """
+        Teselas que tkintermapview pone mientras una no ha llegado (empty_tile_image) o si no existe
+        (not_loaded_tile_image). Las suyas son gris claro y blanca: en el mapa oscuro se verían como
+        cuadros claros, así que se cambian por unas del color del mapa.
+        """
+        if self.oscuro:
+            vacia = Image.new("RGB", (self.tile_size, self.tile_size), estilo.TESELA_VACIA_OSCURO)
+            no_encontrada = vacia
+        else:
+            vacia = Image.new("RGB", (self.tile_size, self.tile_size), estilo.TESELA_VACIA_CLARO)
+            no_encontrada = Image.new("RGB", (self.tile_size, self.tile_size), estilo.TESELA_NO_ENCONTRADA_CLARO)
+        self.empty_tile_image = ImageTk.PhotoImage(vacia)
+        self.not_loaded_tile_image = ImageTk.PhotoImage(no_encontrada)
+
+    def cambiar_modo(self, oscuro):
+        """Pasa a mapa oscuro o claro: vacía la caché de teselas y las vuelve a pedir todas."""
+        self.oscuro = oscuro
+        self.poner_teselas_vacias()
+        self.tile_image_cache = {}
+        self.draw_initial_array()
 
     def request_image(self, zoom, x, y, db_cursor=None):
         """
         Copia de TkinterMapView.request_image (tkintermapview 1.29, map_widget.py) con estos cambios:
           - la petición lleva USER_AGENT en lugar de "TkinterMapView";
           - la petición espera como mucho TIEMPO_MAXIMO_TESELA_S (el original no tenía límite);
+          - en modo oscuro, la tesela se oscurece antes de mostrarla y guardarla;
           - se quita la lectura de teselas de una base de datos (es para usar el mapa sin conexión,
             que la política de OpenStreetMap no permite) y la capa superpuesta, que no se usa.
         Las variables tienen los nombres del original para poder compararlo.
+        tkintermapview llama a este método desde su hilo de carga de teselas, no desde el de la ventana.
         """
         try:
+            oscuro = self.oscuro        # el modo cuando se pide; si cambia mientras llega, no se guarda
             url = self.tile_server.replace("{x}", str(x)).replace("{y}", str(y)).replace("{z}", str(zoom))
             # El original ponía headers={"User-Agent": "TkinterMapView"} y no tenía timeout
             respuesta = requests.get(url, stream=True, headers={"User-Agent": USER_AGENT},
                                      timeout=TIEMPO_MAXIMO_TESELA_S)
             image = Image.open(respuesta.raw)
+            if oscuro:
+                image = oscurecer_tesela(image)
 
-            # Si la ventana se ha cerrado mientras tanto, no se usa la imagen
-            if self.running:
+            # Si la ventana se ha cerrado, o se ha cambiado de mapa mientras llegaba, no se usa la imagen
+            if self.running and oscuro == self.oscuro:
                 image_tk = ImageTk.PhotoImage(image)
             else:
                 return self.empty_tile_image
@@ -154,25 +214,30 @@ def dibujar_silueta(color, tamano, color_borde, ancho_borde):
 
 
 def dibujar_antena(color, tamano):
-    """Icono del transponder fijo: una torre con dos ondas a cada lado."""
+    """
+    Icono del transponder fijo: una torre con dos ondas a cada lado. Se dibuja dos veces: primero
+    más gruesa y del color del borde de los iconos, y encima, del color de la antena. Así lleva un
+    contorno oscuro, como las siluetas, y se ve sobre el mapa oscuro y sobre el claro.
+    """
     grande = tamano * ESCALA_DIBUJO
     imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
     dibujo = ImageDraw.Draw(imagen)
-    grosor = 2 * ESCALA_DIBUJO
     centro_x = grande / 2
     punta_y = grande * 0.32
-    # Torre: mástil y patas
-    dibujo.line([(centro_x, punta_y), (centro_x, grande * 0.95)], fill=color, width=grosor)
-    dibujo.line([(centro_x, grande * 0.55), (grande * 0.30, grande * 0.95)], fill=color, width=grosor)
-    dibujo.line([(centro_x, grande * 0.55), (grande * 0.70, grande * 0.95)], fill=color, width=grosor)
-    radio_punta = grande * 0.07
-    dibujo.ellipse((centro_x - radio_punta, punta_y - radio_punta, centro_x + radio_punta, punta_y + radio_punta),
-                   fill=color)
-    # Ondas: arcos a la derecha (de -45° a 45°) y a la izquierda (de 135° a 225°)
-    for radio in (grande * 0.18, grande * 0.32):
-        caja = (centro_x - radio, punta_y - radio, centro_x + radio, punta_y + radio)
-        dibujo.arc(caja, start=-45, end=45, fill=color, width=grosor)
-        dibujo.arc(caja, start=135, end=225, fill=color, width=grosor)
+    pasadas = [(estilo.BORDE_ICONO, 4 * ESCALA_DIBUJO), (color, 2 * ESCALA_DIBUJO)]
+    for tono, grosor in pasadas:
+        # Torre: mástil y patas
+        dibujo.line([(centro_x, punta_y), (centro_x, grande * 0.95)], fill=tono, width=grosor)
+        dibujo.line([(centro_x, grande * 0.55), (grande * 0.30, grande * 0.95)], fill=tono, width=grosor)
+        dibujo.line([(centro_x, grande * 0.55), (grande * 0.70, grande * 0.95)], fill=tono, width=grosor)
+        radio_punta = grande * 0.07 + grosor / 4
+        dibujo.ellipse((centro_x - radio_punta, punta_y - radio_punta, centro_x + radio_punta,
+                        punta_y + radio_punta), fill=tono)
+        # Ondas: arcos a la derecha (de -45° a 45°) y a la izquierda (de 135° a 225°)
+        for radio in (grande * 0.18, grande * 0.32):
+            caja = (centro_x - radio, punta_y - radio, centro_x + radio, punta_y + radio)
+            dibujo.arc(caja, start=-45, end=45, fill=tono, width=grosor)
+            dibujo.arc(caja, start=135, end=225, fill=tono, width=grosor)
     return imagen.resize((tamano, tamano), Image.LANCZOS)
 
 
@@ -289,8 +354,28 @@ def configurar_mapa(app):
 
     latitud_radar = geo.RADAR_BCN.Lat * geo.GeoUtils.RADS2DEGS
     longitud_radar = geo.RADAR_BCN.Lon * geo.GeoUtils.RADS2DEGS
-    app.mapa.set_marker(latitud_radar, longitud_radar, text="Radar BCN", icon=app.iconos["estacion"],
-                        font=FUENTE_ETIQUETA, text_color=estilo.ESTACION_RADAR)
+    # Sin etiqueta: sobre LEBL se montaba con las de los aviones que despegan (la leyenda explica el icono)
+    app.mapa.set_marker(latitud_radar, longitud_radar, icon=app.iconos["estacion"])
+
+
+def color_etiquetas(app):
+    """Color de las etiquetas del mapa: claro sobre el mapa oscuro y oscuro sobre el claro."""
+    if app.mapa.oscuro:
+        return estilo.ETIQUETA_MAPA_OSCURO
+    return estilo.ETIQUETA_MAPA_CLARO
+
+
+def cambiar_aspecto_mapa(app, oscuro):
+    """
+    Selector Mapa: pasa al mapa oscuro o al claro (MapaOSM.cambiar_modo) y cambia el color de las
+    etiquetas de los aviones que ya están dibujados.
+    """
+    app.mapa.cambiar_modo(oscuro)
+    color = color_etiquetas(app)
+    for marcador in app.mapa.canvas_marker_list:
+        marcador.text_color = color
+        if marcador.canvas_text is not None:
+            app.mapa.canvas.itemconfig(marcador.canvas_text, fill=color)
 
 
 def encuadrar_zona(app):
@@ -455,7 +540,7 @@ def texto_etiqueta(app, identificador, avion):
         return ""
     fila = avion["fila"]
     if filtros.es_transponder_fijo(fila):
-        # Solo el código: el nombre entero tapaba "Radar BCN" y los despegues en LEBL (la leyenda explica la antena)
+        # Solo el código: el nombre entero tapaba los despegues en LEBL (la leyenda explica la antena)
         return filtros.MODO_3A_TRANSPONDER_FIJO
     if filtros.es_blanco_puro(fila):
         tipo = TIPO_BLANCO_PURO_ETIQUETA[valor(fila, "I048_020_TYP")]
@@ -498,7 +583,7 @@ def dibujar_avion(app, identificador, avion):
         marcador.set_position(latitud, longitud)
     else:
         marcador = app.mapa.set_marker(latitud, longitud, text=etiqueta, icon=icono,
-                                       font=FUENTE_ETIQUETA, text_color=estilo.TEXTO,
+                                       font=FUENTE_ETIQUETA, text_color=color_etiquetas(app),
                                        command=app.al_pulsar_avion, data=identificador)
         app.marcadores[identificador] = marcador
 
