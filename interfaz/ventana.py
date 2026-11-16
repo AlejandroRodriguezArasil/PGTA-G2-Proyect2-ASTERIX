@@ -32,6 +32,10 @@ TITULO = "ASTERIX Decoder"
 # Tamaño mínimo de la ventana: cabe en un portátil de 1920x1080 al 150 % (unos 1280 x 690 útiles)
 ANCHO_MINIMO = 1100
 ALTO_MINIMO = 600
+# La ventana se abre maximizada. Al pulsar Restaurar ocupa esta parte de la pantalla, centrada
+FRACCION_VENTANA_RESTAURADA = 0.85
+# Espera antes de maximizar: con customtkinter, maximizar justo al crear la ventana a veces no hace efecto
+ESPERA_MAXIMIZAR_MS = 100
 
 # Ancho de las columnas de la tabla (píxeles): el del texto más largo, con un máximo
 MARGEN_COLUMNA = 24
@@ -123,15 +127,47 @@ ESTADO_CONTROLES = {}
 # =============================================================================
 
 def crear_ventana_principal():
-    """Crea la ventana principal en modo oscuro, maximizada y con la barra de título oscura."""
+    """
+    Crea la ventana principal en modo oscuro. Se queda escondida mientras main.py la construye y se
+    enseña ya maximizada (mostrar_maximizada), para que no se vea antes una ventana pequeña.
+    """
     ctk.set_appearance_mode("dark")
     raiz = ctk.CTk(fg_color=estilo.FONDO)
     raiz.title(TITULO)
     raiz.minsize(ANCHO_MINIMO, ALTO_MINIMO)
-    # "zoomed" maximiza la ventana en Windows; con after() se aplica cuando ya existe
-    raiz.after(0, raiz.state, "zoomed")
-    raiz.after(0, poner_barra_titulo_oscura, raiz)
+    poner_tamano_restaurado(raiz)
+    raiz.withdraw()
+    # after() solo se ejecuta cuando arranca mainloop(), es decir, con la ventana ya construida
+    raiz.after(ESPERA_MAXIMIZAR_MS, mostrar_maximizada, raiz)
     return raiz
+
+
+def poner_tamano_restaurado(raiz):
+    """
+    Tamaño y posición de la ventana cuando se pulsa Restaurar: FRACCION_VENTANA_RESTAURADA de la
+    pantalla, centrada. Sale del tamaño de la pantalla del ordenador en el que se abre, así que vale
+    para cualquier resolución, y nunca es menor que el tamaño mínimo.
+    winfo_screenwidth() y winfo_screenheight() dan píxeles reales de la pantalla. geometry() de
+    customtkinter multiplica el ancho y el alto por la escala de Windows (125 %, 150 %...), así que
+    antes se dividen por esa escala; la posición (x, y) no la multiplica, así que va en píxeles reales.
+    """
+    escala = ctk.ScalingTracker.get_window_scaling(raiz)
+    ancho_pantalla = raiz.winfo_screenwidth()
+    alto_pantalla = raiz.winfo_screenheight()
+    ancho = max(ANCHO_MINIMO, int(ancho_pantalla * FRACCION_VENTANA_RESTAURADA / escala))
+    alto = max(ALTO_MINIMO, int(alto_pantalla * FRACCION_VENTANA_RESTAURADA / escala))
+    x = max(0, (ancho_pantalla - int(ancho * escala)) // 2)
+    y = max(0, (alto_pantalla - int(alto * escala)) // 2)
+    raiz.geometry(str(ancho) + "x" + str(alto) + "+" + str(x) + "+" + str(y))
+
+
+def mostrar_maximizada(raiz):
+    """
+    Enseña la ventana maximizada: el estado "zoomed" de Windows, que ocupa la pantalla y deja la barra
+    de título con los botones de minimizar, restaurar y cerrar (no es pantalla completa sin bordes).
+    """
+    raiz.state("zoomed")
+    poner_barra_titulo_oscura(raiz)
 
 
 def poner_barra_titulo_oscura(raiz):
@@ -665,7 +701,7 @@ def crear_cabecera(app):
     titulos.grid(row=0, column=0, sticky="w", padx=20, pady=10)
     ctk.CTkLabel(titulos, text="ASTERIX Decoder", font=estilo.fuente(estilo.TAMANO_TITULO, True),
                  text_color=estilo.CABECERA_TEXTO, anchor="w").pack(anchor="w")
-    ctk.CTkLabel(titulos, text="CAT048 · CAT021     PGTA · Group G2", font=estilo.fuente(estilo.TAMANO_AYUDA),
+    ctk.CTkLabel(titulos, text="CAT048 · CAT021     PGTA · Group 02", font=estilo.fuente(estilo.TAMANO_AYUDA),
                  text_color=estilo.CABECERA_TEXTO_SUAVE, anchor="w").pack(anchor="w")
 
     app.selector_pestana = Pestanas(cabecera, ["Data", "Simulation"], crear_iconos_pestanas(), app.cambiar_pestana)

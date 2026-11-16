@@ -1,6 +1,8 @@
 # ASTERIX Decoder CAT048 / CAT021
 
-PGTA · Project 2 · Group G2 · Repository: https://github.com/AlejandroRodriguezArasil/PGTA-G2-Proyect2-ASTERIX
+PGTA · Project 2 · Group 02 · Repository: https://github.com/AlejandroRodriguezArasil/PGTA-G2-Proyect2-ASTERIX
+
+**Authors:** Alejandro Rodríguez Arasil and Pau Ramírez Hermoso.
 
 Desktop application that decodes ASTERIX files with CAT048 (Barcelona radar) and CAT021 (ADS-B) messages. It shows the messages in a table, filters them, exports them to CSV and simulates the trajectories on a map.
 
@@ -29,6 +31,7 @@ The .ast files are not part of the delivery: they are the course files (`asterix
 - **Standalone:** it needs neither Python nor any other file. It is for 64-bit Windows.
 - **Windows warning:** the first time, "Windows protected your PC" may appear, because the executable is not signed. Click "More info" and then "Run anyway".
 - **Start-up:** it takes a few seconds to open, because it carries everything it needs inside and unpacks it when it starts.
+- **Window:** the application opens maximized and adapts to the screen resolution.
 - **Internet:** the simulation map needs it. Everything else works offline.
 
 ## Running from the code
@@ -208,7 +211,7 @@ P3 input: Category CAT048 + Remove aircraft on ground + Only messages with FL + 
   - Click on a row: the aircraft is selected as on the map (its radar symbol if it has one; otherwise, the ADS-B one) and the map centres on it (`main.al_pulsar_fila_trafico`).
   - To keep it smooth at x60, the lists are not rebuilt in each step: only the rows that change are added, removed or changed, and they are only re-sorted when someone enters or leaves (`ventana.ListaIncremental`). The event log works the same way: only the new ones are added (`ventana.RegistroEventos`).
 - **Selected aircraft:** the data of the last message of the clicked aircraft, with its status and its trend (`mapa.texto_informacion`). With the Radar / ADS-B selector it switches to its pair in the other system (same TA); the option is greyed out if the pair is not on the map.
-- **Scrolling:** the panel scrolls with the mouse wheel or the touchpad, like the side panel and the table of the Data tab (`ventana.Desplazador`). Over a list with hidden rows, the list scrolls.
+- **Scrolling:** the panel scrolls with the mouse wheel, like the side panel and the table of the Data tab (`ventana.Desplazador`). Over a list with hidden rows, the list scrolls.
 
 **Performance:** with `asterix_combinado.ast` at x60, a step (logic, map and panels) takes 2.6 ms on average and the 60 steps per second are kept.
 
