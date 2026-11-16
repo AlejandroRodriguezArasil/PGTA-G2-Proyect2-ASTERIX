@@ -102,6 +102,11 @@ ESTILO_EVENTO = {
 # Campo de la hora de "Go to time" (píxeles)
 ANCHO_ENTRADA_HORA = 70
 
+# Barra de controles de la simulación: margen interior de la tarjeta y separación entre grupos de
+# controles (píxeles); ver crear_controles_simulacion y ColocadorControles
+MARGEN_CONTROLES = 16
+SEPARACION_GRUPOS_CONTROLES = 24
+
 # Desplazamiento (ver Desplazador): delta que equivale a una unidad. En la tabla, un clic de la
 # rueda (120) baja una fila, como hace Tk; en los paneles, cada 6 de delta es un píxel, como hace
 # customtkinter (20 píxeles por clic).
@@ -1024,82 +1029,175 @@ def crear_pestana_datos(app):
 
 def crear_controles_simulacion(app, padre):
     """
-    Controles de la simulación en dos filas: arriba los botones y la velocidad; abajo las
-    casillas y el sistema. Repartidos así caben en un portátil de 1280 píxeles de ancho.
-    La hora, "Go to time" y la barra de tiempo van en su propia tarjeta (crear_tarjeta_tiempo).
+    Barra de controles de la simulación: una sola tarjeta a todo el ancho, encima del mapa y del panel.
+        - Fila 1: a la izquierda la reproducción (Play, Pause, +1 s, Reset) y la velocidad; a la derecha
+          los controles de vista (Labels, Trails, Follow, System y Map), si caben.
+        - Fila de vista: solo se usa si los controles de vista no caben en la fila 1 (ver ColocadorControles).
+        - Línea de tiempo: el reloj, la barra de tiempo con la hora inicial y la final y "Go to time".
+    Los controles se crean dentro de grupos (un marco por grupo) que son hijos de la tarjeta, no de una
+    fila: así ColocadorControles puede pasar un grupo de una fila a otra con pack(in_=...).
     Lo que guarda cada parte está en su función.
     """
     tarjeta = crear_tarjeta(padre, "")
-    tarjeta.grid(row=0, column=0, sticky="nsew", padx=(0, estilo.MARGEN), pady=(0, estilo.MARGEN))
+    tarjeta.grid(row=0, column=0, columnspan=2, sticky="nsew", pady=(0, estilo.MARGEN))
 
+    # Primero las filas y después los grupos: en tkinter, lo que se crea después queda por encima, y
+    # los grupos tienen que verse encima de la fila en la que se colocan
     fila_1 = ctk.CTkFrame(tarjeta, fg_color="transparent")
-    fila_1.pack(fill="x", padx=16, pady=(12, 5))
-    crear_botones_reproduccion(app, fila_1)
-    crear_selector_velocidad(app, fila_1)
+    fila_1.pack(fill="x", padx=MARGEN_CONTROLES, pady=(12, 6))
+    fila_vista = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    fila_tiempo = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    fila_tiempo.pack(fill="x", padx=MARGEN_CONTROLES, pady=(6, 12))
 
-    fila_2 = ctk.CTkFrame(tarjeta, fg_color="transparent")
-    fila_2.pack(fill="x", padx=16, pady=(5, 12))
-    crear_casillas_simulacion(app, fila_2)
-    crear_selector_sistema(app, fila_2)
-    crear_selector_mapa(app, fila_2)
+    grupo_reproduccion = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    crear_botones_reproduccion(app, grupo_reproduccion)
+    grupo_velocidad = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    crear_selector_velocidad(app, grupo_velocidad)
+    grupo_casillas = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    crear_casillas_simulacion(app, grupo_casillas)
+    grupo_sistema = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    crear_selector_sistema(app, grupo_sistema)
+    grupo_mapa = ctk.CTkFrame(tarjeta, fg_color="transparent")
+    crear_selector_mapa(app, grupo_mapa)
+
+    crear_linea_tiempo(app, fila_tiempo)
+
+    colocador = ColocadorControles(tarjeta, fila_1, fila_vista, fila_tiempo,
+                                   [grupo_reproduccion, grupo_velocidad],
+                                   [grupo_casillas, grupo_sistema, grupo_mapa])
+    tarjeta.bind("<Configure>", colocador.al_cambiar_tamano, add="+")
 
 
-def crear_botones_reproduccion(app, fila_1):
+class ColocadorControles:
+    """
+    Coloca los grupos de la barra de controles según el ancho de la tarjeta:
+        - Si todo cabe en una fila: en la fila 1, la reproducción y la velocidad a la izquierda y los
+          controles de vista (casillas, System y Map) a la derecha.
+        - Si no cabe (por ejemplo, en un portátil de 1366 píxeles o con la ventana al ancho mínimo): los
+          controles de vista pasan a su propia fila, entre la fila 1 y la línea de tiempo. Para que no
+          quede un hueco grande al final de las filas, en cada una los grupos se reparten a lo ancho: el
+          primero pegado a la izquierda y el último a la derecha, alineados con el reloj y con "Go to time".
+    Se llama cada vez que la tarjeta cambia de tamaño (evento <Configure>), pero solo vuelve a colocar los
+    grupos cuando hay que pasar de una forma a la otra.
+    """
+
+    def __init__(self, tarjeta, fila_1, fila_vista, fila_tiempo, grupos_reproduccion, grupos_vista):
+        self.tarjeta = tarjeta
+        self.fila_1 = fila_1
+        self.fila_vista = fila_vista
+        self.fila_tiempo = fila_tiempo
+        self.grupos_reproduccion = grupos_reproduccion      # [reproducción, velocidad]
+        self.grupos_vista = grupos_vista                    # [casillas, System, Map]
+        self.en_una_fila = None                             # None hasta la primera colocación
+
+    def ancho_necesario(self):
+        """Ancho (píxeles) que hacen falta para poner todos los grupos en una sola fila."""
+        # winfo_reqwidth() da píxeles reales; las separaciones de pack las multiplica customtkinter por
+        # la escala de Windows, así que aquí también se multiplican
+        escala = ctk.ScalingTracker.get_widget_scaling(self.tarjeta)
+        ancho = 0
+        for grupo in self.grupos_reproduccion + self.grupos_vista:
+            ancho = ancho + grupo.winfo_reqwidth()
+        separaciones = len(self.grupos_reproduccion + self.grupos_vista) - 1
+        return ancho + int((separaciones * SEPARACION_GRUPOS_CONTROLES + 2 * MARGEN_CONTROLES) * escala)
+
+    def al_cambiar_tamano(self, evento):
+        """Evento <Configure> de la tarjeta: decide si los controles caben en una fila y los coloca."""
+        cabe = self.tarjeta.winfo_width() >= self.ancho_necesario()
+        if cabe == self.en_una_fila:
+            return
+        self.en_una_fila = cabe
+        for grupo in self.grupos_reproduccion + self.grupos_vista:
+            grupo.pack_forget()
+        if cabe:
+            self.colocar_en_una_fila()
+        else:
+            self.colocar_en_dos_filas()
+
+    def colocar_en_una_fila(self):
+        """Reproducción y velocidad a la izquierda de la fila 1; los controles de vista a su derecha."""
+        self.fila_vista.pack_forget()
+        reproduccion, velocidad = self.grupos_reproduccion
+        casillas, sistema, mapa_aspecto = self.grupos_vista
+        reproduccion.pack(in_=self.fila_1, side="left")
+        velocidad.pack(in_=self.fila_1, side="left", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
+        # Con side="right" se colocan de derecha a izquierda: primero Map, después System y las casillas
+        mapa_aspecto.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
+        sistema.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
+        casillas.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
+
+    def colocar_en_dos_filas(self):
+        """
+        Fila 1: reproducción a la izquierda y velocidad a la derecha. Fila de vista (debajo): casillas a la
+        izquierda, System en el centro y Map a la derecha.
+        """
+        self.fila_vista.pack(fill="x", padx=MARGEN_CONTROLES, pady=(6, 6), before=self.fila_tiempo)
+        reproduccion, velocidad = self.grupos_reproduccion
+        casillas, sistema, mapa_aspecto = self.grupos_vista
+        reproduccion.pack(in_=self.fila_1, side="left")
+        velocidad.pack(in_=self.fila_1, side="right")
+        casillas.pack(in_=self.fila_vista, side="left")
+        mapa_aspecto.pack(in_=self.fila_vista, side="right")
+        # expand=True sin fill: el grupo queda centrado en el espacio que dejan los otros dos
+        sistema.pack(in_=self.fila_vista, side="left", expand=True)
+
+
+def crear_botones_reproduccion(app, grupo):
     """
     Reproducir, Pausa, +1 s y Reset.
     Guarda: app.boton_play, app.boton_pausa, app.boton_paso, app.boton_reset.
     """
-    app.boton_play = crear_boton_principal(fila_1, "▶  Play", app.play, 120)
+    app.boton_play = crear_boton_principal(grupo, "▶  Play", app.play, 120)
     app.boton_play.pack(side="left")
     Tooltip(app.boton_play, "Runs the simulation in steps of 1 s of time of day.")
     # Símbolos de texto normales: los de pausa y avance (⏸, ⏭) salen como emojis en Windows
-    app.boton_pausa = crear_boton_secundario(fila_1, "❚❚  Pause", app.pausa, 92)
+    app.boton_pausa = crear_boton_secundario(grupo, "❚❚  Pause", app.pausa, 92)
     app.boton_pausa.pack(side="left", padx=(8, 0))
-    app.boton_paso = crear_boton_secundario(fila_1, "▶❚  +1 s", app.avanzar_un_segundo, 82)
+    app.boton_paso = crear_boton_secundario(grupo, "▶❚  +1 s", app.avanzar_un_segundo, 82)
     app.boton_paso.pack(side="left", padx=(8, 0))
     Tooltip(app.boton_paso, "Advances a single 1 s step.")
-    app.boton_reset = crear_boton_secundario(fila_1, "⟲  Reset", app.reset_simulacion, 86)
+    app.boton_reset = crear_boton_secundario(grupo, "⟲  Reset", app.reset_simulacion, 86)
     app.boton_reset.pack(side="left", padx=(8, 0))
     Tooltip(app.boton_reset, "Stops the simulation and goes back to the first time in the data.")
 
 
-def crear_selector_velocidad(app, fila_1):
+def crear_selector_velocidad(app, grupo):
     """Selector de velocidad. Guarda: app.selector_velocidad."""
     # La ayuda de los selectores va en su etiqueta
-    etiqueta_velocidad = crear_etiqueta(fila_1, "Speed", estilo.TAMANO_TEXTO, estilo.TEXTO)
-    etiqueta_velocidad.pack(side="left", padx=(18, 6))
+    etiqueta_velocidad = crear_etiqueta(grupo, "Speed", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_velocidad.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_velocidad, "Each step is always 1 s; the speed changes how often a step is drawn.")
-    app.selector_velocidad = crear_selector(fila_1, ["x1", "x2", "x5", "x10", "x30", "x60"], app.cambiar_velocidad)
+    app.selector_velocidad = crear_selector(grupo, ["x1", "x2", "x5", "x10", "x30", "x60"], app.cambiar_velocidad)
     app.selector_velocidad.pack(side="left")
 
 
-def crear_selector_sistema(app, fila_2):
+def crear_selector_sistema(app, grupo):
     """Selector Radar / ADS-B / Ambos. Guarda: app.selector_sistema."""
-    etiqueta_sistema = crear_etiqueta(fila_2, "System", estilo.TAMANO_TEXTO, estilo.TEXTO)
-    etiqueta_sistema.pack(side="left", padx=(24, 6))
+    etiqueta_sistema = crear_etiqueta(grupo, "System", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_sistema.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_sistema, "Aircraft seen by the radar (CAT048), by ADS-B (CAT021) or by both. "
                               "It also filters the traffic lists.")
-    app.selector_sistema = crear_selector(fila_2, ["Both", "Radar", "ADS-B"], app.cambiar_sistema)
+    app.selector_sistema = crear_selector(grupo, ["Both", "Radar", "ADS-B"], app.cambiar_sistema)
     app.selector_sistema.pack(side="left")
 
 
-def crear_selector_mapa(app, fila_2):
+def crear_selector_mapa(app, grupo):
     """Selector del aspecto del mapa: Oscuro (el de la aplicación) o Claro (el original). Guarda: app.selector_mapa."""
-    etiqueta_mapa = crear_etiqueta(fila_2, "Map", estilo.TAMANO_TEXTO, estilo.TEXTO)
-    etiqueta_mapa.pack(side="left", padx=(20, 6))
+    etiqueta_mapa = crear_etiqueta(grupo, "Map", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_mapa.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_mapa, "Dark: the OpenStreetMap map darkened, so that the aircraft stand out. "
                            "Light: the original map.")
-    app.selector_mapa = crear_selector(fila_2, ["Dark", "Light"], app.cambiar_mapa)
+    app.selector_mapa = crear_selector(grupo, ["Dark", "Light"], app.cambiar_mapa)
     app.selector_mapa.set("Light")              # al empezar, el mapa claro (MapaOSM empieza así)
     app.selector_mapa.pack(side="left")
 
 
-def crear_casillas_simulacion(app, fila_2):
+def crear_casillas_simulacion(app, grupo):
     """
     Casillas Etiquetas y Estelas (marcadas al empezar) y Seguir (sin marcar).
     Guarda: app.casilla_etiquetas, app.casilla_estelas, app.casilla_seguir.
     """
-    app.casilla_etiquetas = crear_casilla(fila_2, "Labels", app.cambiar_etiquetas)
+    app.casilla_etiquetas = crear_casilla(grupo, "Labels", app.cambiar_etiquetas)
     app.casilla_etiquetas.select()
     app.casilla_etiquetas.pack(side="left")
     Tooltip(app.casilla_etiquetas, "Data block of each aircraft, as on a radar display: the callsign "
@@ -1109,29 +1207,25 @@ def crear_casillas_simulacion(app, fila_2):
                                    "ground and the fixed transponder have no label, unless selected. "
                                    "Pure targets show "
                                    "their type and number, for example PSR 45.")
-    app.casilla_estelas = crear_casilla(fila_2, "Trails", app.cambiar_estelas)
+    app.casilla_estelas = crear_casilla(grupo, "Trails", app.cambiar_estelas)
     app.casilla_estelas.select()
     app.casilla_estelas.pack(side="left", padx=(16, 0))
     Tooltip(app.casilla_estelas, "Line with the last positions of each aircraft.")
-    app.casilla_seguir = crear_casilla(fila_2, "Follow", app.cambiar_seguir)
+    app.casilla_seguir = crear_casilla(grupo, "Follow", app.cambiar_seguir)
     app.casilla_seguir.pack(side="left", padx=(16, 0))
     Tooltip(app.casilla_seguir, "Keeps the selected aircraft in the centre of the map, without changing the zoom. "
                                 "If the aircraft disappears, following stops.")
 
 
-def crear_tarjeta_tiempo(app, padre):
+def crear_linea_tiempo(app, fila):
     """
-    Hora del día de la simulación, grande y legible, con "Go to time" a su derecha y, debajo,
-    la barra de tiempo, que va de la primera a la última hora de los datos.
+    Línea de tiempo de la barra de controles: a la izquierda la hora del día de la simulación, grande y
+    legible; a la derecha "Go to time"; y en el centro, con todo el ancho que sobra, la barra de tiempo,
+    que va de la primera a la última hora de los datos, con esas horas a sus lados.
     Guarda: app.etiqueta_reloj, app.entrada_hora, app.boton_ir, app.barra_tiempo,
             app.etiqueta_hora_inicio, app.etiqueta_hora_fin.
     """
-    tarjeta = crear_tarjeta(padre, "")
-    tarjeta.grid(row=0, column=1, sticky="nsew", pady=(0, estilo.MARGEN))
-
-    fila_hora = ctk.CTkFrame(tarjeta, fg_color="transparent")
-    fila_hora.pack(fill="x", padx=16, pady=(10, 0))
-    reloj = ctk.CTkFrame(fila_hora, fg_color="transparent")
+    reloj = ctk.CTkFrame(fila, fg_color="transparent")
     reloj.pack(side="left")
     crear_etiqueta(reloj, "Simulation time (UTC)", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
     app.etiqueta_reloj = ctk.CTkLabel(reloj, text="--:--:--",
@@ -1139,8 +1233,8 @@ def crear_tarjeta_tiempo(app, padre):
                                       text_color=estilo.TEXTO, anchor="w", width=ANCHO_RELOJ)
     app.etiqueta_reloj.pack(anchor="w")
 
-    ir_a_hora = ctk.CTkFrame(fila_hora, fg_color="transparent")
-    ir_a_hora.pack(side="right", anchor="s", pady=(0, 4))
+    ir_a_hora = ctk.CTkFrame(fila, fg_color="transparent")
+    ir_a_hora.pack(side="right")
     crear_etiqueta(ir_a_hora, "Go to time", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
     campos = ctk.CTkFrame(ir_a_hora, fg_color="transparent")
     campos.pack(anchor="w")
@@ -1152,15 +1246,16 @@ def crear_tarjeta_tiempo(app, padre):
     app.boton_ir = crear_boton_secundario(campos, "Go", app.ir_a_hora, 44)
     app.boton_ir.pack(side="left", padx=(6, 0))
 
-    fila_barra = ctk.CTkFrame(tarjeta, fg_color="transparent")
-    fila_barra.pack(fill="x", padx=16, pady=(4, 12))
-    app.etiqueta_hora_inicio = crear_etiqueta(fila_barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
+    # La barra va la última: con expand=True ocupa todo el ancho que dejan el reloj y "Go to time"
+    barra = ctk.CTkFrame(fila, fg_color="transparent")
+    barra.pack(side="left", fill="x", expand=True, padx=SEPARACION_GRUPOS_CONTROLES)
+    app.etiqueta_hora_inicio = crear_etiqueta(barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_hora_inicio.pack(side="left")
-    app.etiqueta_hora_fin = crear_etiqueta(fila_barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
+    app.etiqueta_hora_fin = crear_etiqueta(barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_hora_fin.pack(side="right")
     # Al arrastrar, command avisa de cada posición (el reloj enseña esa hora); el salto se hace
     # al soltar el ratón (<ButtonRelease-1>), no en cada movimiento, para que no se trabe.
-    app.barra_tiempo = ctk.CTkSlider(fila_barra, from_=0, to=1, height=16, command=app.mover_barra_tiempo,
+    app.barra_tiempo = ctk.CTkSlider(barra, from_=0, to=1, height=16, command=app.mover_barra_tiempo,
                                      fg_color=estilo.BORDE, progress_color=estilo.PRINCIPAL,
                                      button_color=estilo.PRINCIPAL, button_hover_color=estilo.PRINCIPAL_HOVER)
     app.barra_tiempo.set(0)
@@ -1517,13 +1612,12 @@ def crear_tarjeta_avion(app, panel):
 
 
 def crear_pestana_simulacion(app):
-    """Pestaña Simulación: controles y hora arriba; mapa (con la leyenda y los eventos dentro) y panel debajo."""
+    """Pestaña Simulación: la barra de controles arriba; mapa (con la leyenda y los eventos dentro) y panel debajo."""
     pestana = app.pestana_simulacion
     pestana.grid_rowconfigure(1, weight=1)
     pestana.grid_columnconfigure(0, weight=1)
     pestana.grid_columnconfigure(1, minsize=estilo.ANCHO_PANEL_SIMULACION)
 
     crear_controles_simulacion(app, pestana)
-    crear_tarjeta_tiempo(app, pestana)
     crear_zona_mapa(app, pestana)
     crear_panel_simulacion(app, pestana)
