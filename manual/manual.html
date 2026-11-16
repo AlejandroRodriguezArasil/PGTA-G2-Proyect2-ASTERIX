@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Decodificador ASTERIX · Manual de uso</title>
+<title>ASTERIX Decoder · User Manual</title>
 <!--
   Fuente del manual de uso. Se convierte a PDF con crear_manual.bat (Microsoft Edge en modo headless).
   Colores y tipografías: los de estilo.py, para que el manual se parezca a la aplicación.
@@ -33,7 +33,7 @@
     size: A4;
     margin: 16mm 16mm 18mm 16mm;
     @bottom-center {
-      content: "Decodificador ASTERIX · Manual de uso · " counter(page);
+      content: "ASTERIX Decoder · User Manual · " counter(page);
       font-family: "Segoe UI", sans-serif;
       font-size: 8pt;
       color: #5F6B7A;   /* estilo.TEXTO_SECUNDARIO */
@@ -203,90 +203,89 @@
   .portada .datos p { margin: 0 0 1mm 0; }
   .portada .datos .grande { font-size: 13pt; color: var(--texto); font-weight: 600; }
 </style>
-</head>
 <body>
 
 <!-- ============================== Portada ============================== -->
 <section class="pagina portada">
   <div class="banda">
     <p class="tipo">CAT048 · CAT021</p>
-    <h1>Decodificador ASTERIX</h1>
-    <p class="subtitulo">Manual de uso</p>
+    <h1>ASTERIX Decoder</h1>
+    <p class="subtitulo">User Manual</p>
   </div>
   <div class="captura-portada">
-    <img class="captura" src="capturas/portada.png" alt="La aplicación con el fichero combinado cargado">
+    <img class="captura" src="capturas/portada.png" alt="The application with the combined file loaded">
   </div>
   <div class="datos">
-    <p class="grande">PGTA · Proyecto 2</p>
-    <p>Grupo G2</p>
-    <p>Noviembre de 2026</p>
+    <p class="grande">PGTA · Project 2</p>
+    <p>Group G2</p>
+    <p>November 2026</p>
   </div>
 </section>
 
 <!-- ============================== 1 y 2 ============================== -->
 <section class="pagina">
-  <h2>1. Qué es</h2>
-  <p>El Decodificador ASTERIX lee ficheros <b>.ast</b> con mensajes <b>CAT048</b> (radar de Barcelona) y <b>CAT021</b> (ADS-B).</p>
-  <p>Muestra los mensajes en una tabla, permite filtrarlos y exportarlos a CSV, y simula las trayectorias de los aviones en un mapa.</p>
+  <h2>1. What it is</h2>
+  <p>The ASTERIX Decoder reads <b>.ast</b> files with <b>CAT048</b> (Barcelona radar) and <b>CAT021</b> (ADS-B) messages.</p>
+  <p>It shows the messages in a table, lets you filter them and export them to CSV, and simulates the aircraft trajectories on a map.</p>
 
-  <h2 style="margin-top: 7mm;">2. Abrir la aplicación</h2>
+  <h2 style="margin-top: 7mm;">2. Opening the application</h2>
 
-  <h3>Opción A (recomendada): el ejecutable</h3>
+  <h3>Option A (recommended): the executable</h3>
   <div class="paso">
     <div class="numero">1</div>
-    <div class="contenido"><p>Descomprime el .zip de la entrega. <b>DecodificadorASTERIX.exe</b> está en la raíz del .zip; este manual está en la carpeta <b>report</b>.</p></div>
+    <div class="contenido"><p>Unzip the delivery .zip. <b>ASTERIXDecoder.exe</b> is in the root of the .zip; this manual is in the <b>report</b> folder.</p></div>
   </div>
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>Haz doble clic en <b>DecodificadorASTERIX.exe</b>. No hace falta instalar nada (Windows de 64 bits). Tarda unos segundos en abrirse.</p></div>
+    <div class="contenido"><p>Double-click <b>ASTERIXDecoder.exe</b>. Nothing needs to be installed (64-bit Windows). It takes a few seconds to open.</p></div>
   </div>
   <div class="paso">
     <div class="numero">3</div>
     <div class="contenido">
-      <p>Si Windows muestra el aviso <b>«Windows protegió su PC»</b>, pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</p>
+      <p>If Windows shows the <b>"Windows protected your PC"</b> warning, click <b>"More info"</b> and then <b>"Run anyway"</b>.</p>
     </div>
   </div>
 
   <div class="nota">
-    <p><b>Ficheros .ast.</b> No van en la entrega. Son los de la asignatura: <span class="mono">asterix_radar.ast</span>, <span class="mono">asterix_adsb.ast</span> y <span class="mono">asterix_combinado.ast</span>. Pueden estar en cualquier carpeta del equipo.</p>
-    <p><b>Internet.</b> El mapa de la simulación necesita conexión a internet. El resto funciona sin conexión.</p>
-    <p><b>Volver a generar el ejecutable.</b> Doble clic en <b>code\crear_exe.bat</b> (hace falta Python 3). La primera vez tarda unos minutos y necesita internet.</p>
+    <p><b>.ast files.</b> They are not part of the delivery. They are the course files: <span class="mono">asterix_radar.ast</span>, <span class="mono">asterix_adsb.ast</span> and <span class="mono">asterix_combinado.ast</span>. They can be in any folder of the computer.</p>
+    <p><b>Internet.</b> The simulation map needs an internet connection. Everything else works offline.</p>
+    <p><b>Rebuilding the executable.</b> Double-click <b>code\crear_exe.bat</b> (Python 3 is needed). The first time it takes a few minutes and needs internet.</p>
   </div>
 
-  <h3>Opción B: con Python</h3>
-  <p>Hace falta Python 3 instalado; el proyecto se ha probado con Python 3.14. Abre una terminal en la carpeta <b>code</b> y escribe:</p>
+  <h3>Option B: with Python</h3>
+  <p>Python 3 must be installed; the project has been tested with Python 3.14. Open a terminal in the <b>code</b> folder and type:</p>
   <div class="consola">
     <ol>
-      <li>Crear el entorno virtual:<code>python -m venv .venv</code></li>
-      <li>Instalar las librerías:<code>.venv\Scripts\python -m pip install -r requirements.txt</code></li>
-      <li>Abrir la aplicación:<code>.venv\Scripts\python main.py</code></li>
+      <li>Create the virtual environment:<code>python -m venv .venv</code></li>
+      <li>Install the libraries:<code>.venv\Scripts\python -m pip install -r requirements.txt</code></li>
+      <li>Open the application:<code>.venv\Scripts\python main.py</code></li>
     </ol>
   </div>
-  <p>Los pasos 1 y 2 solo se hacen la primera vez. Después basta con el paso 3.</p>
+  <p>Steps 1 and 2 are only done the first time. After that, step 3 is enough.</p>
 </section>
 
 <!-- ============================== 3 ============================== -->
 <section class="pagina">
-  <h2>3. Cargar un fichero .ast</h2>
+  <h2>3. Loading an .ast file</h2>
 
   <div class="paso">
     <div class="numero">1</div>
     <div class="contenido">
-      <p>Pulsa <b>Abrir fichero .ast</b> <span class="marca">1</span>. Está arriba a la derecha y, al empezar, también en el centro de la tabla.</p>
-      <img class="captura" src="capturas/inicio.png" style="width: 118mm;" alt="Aplicación recién abierta">
+      <p>Click <b>Open .ast file</b> <span class="marca">1</span>. It is at the top right and, at the start, also in the centre of the table.</p>
+      <img class="captura" src="capturas/inicio.png" style="width: 118mm;" alt="Application just opened">
     </div>
   </div>
 
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>En la ventana de Windows, ve a la carpeta del fichero, elígelo y pulsa <b>Abrir</b>.</p></div>
+    <div class="contenido"><p>In the Windows dialog, go to the folder of the file, choose it and click <b>Open</b>.</p></div>
   </div>
 
   <div class="paso">
     <div class="numero">3</div>
     <div class="contenido">
-      <p>Espera a que se decodifique. La barra grande <span class="marca">1</span> y la de abajo <span class="marca">2</span> muestran el avance. En nuestro equipo, el fichero combinado tarda unos 20 s.</p>
-      <img class="captura" src="capturas/progreso.png" style="width: 118mm;" alt="Decodificación en curso">
+      <p>Wait while it is decoded. The large bar <span class="marca">1</span> and the bottom bar <span class="marca">2</span> show the progress. On our computer, the combined file takes about 20 s.</p>
+      <img class="captura" src="capturas/progreso.png" style="width: 118mm;" alt="Decoding in progress">
     </div>
   </div>
 
@@ -294,229 +293,234 @@
     <div class="numero">4</div>
     <div class="contenido lado-a-lado">
       <div class="texto">
-        <p>Al acabar, <b>Resumen del fichero</b> muestra los registros leídos, los mensajes que hay en la tabla, los descartados y los segundos que ha tardado.</p>
-        <p>Debajo está el detalle por categoría y por motivo de descarte.</p>
-        <p>No entran en la tabla los mensajes fuera de 40,9–41,7° N y 1,5–2,6° E, los CAT021 en tierra y los mensajes sin posición (sin ella no se puede comprobar la zona).</p>
+        <p>When it finishes, <b>File summary</b> shows the records read, the messages in the table, the discarded ones and the seconds it took.</p>
+        <p>Below it there is the detail by category and by discard reason.</p>
+        <p>The table does not include the messages outside 40.9–41.7° N and 1.5–2.6° E, the CAT021 on ground or the messages without position (without it, the area cannot be checked).</p>
       </div>
-      <img class="captura" src="capturas/resumen.png" style="width: 54mm;" alt="Resumen del fichero">
+      <img class="captura" src="capturas/resumen.png" style="width: 54mm;" alt="File summary">
     </div>
   </div>
 </section>
 
 <!-- ============================== 4 ============================== -->
 <section class="pagina">
-  <h2>4. Ver los datos</h2>
-  <p>La tabla <b>Mensajes decodificados</b> tiene todos los mensajes, en el orden del fichero. Sus columnas son las mismas que las del CSV.</p>
-  <img class="captura" src="capturas/tabla.png" alt="Tabla de mensajes">
+  <h2>4. Viewing the data</h2>
+  <p>The <b>Decoded messages</b> table has all the messages, in the order of the file. Its columns are the same as those of the CSV.</p>
+  <img class="captura" src="capturas/tabla.png" alt="Message table">
   <ul class="marcas">
-    <li><span class="marca">1</span><b>Contador:</b> qué mensajes se ven y cuántos hay en total.</li>
-    <li><span class="marca">2</span><b>Barra horizontal:</b> hay una columna por dato (82 en total). Arrástrala para ver el resto de columnas.</li>
-    <li><span class="marca">3</span><b>Anterior / Siguiente:</b> la tabla va en páginas de 500 mensajes.</li>
+    <li><span class="marca">1</span><b>Counter:</b> which messages are shown and how many there are in total.</li>
+    <li><span class="marca">2</span><b>Horizontal bar:</b> there is one column per data item (82 in total). Drag it to see the other columns.</li>
+    <li><span class="marca">3</span><b>Previous / Next:</b> the table is split into pages of 500 messages.</li>
   </ul>
   <div class="nota">
-    <p>Una celda vacía quiere decir que el mensaje no trae ese dato.</p>
+    <p>An empty cell means that the message does not carry that data item.</p>
+    <p>In the application the numbers use the English format (decimal point). The CSV uses the decimal comma (section 6).</p>
   </div>
 </section>
 
 <!-- ============================== 5 ============================== -->
 <section class="pagina">
-  <h2>5. Filtrar</h2>
-  <p>Ejemplo: la entrada del P3 con <span class="mono">asterix_combinado.ast</span>.</p>
+  <h2>5. Filtering</h2>
+  <p>Example: the P3 input with <span class="mono">asterix_combinado.ast</span>.</p>
 
   <div class="lado-a-lado">
-    <img class="captura" src="capturas/filtros.png" style="width: 66mm;" alt="Panel de filtros">
+    <img class="captura" src="capturas/filtros.png" style="width: 66mm;" alt="Filter panel">
     <div class="texto">
       <ul class="marcas">
-        <li><span class="marca">1</span>En <b>Categoría ASTERIX</b>, elige <b>CAT048</b>.</li>
-        <li><span class="marca">2</span>Marca <b>Quitar aeronaves en tierra (CAT048)</b>.</li>
-        <li><span class="marca">3</span>Marca <b>Solo mensajes con FL</b>.</li>
-        <li><span class="marca">4</span>Escribe <b>6000</b> en <b>Altitud máxima (ft)</b>.</li>
-        <li><span class="marca">5</span>Pulsa <b>Aplicar filtros</b> (o Intro en un campo de texto).</li>
-        <li><span class="marca">6</span><b>Quitar filtros</b> vuelve a mostrar todos los mensajes.</li>
+        <li><span class="marca">1</span>In <b>ASTERIX category</b>, choose <b>CAT048</b>.</li>
+        <li><span class="marca">2</span>Tick <b>Remove aircraft on ground (CAT048)</b>.</li>
+        <li><span class="marca">3</span>Tick <b>Only messages with FL</b>.</li>
+        <li><span class="marca">4</span>Type <b>6000</b> in <b>Maximum altitude (ft)</b>.</li>
+        <li><span class="marca">5</span>Click <b>Apply filters</b> (or press Enter in a text field).</li>
+        <li><span class="marca">6</span><b>Clear filters</b> shows all the messages again.</li>
       </ul>
       <div class="nota">
-        <p>Los filtros solo se aplican al pulsar <b>Aplicar filtros</b>. Se pueden combinar todos.</p>
-        <p>Si pasas el ratón por encima de un filtro, sale una ayuda con lo que hace.</p>
+        <p>The filters are only applied when you click <b>Apply filters</b>. They can all be combined.</p>
+        <p>If you hover the mouse over a filter, a tooltip explains what it does.</p>
       </div>
     </div>
   </div>
 
-  <h3>Resultado</h3>
-  <img class="captura" src="capturas/resultado.png" alt="Tabla filtrada">
+  <h3>Result</h3>
+  <img class="captura" src="capturas/resultado.png" alt="Filtered table">
   <ul class="marcas">
-    <li><span class="marca">7</span>El contador muestra <b>20.952 mensajes</b> (189.594 sin filtrar).</li>
+    <li><span class="marca">7</span>The counter shows <b>20,952 messages</b> (189,594 unfiltered).</li>
   </ul>
 
-  <h3>Los otros filtros</h3>
+  <h3>The other filters</h3>
   <ul>
-    <li><b>Quitar blancos puros (CAT048):</b> quita los mensajes que no vienen de una interrogación Modo S.</li>
-    <li><b>Quitar transponder fijo (7777):</b> quita los mensajes con Modo 3/A 7777.</li>
-    <li><b>Aeronave:</b> busca el texto en el callsign, la dirección Modo S o el Modo 3/A.</li>
+    <li><b>Remove pure targets (CAT048):</b> removes the messages that do not come from a Mode S interrogation.</li>
+    <li><b>Remove fixed transponder (7777):</b> removes the messages with Mode 3/A 7777.</li>
+    <li><b>Aircraft:</b> searches the text in the callsign, the Mode S address or the Mode 3/A.</li>
   </ul>
 </section>
 
 <!-- ============================== 6 ============================== -->
 <section class="pagina">
-  <h2>6. Exportar a CSV</h2>
+  <h2>6. Exporting to CSV</h2>
 
   <div class="lado-a-lado">
-    <img class="captura" src="capturas/exportar.png" style="width: 70mm;" alt="Botones de exportar">
+    <img class="captura" src="capturas/exportar.png" style="width: 70mm;" alt="Export buttons">
     <div class="texto">
       <ul class="marcas">
-        <li><span class="marca">1</span><b>Exportar todo:</b> guarda todos los mensajes decodificados.</li>
-        <li><span class="marca">2</span><b>Exportar lo filtrado:</b> guarda solo los mensajes que quedan tras los filtros. Se activa al aplicar algún filtro.</li>
+        <li><span class="marca">1</span><b>Export all:</b> saves all the decoded messages.</li>
+        <li><span class="marca">2</span><b>Export filtered:</b> saves only the messages left after the filters. It is enabled once a filter is applied.</li>
       </ul>
     </div>
   </div>
 
-  <h3>Pasos</h3>
+  <h3>Steps</h3>
   <div class="paso">
     <div class="numero">1</div>
-    <div class="contenido"><p>Pulsa <b>Exportar todo</b> o <b>Exportar lo filtrado</b>.</p></div>
+    <div class="contenido"><p>Click <b>Export all</b> or <b>Export filtered</b>.</p></div>
   </div>
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>En la ventana <b>Guardar CSV</b>, elige la carpeta y el nombre, y pulsa <b>Guardar</b>.</p></div>
+    <div class="contenido"><p>In the <b>Save CSV</b> dialog, choose the folder and the name, and click <b>Save</b>.</p></div>
   </div>
   <div class="paso">
     <div class="numero">3</div>
-    <div class="contenido"><p>Al acabar sale el aviso <b>Exportación terminada</b>, con el número de mensajes y la ruta del fichero.</p></div>
+    <div class="contenido"><p>When it finishes, the <b>Export finished</b> message appears, with the number of messages and the path of the file.</p></div>
   </div>
 
-  <h3>Cómo es el CSV</h3>
+  <h3>What the CSV is like</h3>
   <ul>
-    <li>Separador <b>;</b> y coma decimal, para que Excel en español lo abra bien con doble clic.</li>
-    <li>Una fila por mensaje, en el orden del fichero. Siempre las mismas 82 columnas, en el mismo orden, para cualquier fichero; la celda queda vacía si el mensaje no trae ese dato.</li>
-    <li>Columnas extra: <b>LAT</b>, <b>LON</b> y <b>H</b> en WGS84 (H solo en CAT048), y <b>ALT_CORREGIDA_FT</b> (altitud corregida por QNH por debajo de 6000 ft).</li>
+    <li><b>;</b> separator and decimal comma, so that Excel with a Spanish locale opens it correctly with a double click.</li>
+    <li>One row per message, in the order of the file. Always the same 82 columns, in the same order, for any file; the cell is empty if the message does not carry that data item.</li>
+    <li>Extra columns: <b>LAT</b>, <b>LON</b> and <b>H</b> in WGS84 (H only in CAT048), <b>H_NO_FL</b> (1 if the CAT048 message had no FL and H was computed with height 0) and <b>ALT_CORRECTED_FT</b> (QNH-corrected altitude below 6000 ft).</li>
   </ul>
 
   <div class="nota">
-    <p><b>«#######» en Excel.</b> La columna es demasiado estrecha (pasa con la hora, TIME). Ensánchala: doble clic en el borde derecho de su cabecera, o Formato &gt; Autoajustar ancho de columna.</p>
-    <p><b>Excel.</b> Si abres el CSV con doble clic, Excel quita el cero inicial del Modo 3/A (por ejemplo, <span class="mono">0437</span> pasa a <span class="mono">437</span>) y puede leer alguna dirección Modo S (TA) como número.</p>
-    <p>Para verlas igual que en la aplicación, importa el CSV desde Excel y pon las columnas <b>MODE3A</b> y <b>TA</b> como <b>Texto</b>.</p>
+    <p><b>"#######" in Excel.</b> The column is too narrow (it happens with the time, TIME). Widen it: double-click the right border of its header, or Format &gt; AutoFit Column Width.</p>
+    <p><b>Excel.</b> If you open the CSV with a double click, Excel removes the leading zero of the Mode 3/A (for example, <span class="mono">0437</span> becomes <span class="mono">437</span>) and may read some Mode S address (TA) as a number.</p>
+    <p>To see them as in the application, import the CSV from Excel and set the <b>MODE3A</b> and <b>TA</b> columns as <b>Text</b>.</p>
   </div>
 </section>
 
 <!-- ============================== 7 ============================== -->
 <section class="pagina">
-  <h2>7. Simulación</h2>
+  <h2>7. Simulation</h2>
 
   <div class="paso">
     <div class="numero">1</div>
-    <div class="contenido"><p>Pulsa <b>Simulación</b>, en el centro de la parte de arriba.</p></div>
+    <div class="contenido"><p>Click <b>Simulation</b>, in the centre of the top bar.</p></div>
   </div>
 
   <div class="nota">
-    <p><b>Se simula lo que está filtrado en la pestaña Datos.</b> El aviso azul encima del mapa dice cuántos mensajes se simulan y con qué filtros. Para simularlo todo, pulsa <b>Quitar filtros</b> en Datos.</p>
+    <p><b>What is simulated is what is filtered in the Data tab.</b> The blue notice above the map says how many messages are simulated and with which filters. To simulate everything, click <b>Clear filters</b> in Data.</p>
   </div>
 
   <div class="paso">
     <div class="numero">2</div>
-    <div class="contenido"><p>Usa los controles de encima del mapa. A su derecha está la <b>Hora de la simulación (UTC)</b>, con <b>Ir a la hora</b> y la barra de tiempo.</p></div>
+    <div class="contenido"><p>Use the controls above the map. To their right is the <b>Simulation time (UTC)</b>, with <b>Go to time</b> and the time bar.</p></div>
   </div>
-  <img class="captura" src="capturas/controles.png" alt="Controles de la simulación">
+  <img class="captura" src="capturas/controles.png" alt="Simulation controls">
 
   <table>
-    <tr><th style="width: 9mm;"></th><th style="width: 30mm;">Control</th><th>Qué hace</th></tr>
-    <tr><td><span class="marca">1</span></td><td class="control">Reproducir</td><td>Avanza la simulación de 1 s en 1 s de hora del día.</td></tr>
-    <tr><td><span class="marca">2</span></td><td class="control">Pausa</td><td>Para la simulación. Al cambiar a la pestaña Datos, la simulación se pausa.</td></tr>
-    <tr><td><span class="marca">3</span></td><td class="control">+1 s</td><td>Avanza un solo salto de 1 s.</td></tr>
-    <tr><td><span class="marca">4</span></td><td class="control">Reset</td><td>Para la simulación y vuelve a la primera hora de los datos.</td></tr>
-    <tr><td><span class="marca">5</span></td><td class="control">Velocidad</td><td>De x1 a x60. Cada salto es siempre de 1 s; la velocidad solo cambia cada cuánto se dibuja (x1: un salto por segundo; x60: 60 saltos por segundo).</td></tr>
-    <tr><td><span class="marca">6</span></td><td class="control">Etiquetas</td><td>Muestra u oculta el bloque de datos de cada avión (ver la página siguiente).</td></tr>
-    <tr><td><span class="marca">7</span></td><td class="control">Estelas</td><td>Muestra u oculta la línea con las últimas posiciones de cada avión.</td></tr>
-    <tr><td><span class="marca">8</span></td><td class="control">Seguir</td><td>Mantiene el avión seleccionado en el centro del mapa, sin cambiar el zoom. Si el avión desaparece, se deja de seguir.</td></tr>
-    <tr><td><span class="marca">9</span></td><td class="control">Sistema</td><td><b>Ambos</b>, <b>Radar</b> (CAT048) o <b>ADS-B</b> (CAT021). Con Ambos, un avión que ven los dos sistemas sale dos veces en el mapa. También filtra las listas de tráfico.</td></tr>
-    <tr><td><span class="marca">10</span></td><td class="control">Mapa</td><td><b>Oscuro</b> (el mapa de OpenStreetMap oscurecido, para que destaquen los aviones) o <b>Claro</b> (el original).</td></tr>
-    <tr><td><span class="marca">11</span></td><td class="control">Ir a la hora</td><td>Escribe la hora (UTC) como hh:mm y pulsa <b>Ir</b> o Intro. Cada avión aparece en su última posición conocida antes de esa hora.</td></tr>
-    <tr><td><span class="marca">12</span></td><td class="control">Barra de tiempo</td><td>Va de la primera a la última hora de los datos y avanza sola al reproducir. Arrástrala: el reloj enseña la hora y, al soltar, la simulación salta a esa hora.</td></tr>
+    <tr><th style="width: 9mm;"></th><th style="width: 30mm;">Control</th><th>What it does</th></tr>
+    <tr><td><span class="marca">1</span></td><td class="control">Play</td><td>Runs the simulation in steps of 1 s of time of day.</td></tr>
+    <tr><td><span class="marca">2</span></td><td class="control">Pause</td><td>Stops the simulation. When you switch to the Data tab, the simulation pauses.</td></tr>
+    <tr><td><span class="marca">3</span></td><td class="control">+1 s</td><td>Advances a single 1 s step.</td></tr>
+    <tr><td><span class="marca">4</span></td><td class="control">Reset</td><td>Stops the simulation and goes back to the first time in the data.</td></tr>
+    <tr><td><span class="marca">5</span></td><td class="control">Speed</td><td>From x1 to x60. Each step is always 1 s; the speed only changes how often a step is drawn (x1: one step per second; x60: 60 steps per second).</td></tr>
+    <tr><td><span class="marca">6</span></td><td class="control">Labels</td><td>Shows or hides the data block of each aircraft (see the next page).</td></tr>
+    <tr><td><span class="marca">7</span></td><td class="control">Trails</td><td>Shows or hides the line with the last positions of each aircraft.</td></tr>
+    <tr><td><span class="marca">8</span></td><td class="control">Follow</td><td>Keeps the selected aircraft in the centre of the map, without changing the zoom. If the aircraft disappears, following stops.</td></tr>
+    <tr><td><span class="marca">9</span></td><td class="control">System</td><td><b>Both</b>, <b>Radar</b> (CAT048) or <b>ADS-B</b> (CAT021). With Both, an aircraft seen by both systems appears twice on the map. It also filters the traffic lists.</td></tr>
+    <tr><td><span class="marca">10</span></td><td class="control">Map</td><td><b>Light</b> (the original one, shown at the start) or <b>Dark</b> (darkened, so that the aircraft stand out).</td></tr>
+    <tr><td><span class="marca">11</span></td><td class="control">Go to time</td><td>Type the time (UTC) as hh:mm and click <b>Go</b> or press Enter. Each aircraft appears at its last known position before that time.</td></tr>
+    <tr><td><span class="marca">12</span></td><td class="control">Time bar</td><td>It goes from the first to the last time of the data and moves on its own while playing. Drag it: the clock shows the time and, on release, the simulation jumps to that time.</td></tr>
   </table>
-  <p>Al ir a otra hora (Ir a la hora, la barra o Reset), el registro de eventos se vacía y los totales vuelven a cero.</p>
+  <p>When you go to another time (Go to time, the bar or Reset), the event log is cleared and the totals go back to zero.</p>
 </section>
 
 <!-- ============================== 7 (cont.) ============================== -->
 <section class="pagina">
-  <h3 style="margin-top: 0;">El mapa y las etiquetas</h3>
+  <h3 style="margin-top: 0;">The map and the labels</h3>
   <div class="lado-a-lado">
-    <img class="captura" src="capturas/mapa_avion.png" style="width: 92mm;" alt="Avión seleccionado y su pareja">
+    <img class="captura" src="capturas/mapa_avion.png" style="width: 92mm;" alt="Selected aircraft and its pair">
     <div class="texto">
       <div class="paso">
         <div class="numero">3</div>
         <div class="contenido">
-          <p>Haz clic en un avión. Se pone en <span class="punto rojo"></span>rojo <span class="marca">1</span> y, si el otro sistema también lo ve, su pareja también <span class="marca">2</span>. En el ejemplo, 1 es el radar y 2 el ADS-B del mismo avión (TVF32ER).</p>
-          <p>Colores: <span class="punto radar"></span>radar; <span class="punto adsb"></span>ADS-B; <span class="punto rojo"></span>el avión seleccionado y su pareja.</p>
+          <p>Click an aircraft. It turns <span class="punto rojo"></span>red <span class="marca">1</span> and, if the other system also sees it, so does its pair <span class="marca">2</span>. In the example, 1 is the radar and 2 the ADS-B of the same aircraft (TVF32ER).</p>
+          <p>Colours: <span class="punto radar"></span>radar; <span class="punto adsb"></span>ADS-B; <span class="punto rojo"></span>the selected aircraft and its pair.</p>
         </div>
       </div>
     </div>
   </div>
   <ul>
-    <li><b>Etiqueta:</b> el callsign y, debajo, el nivel en cientos de pies con su tendencia (↑ sube, ↓ baja, → nivelado) y la velocidad respecto al suelo en nudos. «147↑ 338» es nivel 147 subiendo a 338 kt. En ADS-B no hay velocidad. Un avión que ven los dos sistemas lleva una sola etiqueta. Los aviones en tierra no llevan etiqueta, salvo el seleccionado.</li>
-    <li>Arrastra el mapa para moverte. Acerca o aleja con la rueda del ratón o con los botones <b>+</b> y <b>−</b>.</li>
-    <li>La silueta de cada avión apunta a su rumbo (si aún no se conoce, mira al norte). Un avión desaparece si pasa más de 12 s sin mensajes.</li>
+    <li><b>Label:</b> the callsign and, below, the level in hundreds of feet with its trend (↑ climbing, ↓ descending, → level) and the ground speed in knots. "147↑ 338" is level 147, climbing, at 338 kt. In ADS-B there is no speed. An aircraft seen by both systems has a single label. Aircraft on the ground and the fixed transponder have no label, unless selected.</li>
+    <li>The red rectangle is the limit of the geographic filter: outside it, the messages are discarded.</li>
+    <li>Drag the map to move around. Zoom in or out with the mouse wheel or with the <b>+</b> and <b>−</b> buttons.</li>
+    <li>The symbol of each aircraft points to its heading (if it is not known yet, it faces north). An aircraft disappears if it spends more than 12 s without messages.</li>
   </ul>
 
-  <h3>Tráfico y avión seleccionado</h3>
+  <h3>Traffic and selected aircraft</h3>
   <div class="lado-a-lado">
     <div class="texto">
-      <p>A la derecha del mapa, de arriba abajo: <b>Tráfico</b>, <b>Avión seleccionado</b> y la <b>Leyenda</b> (recogida al empezar; se despliega pulsando su cabecera). Si no caben, el panel baja con la rueda del ratón o el panel táctil.</p>
+      <p>To the right of the map, from top to bottom: <b>Traffic</b> and <b>Selected aircraft</b>. If they do not fit, the panel scrolls with the mouse wheel or the touchpad.</p>
       <ul class="marcas">
-        <li><span class="marca">1</span><b>En vuelo:</b> callsign, nivel y sistemas que lo ven. El nivel es <b>A030</b> (altitud corregida, 3.000 ft) o <b>FL147</b> (nivel de vuelo), con su tendencia. Sist.: <b>R</b> radar, <b>A</b> ADS-B, <b>RA</b> los dos.</li>
-        <li><span class="marca">2</span><b>En tierra:</b> según el radar (dato STAT). Los aviones en tierra vistos solo por ADS-B no salen: se descartan al decodificar.</li>
-        <li><span class="marca">3</span><b>Avión seleccionado:</b> sus datos, con su estado y su tendencia. Con <b>Radar / ADS-B</b> pasas al mismo avión en el otro sistema (en gris si no está en el mapa por ese sistema).</li>
+        <li><span class="marca">1</span><b>Airborne:</b> callsign, level and the system that sees it (<b>Radar</b>, <b>ADS-B</b> or <b>Both</b>, column <b>Seen by</b>). The level is <b>A030</b> (corrected altitude, 3,000 ft) or <b>FL147</b> (flight level), with its trend.</li>
+        <li><span class="marca">2</span><b>On ground:</b> according to the radar (STAT data). Only the radar sees them: ADS-B aircraft on the ground are discarded when decoding.</li>
+        <li><span class="marca">3</span><b>Selected aircraft:</b> its data, with its status and its trend. With <b>Radar / ADS-B</b> you switch to the same aircraft in the other system (greyed out if that system does not show it on the map).</li>
       </ul>
-      <p>Haz clic en una fila de las listas para seleccionar ese avión: el mapa se centra en él. Debajo de las listas, cuántos aviones hay dibujados en el mapa: radar, ADS-B y blancos puros.</p>
+      <p>Click a row of the lists to select that aircraft: the map centres on it. Below the lists, how many aircraft are drawn on the map: radar, ADS-B and pure targets.</p>
       <div class="nota">
-        <p>Un avión pasa de una lista a la otra cuando 2 mensajes seguidos lo confirman. Hasta entonces, o si es un blanco puro o el transponder fijo, no sale en las listas.</p>
+        <p>An aircraft moves from one list to the other when 2 consecutive messages confirm it. Until then, or if it is a pure target or the fixed transponder, it does not appear in the lists.</p>
       </div>
     </div>
-    <img class="captura" src="capturas/panel.png" style="width: 50mm;" alt="Panel de tráfico y avión seleccionado">
+    <img class="captura" src="capturas/panel.png" style="width: 50mm;" alt="Traffic panel and selected aircraft">
   </div>
 </section>
 
 <!-- ============================== 7 (cont.) y 8 ============================== -->
 <section class="pagina">
-  <h3 style="margin-top: 0;">Registro de eventos</h3>
-  <p>Debajo del mapa, lo que va pasando, con lo más reciente arriba: hora, tipo, callsign y sistema (R o A). A la derecha, los totales de despegues y aterrizajes.</p>
-  <img class="captura" src="capturas/eventos.png" alt="Registro de eventos">
+  <h3 style="margin-top: 0;">Legend and events, inside the map</h3>
+  <p>At the bottom left of the map is the <b>Legend</b>: what each icon is and how the labels are read (with the mouse over some of them, an explanation appears). At the top right, the <b>Events</b>: what is happening, with the most recent on top (time, type, callsign and system), and in the title the totals of takeoffs and landings. Both are visible when the tab opens; if they cover something, click their title to collapse them.</p>
+  <div class="lado-a-lado" style="align-items: flex-end;">
+    <img class="captura" src="capturas/leyenda.png" style="width: 82mm;" alt="Map legend">
+    <img class="captura" src="capturas/eventos.png" style="width: 92mm;" alt="Events window">
+  </div>
   <table>
-    <tr><th style="width: 9mm;"></th><th style="width: 42mm;">Evento</th><th>Cuándo sale</th></tr>
-    <tr><td class="evento-icono" style="color: #1F5FAD;">+</td><td class="control">Nuevo contacto</td><td>Aparece un avión, o vuelve después de haber desaparecido.</td></tr>
-    <tr><td class="evento-icono" style="color: #2E7D46;">↗</td><td class="control">Despega</td><td>Pasa de en tierra a en vuelo.</td></tr>
-    <tr><td class="evento-icono" style="color: #7A4E12;">↘</td><td class="control">Aterriza</td><td>Pasa de en vuelo a en tierra.</td></tr>
-    <tr><td class="evento-icono" style="color: #7A8594;">×</td><td class="control">Pérdida de contacto</td><td>Pasa más de 12 s sin mensajes de ningún sistema.</td></tr>
+    <tr><th style="width: 9mm;"></th><th style="width: 42mm;">Event</th><th>When it appears</th></tr>
+    <tr><td class="evento-icono" style="color: #1F5FAD;">+</td><td class="control">New contact</td><td>An aircraft appears, or comes back after having disappeared.</td></tr>
+    <tr><td class="evento-icono" style="color: #2E7D46;">↗</td><td class="control">Takeoff</td><td>It goes from on ground to airborne.</td></tr>
+    <tr><td class="evento-icono" style="color: #7A4E12;">↘</td><td class="control">Landing</td><td>It goes from airborne to on ground.</td></tr>
+    <tr><td class="evento-icono" style="color: #7A8594;">×</td><td class="control">Contact lost</td><td>It spends more than 12 s without messages from any system.</td></tr>
   </table>
-  <p>Los eventos salen al reproducir o al avanzar 1 s. Haz clic en uno para seleccionar su avión y centrar el mapa en él, si sigue a la vista.</p>
+  <p>The events appear when playing or stepping 1 s. Click one to select its aircraft and centre the map on it, if it is still in view.</p>
 
-  <h2 style="margin-top: 6mm;">8. Problemas frecuentes</h2>
+  <h2 style="margin-top: 6mm;">8. Troubleshooting</h2>
   <table>
-    <tr><th style="width: 52mm;">Problema</th><th>Qué hacer</th></tr>
+    <tr><th style="width: 52mm;">Problem</th><th>What to do</th></tr>
     <tr>
-      <td>Al abrir el .exe sale «Windows protegió su PC».</td>
-      <td>Es el aviso de SmartScreen, porque el ejecutable no está firmado. Pulsa <b>«Más información»</b> y después <b>«Ejecutar de todas formas»</b>.</td>
+      <td>When opening the .exe, "Windows protected your PC" appears.</td>
+      <td>It is the SmartScreen warning, because the executable is not signed. Click <b>"More info"</b> and then <b>"Run anyway"</b>.</td>
     </tr>
     <tr>
-      <td>El .exe tarda en abrirse.</td>
-      <td>Es normal: se descomprime al arrancar. No lo abras dos veces.</td>
+      <td>The .exe takes a while to open.</td>
+      <td>It is normal: it unpacks itself when it starts. Do not open it twice.</td>
     </tr>
     <tr>
-      <td>El mapa no muestra la costa ni las calles.</td>
-      <td>No hay conexión a internet. El mapa descarga sus imágenes de OpenStreetMap: conéctate y mueve un poco el mapa.</td>
+      <td>The map does not show the coast or the streets.</td>
+      <td>There is no internet connection. The map downloads its images from OpenStreetMap: connect and move the map a little.</td>
     </tr>
     <tr>
-      <td>En la simulación no se ve nada.</td>
-      <td>Revisa los filtros de Datos (los dice el aviso azul) y el selector <b>Sistema</b>. Si sale un mensaje en el mapa, dice qué hacer.</td>
+      <td>Nothing can be seen in the simulation.</td>
+      <td>Check the filters of Data (the blue notice lists them) and the <b>System</b> selector. If a message appears on the map, it says what to do.</td>
     </tr>
     <tr>
-      <td>Un avión del mapa no sale en las listas de tráfico.</td>
-      <td>Aún no hay 2 mensajes seguidos que digan si está en tierra o en vuelo, o es un blanco puro o el transponder fijo, que no cuentan como tráfico. Mira también el selector <b>Sistema</b>.</td>
+      <td>An aircraft on the map does not appear in the traffic lists.</td>
+      <td>There are not yet 2 consecutive messages that say whether it is on the ground or airborne, or it is a pure target or the fixed transponder, which do not count as traffic. Also check the <b>System</b> selector.</td>
     </tr>
     <tr>
-      <td>Aparecen puntos grises que desaparecen enseguida.</td>
-      <td>Son blancos puros (ecos de radar primario o secundario, sin Modo S). Se quitan con el filtro <b>«Quitar blancos puros»</b>.</td>
+      <td>Grey dots appear and soon disappear.</td>
+      <td>They are pure targets (primary or secondary radar echoes, without Mode S). They are removed with the <b>"Remove pure targets"</b> filter.</td>
     </tr>
     <tr>
-      <td>Excel muestra «#####» o quita ceros.</td>
-      <td>Ensancha la columna o importa como texto (apartado 6).</td>
+      <td>Excel shows "#####" or removes zeros.</td>
+      <td>Widen the column or import it as text (section 6).</td>
     </tr>
   </table>
 </section>

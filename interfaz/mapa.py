@@ -38,7 +38,7 @@ CATEGORIA_021 = 21
 # usarlas sin conexión: aquí solo se descargan las que se ven y se guardan en memoria durante la sesión.
 SERVIDOR_TESELAS = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ZOOM_MAXIMO_SERVIDOR = 19
-USER_AGENT = "DecodificadorASTERIX-PGTA-G2/1.0 (proyecto universitario UPC)"
+USER_AGENT = "ASTERIXDecoder-PGTA-G2/1.0 (UPC university project)"
 ATRIBUCION_MAPA = "© OpenStreetMap contributors"
 TIEMPO_MAXIMO_TESELA_S = 10     # si el servidor no responde en este tiempo, se deja de esperar esa tesela
 
@@ -53,8 +53,9 @@ TAMANO_ANTENA = 26
 TAMANO_ESTACION = 18
 TAMANO_BLANCO_PURO = 10
 TAMANO_BLANCO_PURO_RESALTADO = 14
-TAMANO_LEYENDA = 20
+TAMANO_LEYENDA = 16           # la leyenda va dentro del mapa: iconos algo más pequeños
 ANCHO_ESTELA = 2
+ANCHO_ZONA_FILTRO = 3           # el límite del filtro geográfico, más grueso que las estelas
 FUENTE_ETIQUETA = (estilo.FAMILIA, estilo.TAMANO_ETIQUETA_MAPA, "bold")
 
 # Las siluetas se generan una sola vez, giradas cada PASO_GIRO_DEG grados, y se reutilizan
@@ -75,7 +76,10 @@ ESCALA_DIBUJO = 4       # se dibuja 4 veces más grande y se reduce, para que lo
 
 # Etiqueta de los blancos puros según su TYP de I048/020 (CAT048 v1.31, §5.2.2), delante del
 # Modo 3/A o, si no hay, del track number
-TIPO_BLANCO_PURO_ETIQUETA = {0: "Sin det.", 1: "PSR", 2: "SSR", 3: "PSR+SSR"}
+TIPO_BLANCO_PURO_ETIQUETA = {0: "No det.", 1: "PSR", 2: "SSR", 3: "PSR+SSR"}
+
+# Unidad de los ángulos del panel del avión: va pegada al número (41.43291°), las demás con un espacio
+UNIDAD_GRADOS = "°"
 
 # Esquinas de la zona del filtro geográfico
 ESQUINA_NOROESTE = (geo.LATITUD_MAXIMA_DEG, geo.LONGITUD_MINIMA_DEG)
@@ -118,7 +122,7 @@ class MapaOSM(tkintermapview.TkinterMapView):
 
     def __init__(self, padre, **opciones):
         # Antes de crear el mapa: al crearse, tkintermapview ya empieza a pedir teselas
-        self.oscuro = True
+        self.oscuro = False             # al empezar, el mapa claro (el original de OpenStreetMap)
         super().__init__(padre, **opciones)
         self.poner_teselas_vacias()
 
@@ -350,12 +354,12 @@ def configurar_mapa(app):
         (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MAXIMA_DEG),
         (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MINIMA_DEG),
     ]
-    app.mapa.set_polygon(esquinas, outline_color=estilo.ZONA_FILTRO, fill_color=None, border_width=2)
+    app.mapa.set_polygon(esquinas, outline_color=estilo.ZONA_FILTRO, fill_color=None, border_width=ANCHO_ZONA_FILTRO)
 
     latitud_radar = geo.RADAR_BCN.Lat * geo.GeoUtils.RADS2DEGS
     longitud_radar = geo.RADAR_BCN.Lon * geo.GeoUtils.RADS2DEGS
-    # Sin etiqueta: sobre LEBL se montaba con las de los aviones que despegan (la leyenda explica el icono)
-    app.mapa.set_marker(latitud_radar, longitud_radar, icon=app.iconos["estacion"])
+    app.mapa.set_marker(latitud_radar, longitud_radar, text="Radar BCN", icon=app.iconos["estacion"],
+                        font=FUENTE_ETIQUETA, text_color=color_etiquetas(app))
 
 
 def color_etiquetas(app):
@@ -368,7 +372,7 @@ def color_etiquetas(app):
 def cambiar_aspecto_mapa(app, oscuro):
     """
     Selector Mapa: pasa al mapa oscuro o al claro (MapaOSM.cambiar_modo) y cambia el color de las
-    etiquetas de los aviones que ya están dibujados.
+    etiquetas que ya están dibujadas (los aviones y "Radar BCN").
     """
     app.mapa.cambiar_modo(oscuro)
     color = color_etiquetas(app)
@@ -533,15 +537,18 @@ def texto_etiqueta(app, identificador, avion):
         línea 2: nivel en cientos de pies con su tendencia y la velocidad GS, por ejemplo "045↑ 210".
                  El nivel es el de simulacion.texto_nivel sin el prefijo A o FL, para que sea corto.
     Los blancos puros llevan su tipo y el Modo 3/A o, si no hay, el track number (por ejemplo
-    "PSR 45"), y el transponder fijo, su Modo 3/A (7777). Vacía si las etiquetas están ocultas o si el
-    avión no lleva etiqueta (lleva_etiqueta).
+    "PSR 45"). El transponder fijo solo lleva su Modo 3/A (7777), y solo si está seleccionado.
+    Vacía si las etiquetas están ocultas o si el avión no lleva etiqueta (lleva_etiqueta).
     """
     if app.casilla_etiquetas.get() == 0:
         return ""
     fila = avion["fila"]
     if filtros.es_transponder_fijo(fila):
-        # Solo el código: el nombre entero tapaba los despegues en LEBL (la leyenda explica la antena)
-        return filtros.MODO_3A_TRANSPONDER_FIJO
+        # Sin etiqueta, salvo si está seleccionado: está en LEBL, junto a "Radar BCN" y a los aviones que
+        # despegan, y su etiqueta se montaba con las de ellos (la leyenda explica la antena)
+        if app.avion_seleccionado == identificador:
+            return filtros.MODO_3A_TRANSPONDER_FIJO
+        return ""
     if filtros.es_blanco_puro(fila):
         tipo = TIPO_BLANCO_PURO_ETIQUETA[valor(fila, "I048_020_TYP")]
         if valor(fila, "MODE3A") is not None:
@@ -739,11 +746,13 @@ def contar_en_mapa(app, aviones):
 # =============================================================================
 
 def texto_numero(numero, decimales, unidad):
-    """Número con coma decimal y su unidad, o "-" si no hay dato."""
+    """Número con punto decimal (la interfaz va en inglés) y su unidad, o "-" si no hay dato."""
     if numero is None:
         return "-"
-    texto = format(numero, "." + str(decimales) + "f").replace(".", ",")
-    if unidad != "":
+    texto = format(numero, "." + str(decimales) + "f")
+    if unidad == UNIDAD_GRADOS:
+        texto = texto + unidad
+    elif unidad != "":
         texto = texto + " " + unidad
     return texto
 
@@ -759,43 +768,44 @@ def texto_informacion(avion, identificador, texto_estado):
     """
     Texto del panel con los datos del último mensaje del avión seleccionado. Si el avión también
     está en el mapa por el otro sistema lo indica el selector Radar / ADS-B del panel, no este texto.
-    texto_estado es el de simulacion.texto_estado_avion ("en vuelo", "en tierra"...).
+    texto_estado es el de simulacion.texto_estado_avion ("airborne", "on ground"...).
+    La hora del mensaje se guarda con coma decimal (la del CSV); aquí se escribe con punto.
     """
     fila = avion["fila"]
     lineas = []
     if filtros.es_transponder_fijo(fila):
-        lineas.append("Transponder fijo (7777): referencia")
-        lineas.append("en tierra, siempre quieto.")
+        lineas.append("Fixed transponder (7777): ground")
+        lineas.append("reference, always stationary.")
         lineas.append("")
     if identificador[0] == CATEGORIA_048:
-        lineas.append("Sistema     Radar (CAT048)")
+        lineas.append("System          Radar (CAT048)")
     else:
-        lineas.append("Sistema     ADS-B (CAT021)")
-    lineas.append("Estado      " + texto_estado)
-    lineas.append("Callsign    " + texto_o_guion(valor(fila, "TI")))
-    lineas.append("TA          " + texto_o_guion(valor(fila, "TA")))
-    lineas.append("Modo 3/A    " + texto_o_guion(valor(fila, "MODE3A")))
-    lineas.append("FL          " + texto_numero(valor(fila, "FL"), 2, ""))
-    lineas.append("Alt. corr.  " + texto_numero(valor(fila, "ALT_CORREGIDA_FT"), 0, "ft"))
-    lineas.append("Tendencia   " + simulacion.texto_tendencia(avion["tendencia"]))
-    lineas.append("Latitud     " + texto_numero(valor(fila, "LAT"), 5, "°"))
-    lineas.append("Longitud    " + texto_numero(valor(fila, "LON"), 5, "°"))
-    lineas.append("Último msg  " + str(valor(fila, "TIME")))
+        lineas.append("System          ADS-B (CAT021)")
+    lineas.append("Status          " + texto_estado)
+    lineas.append("Callsign        " + texto_o_guion(valor(fila, "TI")))
+    lineas.append("Mode S address  " + texto_o_guion(valor(fila, "TA")))
+    lineas.append("Mode 3/A        " + texto_o_guion(valor(fila, "MODE3A")))
+    lineas.append("Flight level    " + texto_numero(valor(fila, "FL"), 2, ""))
+    lineas.append("Corrected alt.  " + texto_numero(valor(fila, "ALT_CORRECTED_FT"), 0, "ft"))
+    lineas.append("Vertical trend  " + simulacion.texto_tendencia(avion["tendencia"]))
+    lineas.append("Latitude        " + texto_numero(valor(fila, "LAT"), 5, UNIDAD_GRADOS))
+    lineas.append("Longitude       " + texto_numero(valor(fila, "LON"), 5, UNIDAD_GRADOS))
+    lineas.append("Last message    " + str(valor(fila, "TIME")).replace(",", "."))
     lineas.append("")
     if identificador[0] == CATEGORIA_048:
-        lineas.append("Velocidades")
-        lineas.append("  GS (BDS 5.0)    " + texto_numero(valor(fila, "BDS50_GS"), 0, "kt"))
-        lineas.append("  GS (I048/200)   " + texto_numero(valor(fila, "I048_200_GS_KT"), 0, "kt"))
-        lineas.append("  TAS             " + texto_numero(valor(fila, "BDS50_TAS"), 0, "kt"))
-        lineas.append("  IAS             " + texto_numero(valor(fila, "BDS60_IAS"), 0, "kt"))
-        lineas.append("  Mach            " + texto_numero(valor(fila, "BDS60_MACH"), 3, ""))
-        lineas.append("Rumbo")
-        lineas.append("  HDG (BDS 6.0)   " + texto_numero(valor(fila, "BDS60_HDG"), 1, "°"))
-        lineas.append("  TTA (BDS 5.0)   " + texto_numero(valor(fila, "BDS50_TTA"), 1, "°"))
-        lineas.append("  Rumbo I048/200  " + texto_numero(valor(fila, "I048_200_HDG_DEG"), 1, "°"))
-        lineas.append("Vertical")
-        lineas.append("  BAR             " + texto_numero(valor(fila, "BDS60_BAR"), 0, "ft/min"))
-        lineas.append("  IVV             " + texto_numero(valor(fila, "BDS60_IVV"), 0, "ft/min"))
+        lineas.append("Speeds")
+        lineas.append("  GS (BDS 5.0)      " + texto_numero(valor(fila, "BDS50_GS"), 0, "kt"))
+        lineas.append("  GS (I048/200)     " + texto_numero(valor(fila, "I048_200_GS_KT"), 0, "kt"))
+        lineas.append("  TAS               " + texto_numero(valor(fila, "BDS50_TAS"), 0, "kt"))
+        lineas.append("  IAS               " + texto_numero(valor(fila, "BDS60_IAS"), 0, "kt"))
+        lineas.append("  Mach              " + texto_numero(valor(fila, "BDS60_MACH"), 3, ""))
+        lineas.append("Heading")
+        lineas.append("  HDG (BDS 6.0)     " + texto_numero(valor(fila, "BDS60_HDG"), 1, UNIDAD_GRADOS))
+        lineas.append("  TTA (BDS 5.0)     " + texto_numero(valor(fila, "BDS50_TTA"), 1, UNIDAD_GRADOS))
+        lineas.append("  Heading I048/200  " + texto_numero(valor(fila, "I048_200_HDG_DEG"), 1, UNIDAD_GRADOS))
+        lineas.append("Vertical rate")
+        lineas.append("  BAR               " + texto_numero(valor(fila, "BDS60_BAR"), 0, "ft/min"))
+        lineas.append("  IVV               " + texto_numero(valor(fila, "BDS60_IVV"), 0, "ft/min"))
     else:
-        lineas.append("Velocidad y rumbo: no se decodifican en CAT021.")
+        lineas.append("Speed and heading: not decoded in CAT021.")
     return "\n".join(lineas)

@@ -87,10 +87,10 @@ def leer_cabecera_bloque(datos, posicion):
     """
     problema = problema_bloque(datos, posicion)
     if problema == BLOQUE_CORTADO:
-        raise ValueError("el bloque del octeto " + str(posicion) + " no cabe entero en el fichero")
+        raise ValueError("the block at byte " + str(posicion) + " does not fit in the file")
     if problema == LEN_NO_VALIDO:
-        raise ValueError("bloque con LEN = " + str(leer_entero(datos, posicion + 1, 2))
-                         + " en el octeto " + str(posicion))
+        raise ValueError("block with LEN = " + str(leer_entero(datos, posicion + 1, 2))
+                         + " at byte " + str(posicion))
 
     categoria = datos[posicion]
     longitud_bloque = leer_entero(datos, posicion + 1, 2)

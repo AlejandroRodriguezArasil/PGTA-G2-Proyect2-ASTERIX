@@ -58,11 +58,11 @@ INTERVALO_CAMBIO_DE_HILO_S = 0.0005
 ESPERA_POR_VELOCIDAD_MS = {"x1": 1000, "x2": 500, "x5": 200, "x10": 100, "x30": 33, "x60": 17}
 RETRASO_MAXIMO_S = 1.0      # retraso del reloj de la simulación que se intenta recuperar (ver tic_reloj)
 
-# Sangría de las líneas del resumen que dependen de la de encima (por ejemplo, "12.318 de ellos sin FL")
+# Sangría de las líneas del resumen que dependen de la de encima (por ejemplo, "12,318 of them without FL")
 SANGRIA_RESUMEN = "      "
 
 # Ayuda de la opción Radar / ADS-B del panel cuando no se puede pulsar
-AYUDA_SIN_PAREJA = "Este avión no está en el mapa por el otro sistema."
+AYUDA_SIN_PAREJA = "The other system does not show this aircraft on the map."
 
 
 class Aplicacion:
@@ -127,10 +127,10 @@ class Aplicacion:
     # =========================================================================
 
     def elegir_fichero(self):
-        """Botón "Abrir fichero .ast": diálogo para elegir el fichero y empezar a decodificarlo."""
+        """Botón "Open .ast file": diálogo para elegir el fichero y empezar a decodificarlo."""
         ruta = filedialog.askopenfilename(
-            title="Elige un fichero ASTERIX",
-            filetypes=[("Ficheros ASTERIX", "*.ast"), ("Todos los ficheros", "*.*")])
+            title="Choose an ASTERIX file",
+            filetypes=[("ASTERIX files", "*.ast"), ("All files", "*.*")])
         if ruta == "":
             return
         self.decodificar_en_segundo_plano(ruta)
@@ -149,12 +149,12 @@ class Aplicacion:
         self.fichero_decodificando = os.path.basename(ruta)
         self.etiqueta_fichero.configure(text=self.fichero_decodificando)
         self.mostrar_resumen(None)
-        self.etiqueta_detalle_resumen.configure(text="Decodificando el fichero...")
+        self.etiqueta_detalle_resumen.configure(text="Decoding the file...")
 
         self.porcentaje = 0
         self.registros_leidos = 0
         self.barra_progreso_tabla.set(0)
-        ventana.cambiar_texto(self.etiqueta_progreso_tabla, "Decodificando " + self.fichero_decodificando + "...  0 %")
+        ventana.cambiar_texto(self.etiqueta_progreso_tabla, "Decoding " + self.fichero_decodificando + "...  0 %")
         self.resultado_hilo = None
         self.error_hilo = None
         self.hilo = threading.Thread(target=self.tarea_decodificar, args=(ruta,), daemon=True)
@@ -162,7 +162,7 @@ class Aplicacion:
 
         self.mostrar_pagina()
         self.actualizar_panel_simulacion()
-        self.poner_estado("Decodificando " + self.fichero_decodificando + "...", estilo.ESTADO_TRABAJANDO)
+        self.poner_estado("Decoding " + self.fichero_decodificando + "...", estilo.ESTADO_TRABAJANDO)
         self.poner_progreso(0)
         self.raiz.after(INTERVALO_REVISION_MS, self.revisar_decodificacion)
 
@@ -171,15 +171,15 @@ class Aplicacion:
         try:
             self.resultado_hilo = decodificar.decodificar_fichero(ruta, self.guardar_progreso_decodificacion)
         except ValueError as error:
-            self.error_hilo = "El fichero no es ASTERIX o está dañado:\n" + str(error) + "."
+            self.error_hilo = "The file is not ASTERIX or it is damaged:\n" + str(error) + "."
         except PermissionError:
-            self.error_hilo = "No se ha podido leer el fichero: no hay permiso para abrirlo."
+            self.error_hilo = "The file could not be read: there is no permission to open it."
         except OSError:
-            self.error_hilo = "No se ha podido leer el fichero (puede que se haya movido o borrado)."
+            self.error_hilo = "The file could not be read (it may have been moved or deleted)."
         except MemoryError:
-            self.error_hilo = "No hay memoria suficiente para decodificar este fichero."
+            self.error_hilo = "There is not enough memory to decode this file."
         except Exception as error:
-            self.error_hilo = "Error inesperado al decodificar:\n" + str(error)
+            self.error_hilo = "Unexpected error while decoding:\n" + str(error)
 
     def guardar_progreso_decodificacion(self, porcentaje, registros_leidos):
         """La llama decodificar_fichero desde el hilo para informar del progreso."""
@@ -202,8 +202,8 @@ class Aplicacion:
             # Progreso grande en el sitio de la tabla
             self.barra_progreso_tabla.set(self.porcentaje / 100)
             ventana.cambiar_texto(self.etiqueta_progreso_tabla,
-                                  "Decodificando " + self.fichero_decodificando + "...  " + str(self.porcentaje) + " %  ·  "
-                                  + con_miles(self.registros_leidos) + " registros leídos")
+                                  "Decoding " + self.fichero_decodificando + "...  " + str(self.porcentaje) + " %  ·  "
+                                  + con_miles(self.registros_leidos) + " records read")
             self.raiz.after(INTERVALO_REVISION_MS, self.revisar_decodificacion)
             return
 
@@ -215,15 +215,15 @@ class Aplicacion:
             self.mostrar_resumen(self.recuentos)
             self.poner_progreso(0)
             if self.nombre_fichero == "":
-                self.etiqueta_fichero.configure(text="Ningún fichero cargado")
-                self.poner_estado("No se ha podido decodificar " + fichero_nuevo, estilo.TEXTO_SUAVE)
+                self.etiqueta_fichero.configure(text="No file loaded")
+                self.poner_estado("Could not decode " + fichero_nuevo, estilo.TEXTO_SUAVE)
             else:
                 self.etiqueta_fichero.configure(text=self.nombre_fichero)
-                self.poner_estado("No se ha podido decodificar " + fichero_nuevo + "; siguen los datos de "
+                self.poner_estado("Could not decode " + fichero_nuevo + "; still showing the data of "
                                   + self.nombre_fichero, estilo.TEXTO_SUAVE)
             self.mostrar_pagina()
             self.actualizar_panel_simulacion()
-            messagebox.showerror("Error al decodificar", self.error_hilo)
+            messagebox.showerror("Decoding error", self.error_hilo)
             return
 
         filas, recuentos = self.resultado_hilo
@@ -231,8 +231,8 @@ class Aplicacion:
         self.nombre_fichero = fichero_nuevo
         self.mostrar_datos(filas, recuentos)
         # Si se estaba en la pestaña Simulación, el mapa se prepara ya (si no, se hace al entrar)
-        if self.selector_pestana.get() == "Simulación":
-            self.cambiar_pestana("Simulación")
+        if self.selector_pestana.get() == "Simulation":
+            self.cambiar_pestana("Simulation")
 
     # =========================================================================
     # 3. Mostrar los datos: resumen y tabla por páginas
@@ -250,21 +250,21 @@ class Aplicacion:
         # Ancho de cada columna según su cabecera y los valores de las primeras filas
         muestra = []
         for fila in filas[:FILAS_PARA_MEDIR_ANCHOS]:
-            muestra.append(exportar_csv.formatear_fila(fila))
+            muestra.append(celdas_tabla(fila))
         ventana.ajustar_anchos_columnas(self, muestra)
 
         self.invalidar_simulacion()
         self.mostrar_pagina()
         self.poner_progreso(100)
-        self.poner_estado("Decodificado en " + formatear_segundos(recuentos["segundos"]) + " · "
-                          + con_miles(len(filas)) + " mensajes", estilo.ESTADO_LISTO)
+        self.poner_estado("Decoded in " + formatear_segundos(recuentos["segundos"]) + " · "
+                          + con_miles(len(filas)) + " messages", estilo.ESTADO_LISTO)
 
     def mostrar_resumen(self, recuentos):
         """Rellena la tarjeta de resumen; con None la deja vacía (sin fichero o mientras se decodifica)."""
         if recuentos is None:
             for cifra in (self.cifra_leidos, self.cifra_filas, self.cifra_descartados, self.cifra_tiempo):
                 cifra.configure(text="—")
-            self.etiqueta_detalle_resumen.configure(text="Abre un fichero .ast para ver el resumen.")
+            self.etiqueta_detalle_resumen.configure(text="Open an .ast file to see its summary.")
             return
 
         leidos = recuentos["registros_048"] + recuentos["registros_021"]
@@ -275,28 +275,28 @@ class Aplicacion:
         self.cifra_leidos.configure(text=con_miles(leidos))
         self.cifra_filas.configure(text=con_miles(filas))
         self.cifra_descartados.configure(text=con_miles(leidos - filas))
-        self.cifra_tiempo.configure(text=format(recuentos["segundos"], ".1f").replace(".", ","))
+        self.cifra_tiempo.configure(text=format(recuentos["segundos"], ".1f"))
 
         # Una línea por concepto y cortas, para que ninguna se parta a mitad de un dato: las más largas
         # caben en el ancho del panel aunque las cifras tengan 7 dígitos. Las que dependen de la línea
         # de encima van con SANGRIA_RESUMEN.
         lineas = [
-            "CAT048: " + con_miles(recuentos["registros_048"]) + " leídos · " + con_miles(recuentos["filas_048"])
-            + " en la tabla",
-            SANGRIA_RESUMEN + con_miles(recuentos["filas_048_sin_fl"]) + " de ellos sin FL",
-            "CAT021: " + con_miles(recuentos["registros_021"]) + " leídos · " + con_miles(recuentos["filas_021"])
-            + " en la tabla",
-            "Descartados: " + con_miles(fuera_de_zona) + " fuera de zona",
-            SANGRIA_RESUMEN + con_miles(recuentos["descartados_021_en_tierra"]) + " CAT021 en tierra (GBS)",
-            SANGRIA_RESUMEN + con_miles(sin_posicion) + " sin posición",
-            "Bloques desincronizados: " + con_miles(recuentos["bloques_desincronizados"]),
+            "CAT048: " + con_miles(recuentos["registros_048"]) + " read · " + con_miles(recuentos["filas_048"])
+            + " in the table",
+            SANGRIA_RESUMEN + con_miles(recuentos["filas_048_sin_fl"]) + " of them without FL",
+            "CAT021: " + con_miles(recuentos["registros_021"]) + " read · " + con_miles(recuentos["filas_021"])
+            + " in the table",
+            "Discarded: " + con_miles(fuera_de_zona) + " outside the area",
+            SANGRIA_RESUMEN + con_miles(recuentos["descartados_021_en_tierra"]) + " CAT021 on ground (GBS)",
+            SANGRIA_RESUMEN + con_miles(sin_posicion) + " without position",
+            "Desynchronized blocks: " + con_miles(recuentos["bloques_desincronizados"]),
         ]
         if recuentos["lectura_parada"] == lector.BLOQUE_CORTADO:
-            lineas.append("Fichero incompleto: el último bloque estaba")
-            lineas.append("cortado y no se ha leído.")
+            lineas.append("Incomplete file: the last block was")
+            lineas.append("cut off and has not been read.")
         elif recuentos["lectura_parada"] == lector.LEN_NO_VALIDO:
-            lineas.append("Bloque dañado (LEN no válido) en el octeto")
-            lineas.append(con_miles(recuentos["octeto_parada"]) + ": se ha leído hasta ahí.")
+            lineas.append("Damaged block (invalid LEN) at byte")
+            lineas.append(con_miles(recuentos["octeto_parada"]) + ": read up to there.")
         self.etiqueta_detalle_resumen.configure(text="\n".join(lineas))
 
     def numero_de_paginas(self):
@@ -315,22 +315,22 @@ class Aplicacion:
         primera = self.pagina_actual * FILAS_POR_PAGINA
         ultima = min(primera + FILAS_POR_PAGINA, total)
         for numero_fila in range(primera, ultima):
-            celdas = exportar_csv.formatear_fila(self.filas_visibles[numero_fila])
+            celdas = celdas_tabla(self.filas_visibles[numero_fila])
             if numero_fila % 2 == 1:
                 self.tabla.insert("", "end", values=celdas, tags=("alterna",))
             else:
                 self.tabla.insert("", "end", values=celdas)
         self.tabla.yview_moveto(0)
 
-        self.etiqueta_pagina.configure(text="Página " + con_miles(self.pagina_actual + 1)
-                                       + " de " + con_miles(self.numero_de_paginas()))
+        self.etiqueta_pagina.configure(text="Page " + con_miles(self.pagina_actual + 1)
+                                       + " of " + con_miles(self.numero_de_paginas()))
         if total == 0:
             self.etiqueta_total.configure(text="")
         else:
-            texto = ("Mostrando " + con_miles(primera + 1) + "-" + con_miles(ultima)
-                     + " de " + con_miles(total) + " mensajes")
+            texto = ("Showing " + con_miles(primera + 1) + "-" + con_miles(ultima)
+                     + " of " + con_miles(total) + " messages")
             if self.opciones_filtros is not None:
-                texto = texto + " (" + con_miles(len(self.filas_todas)) + " sin filtrar)"
+                texto = texto + " (" + con_miles(len(self.filas_todas)) + " unfiltered)"
             self.etiqueta_total.configure(text=texto)
 
         self.actualizar_estado_vacio_tabla()
@@ -349,13 +349,13 @@ class Aplicacion:
 
         boton = ""
         if self.recuentos is None:
-            mensaje = "Abre un fichero .ast para empezar.\nSe decodificarán sus mensajes CAT048 y CAT021."
+            mensaje = "Open an .ast file to start.\nIts CAT048 and CAT021 messages will be decoded."
             boton = "abrir"
         elif len(self.filas_todas) == 0:
-            mensaje = ("Ningún mensaje del fichero pasa los descartes obligatorios\n"
-                       "(sin posición, fuera de la zona geográfica o CAT021 en tierra).")
+            mensaje = ("No message in the file passes the mandatory discards\n"
+                       "(no position, outside the geographic area or CAT021 on ground).")
         elif len(self.filas_visibles) == 0:
-            mensaje = "Ningún mensaje cumple los filtros."
+            mensaje = "No message matches the filters."
             boton = "quitar"
         else:
             self.estado_vacio_tabla.place_forget()
@@ -363,10 +363,10 @@ class Aplicacion:
 
         self.etiqueta_vacio_tabla.configure(text=mensaje)
         if boton == "abrir":
-            self.boton_vacio_tabla.configure(text="Abrir fichero .ast", command=self.elegir_fichero)
+            self.boton_vacio_tabla.configure(text="Open .ast file", command=self.elegir_fichero)
             self.boton_vacio_tabla.pack(pady=(0, 24))
         elif boton == "quitar":
-            self.boton_vacio_tabla.configure(text="Quitar filtros", command=self.quitar_filtros)
+            self.boton_vacio_tabla.configure(text="Clear filters", command=self.quitar_filtros)
             self.boton_vacio_tabla.pack(pady=(0, 24))
         else:
             self.boton_vacio_tabla.pack_forget()
@@ -418,8 +418,8 @@ class Aplicacion:
                 altitud = None
             # float() también acepta "nan" o "inf", que no son una altitud
             if altitud is None or not math.isfinite(altitud):
-                messagebox.showwarning("Altitud no válida",
-                                       "La altitud máxima tiene que ser un número en ft, por ejemplo 6000.")
+                messagebox.showwarning("Invalid altitude",
+                                       "The maximum altitude must be a number in ft, for example 6000.")
                 return None
             opciones["altitud_maxima_ft"] = altitud
 
@@ -439,8 +439,8 @@ class Aplicacion:
         self.pagina_actual = 0
         self.invalidar_simulacion()      # la simulación usa los mensajes filtrados
         self.mostrar_pagina()
-        self.poner_estado("Filtrado: " + con_miles(len(self.filas_visibles)) + " de "
-                          + con_miles(len(self.filas_todas)) + " mensajes", estilo.ESTADO_LISTO)
+        self.poner_estado("Filtered: " + con_miles(len(self.filas_visibles)) + " of "
+                          + con_miles(len(self.filas_todas)) + " messages", estilo.ESTADO_LISTO)
 
     def aplicar_filtros_con_intro(self, evento):
         """Pulsar Intro en un campo de texto del panel de filtros equivale a "Aplicar filtros" (si está activo)."""
@@ -448,8 +448,8 @@ class Aplicacion:
             self.aplicar_filtros()
 
     def quitar_filtros(self):
-        """Botón "Quitar filtros": deja el panel como al principio y vuelve a mostrar todo."""
-        self.selector_categoria.set("Ambas")
+        """Botón "Clear filters": deja el panel como al principio y vuelve a mostrar todo."""
+        self.selector_categoria.set("Both")
         self.casilla_blancos_puros.deselect()
         self.casilla_transponder_fijo.deselect()
         self.casilla_en_tierra.deselect()
@@ -462,7 +462,7 @@ class Aplicacion:
         self.pagina_actual = 0
         self.invalidar_simulacion()
         self.mostrar_pagina()
-        self.poner_estado("Sin filtros: " + con_miles(len(self.filas_todas)) + " mensajes", estilo.ESTADO_LISTO)
+        self.poner_estado("No filters: " + con_miles(len(self.filas_todas)) + " messages", estilo.ESTADO_LISTO)
 
     # =========================================================================
     # 5. Exportar a CSV
@@ -476,13 +476,13 @@ class Aplicacion:
     def exportar_filtrado(self):
         """Botón "Exportar lo filtrado": solo las filas que quedan tras los filtros."""
         nombre_base = os.path.splitext(self.nombre_fichero)[0]
-        self.exportar(self.filas_visibles, nombre_base + "_filtrado.csv")
+        self.exportar(self.filas_visibles, nombre_base + "_filtered.csv")
 
     def exportar(self, filas, nombre_sugerido):
         """Diálogo para elegir dónde se guarda el CSV y exportación en un hilo aparte."""
         ruta = filedialog.asksaveasfilename(
-            title="Guardar CSV", initialfile=nombre_sugerido, defaultextension=".csv",
-            filetypes=[("CSV separado por ';'", "*.csv")])
+            title="Save CSV", initialfile=nombre_sugerido, defaultextension=".csv",
+            filetypes=[("CSV separated by ';'", "*.csv")])
         if ruta == "":
             return
         self.empezar_exportacion(ruta, filas)
@@ -497,7 +497,7 @@ class Aplicacion:
         self.hilo = threading.Thread(target=self.tarea_exportar, args=(ruta, filas), daemon=True)
         self.hilo.start()
         self.actualizar_botones()
-        self.poner_estado("Exportando " + con_miles(len(filas)) + " mensajes...", estilo.ESTADO_TRABAJANDO)
+        self.poner_estado("Exporting " + con_miles(len(filas)) + " messages...", estilo.ESTADO_TRABAJANDO)
         self.poner_progreso(0)
         self.raiz.after(INTERVALO_REVISION_MS, self.revisar_exportacion)
 
@@ -510,13 +510,13 @@ class Aplicacion:
         except ExportacionCancelada:
             return              # se ha cerrado la ventana: revisar_exportacion borra el CSV a medias
         except PermissionError:
-            self.error_hilo = ("No se ha podido guardar el CSV: el fichero está abierto en otro programa\n"
-                               "o no hay permiso para escribir en esa carpeta. Si está abierto en Excel,\n"
-                               "ciérralo y vuelve a intentarlo.")
+            self.error_hilo = ("The CSV could not be saved: the file is open in another program\n"
+                               "or there is no permission to write in that folder. If it is open in Excel,\n"
+                               "close it and try again.")
         except OSError:
-            self.error_hilo = "No se ha podido guardar el CSV en esa carpeta. Prueba con otra."
+            self.error_hilo = "The CSV could not be saved in that folder. Try another one."
         except Exception as error:
-            self.error_hilo = "Error inesperado al exportar:\n" + str(error)
+            self.error_hilo = "Unexpected error while exporting:\n" + str(error)
 
     def revisar_exportacion(self):
         """Se repite cada 100 ms: mueve la barra de progreso y, al acabar, avisa."""
@@ -539,15 +539,15 @@ class Aplicacion:
         self.actualizar_botones()
         if self.error_hilo is not None:
             self.poner_progreso(0)
-            self.poner_estado("No se ha podido exportar", estilo.TEXTO_SUAVE)
-            messagebox.showerror("Error al exportar", self.error_hilo)
+            self.poner_estado("Could not export", estilo.TEXTO_SUAVE)
+            messagebox.showerror("Export error", self.error_hilo)
             return
 
         ruta, numero_filas, segundos = self.resultado_hilo
         self.poner_progreso(100)
-        self.poner_estado("Exportado en " + formatear_segundos(segundos) + ": " + ruta, estilo.ESTADO_LISTO)
-        messagebox.showinfo("Exportación terminada",
-                            "Se han guardado " + con_miles(numero_filas) + " mensajes en:\n" + ruta)
+        self.poner_estado("Exported in " + formatear_segundos(segundos) + ": " + ruta, estilo.ESTADO_LISTO)
+        messagebox.showinfo("Export finished",
+                            "Saved " + con_miles(numero_filas) + " messages to:\n" + ruta)
 
     # =========================================================================
     # 6. Simular en el mapa
@@ -558,7 +558,7 @@ class Aplicacion:
         Selector de la cabecera: muestra la pestaña Datos o la pestaña Simulación.
         Al pasar a Datos, la simulación se pausa (como el botón Pausa) y al volver sigue en pausa.
         """
-        if pestana == "Datos":
+        if pestana == "Data":
             self.pausa()
             self.pestana_simulacion.pack_forget()
             self.pestana_datos.pack(fill="both", expand=True)
@@ -609,21 +609,21 @@ class Aplicacion:
         if self.estado_simulacion is None:
             self.preparar_simulacion()
         if simulacion.ha_terminado(self.estado_simulacion):
-            messagebox.showinfo("Simulación", "La simulación ha llegado al final de los datos.\n"
-                                              "Pulsa Reset o elige una hora para volver a empezar.")
+            messagebox.showinfo("Simulation", "The simulation has reached the end of the data.\n"
+                                              "Press Reset or choose a time to start again.")
             return
         if self.reproduciendo:
             return
         self.reproduciendo = True
         self.actualizar_botones()
-        self.poner_estado("Reproduciendo a " + self.selector_velocidad.get(), estilo.ESTADO_LISTO)
+        self.poner_estado("Playing at " + self.selector_velocidad.get(), estilo.ESTADO_LISTO)
         self.instante_siguiente_salto = time.perf_counter() + self.espera_ms / 1000
         self.id_reloj = self.raiz.after(self.espera_ms, self.tic_reloj)
 
     def pausa(self):
         """Botón Pausa: para el reloj de la simulación."""
         if self.reproduciendo:
-            self.poner_estado("Simulación en pausa", estilo.TEXTO_SUAVE)
+            self.poner_estado("Simulation paused", estilo.TEXTO_SUAVE)
         self.reproduciendo = False
         if self.id_reloj is not None:
             self.raiz.after_cancel(self.id_reloj)
@@ -646,7 +646,7 @@ class Aplicacion:
         self.dar_un_salto()
         if simulacion.ha_terminado(self.estado_simulacion):
             self.pausa()
-            self.poner_estado("Fin de los datos: pulsa Reset para volver a empezar", estilo.TEXTO_SUAVE)
+            self.poner_estado("End of the data: press Reset to start again", estilo.TEXTO_SUAVE)
             return
 
         ahora = time.perf_counter()
@@ -714,7 +714,7 @@ class Aplicacion:
         """Botón "Ir": salta a la hora escrita (hh:mm). Cada avión aparece en su última posición antes de esa hora."""
         segundo = leer_hora(self.entrada_hora.get())
         if segundo is None:
-            messagebox.showwarning("Hora no válida", "Escribe la hora como hh:mm, por ejemplo 06:30.")
+            messagebox.showwarning("Invalid time", "Type the time as hh:mm, for example 06:30.")
             return
         if self.estado_simulacion is None:
             self.preparar_simulacion()
@@ -722,8 +722,8 @@ class Aplicacion:
         fin = self.estado_simulacion["fin"]
         # La hora se escribe en minutos: vale el minuto en que empiezan los datos (08:00 si empiezan a las 08:00:03)
         if segundo < inicio - inicio % 60 or segundo > fin:
-            messagebox.showwarning("Hora fuera de los datos",
-                                   "Los datos van de las " + hora_sin_decimales(inicio) + " a las "
+            messagebox.showwarning("Time outside the data",
+                                   "The data go from " + hora_sin_decimales(inicio) + " to "
                                    + hora_sin_decimales(fin) + " UTC.")
             return
         self.saltar_a_segundo(segundo)
@@ -780,7 +780,7 @@ class Aplicacion:
         self.espera_ms = ESPERA_POR_VELOCIDAD_MS[velocidad]
         self.instante_siguiente_salto = time.perf_counter()
         if self.reproduciendo:
-            self.poner_estado("Reproduciendo a " + velocidad, estilo.ESTADO_LISTO)
+            self.poner_estado("Playing at " + velocidad, estilo.ESTADO_LISTO)
 
     def cambiar_sistema(self, sistema):
         """
@@ -805,16 +805,12 @@ class Aplicacion:
 
     def cambiar_mapa(self, aspecto):
         """Selector Mapa: oscurece el mapa o lo deja como el original (vuelve a pedir las teselas)."""
-        mapa.cambiar_aspecto_mapa(self, aspecto == "Oscuro")
+        mapa.cambiar_aspecto_mapa(self, aspecto == "Dark")
 
     def cambiar_seguir(self):
         """Casilla Seguir: al marcarla, el mapa se centra ya en el avión seleccionado (si está en el mapa)."""
         if self.casilla_seguir.get() == 1 and self.avion_seleccionado in self.marcadores:
             mapa.centrar_en_avion(self, self.estado_simulacion["aviones"][self.avion_seleccionado])
-
-    def cambiar_leyenda(self):
-        """Cabecera de la leyenda del panel de la simulación: la despliega si está recogida y al revés."""
-        ventana.mostrar_leyenda(self, not self.leyenda_desplegada)
 
     def seleccionar_avion(self, identificador, centrar):
         """
@@ -861,7 +857,7 @@ class Aplicacion:
             return
         identificador = mapa.avion_en_mapa_por_ta(self, direccion_modo_s)
         if identificador is None:
-            self.poner_estado("Ese avión ya no está a la vista.", estilo.TEXTO_SUAVE)
+            self.poner_estado("That aircraft is no longer in view.", estilo.TEXTO_SUAVE)
             return
         self.seleccionar_avion(identificador, True)
 
@@ -922,7 +918,7 @@ class Aplicacion:
             ventana.cambiar_texto(self.cifra_adsb, "0")
             ventana.cambiar_texto(self.cifra_blancos_puros, "0")
             ventana.escribir_contadores_trafico(self, 0, 0)
-            ventana.cambiar_texto(self.etiqueta_totales_eventos, "Despegues: 0 · Aterrizajes: 0")
+            ventana.cambiar_texto(self.etiqueta_totales_eventos, "Takeoffs: 0 · Landings: 0")
             return
 
         # Mientras se arrastra la barra de tiempo, el reloj enseña la hora a la que se va a saltar
@@ -938,8 +934,8 @@ class Aplicacion:
             texto = mapa.texto_informacion(estado["aviones"][self.avion_seleccionado], self.avion_seleccionado,
                                            simulacion.texto_estado_avion(estado, self.avion_seleccionado))
         else:
-            texto = ("El avión seleccionado ya no está a la vista (más de "
-                     + str(simulacion.SEGUNDOS_PARA_CADUCAR) + " s sin mensajes).")
+            texto = ("The selected aircraft is no longer in view (more than "
+                     + str(simulacion.SEGUNDOS_PARA_CADUCAR) + " s without messages).")
         ventana.escribir_texto(self.cuadro_info, texto)
 
     def actualizar_trafico(self):
@@ -972,42 +968,42 @@ class Aplicacion:
         if len(nuevos) > 0:
             self.registro_eventos.anadir(nuevos)
             self.ultimo_evento_mostrado = nuevos[-1]["numero"]
-        ventana.cambiar_texto(self.etiqueta_totales_eventos, "Despegues: " + str(estado["despegues"])
-                              + " · Aterrizajes: " + str(estado["aterrizajes"]))
+        ventana.cambiar_texto(self.etiqueta_totales_eventos, "Takeoffs: " + str(estado["despegues"])
+                              + " · Landings: " + str(estado["aterrizajes"]))
 
     def actualizar_aviso_simulacion(self):
         """Aviso encima del mapa: cuántos mensajes se simulan y con qué filtros de la pestaña Datos."""
         if len(self.filas_todas) == 0:
-            texto = "Abre un fichero .ast para simular sus trayectorias."
+            texto = "Open an .ast file to simulate its trajectories."
         elif self.opciones_filtros is None:
-            texto = ("Se simulan los " + con_miles(len(self.filas_visibles))
-                     + " mensajes de la pestaña Datos (sin filtros).")
+            texto = ("Simulating the " + con_miles(len(self.filas_visibles))
+                     + " messages of the Data tab (no filters).")
         else:
-            texto = ("Se simulan los " + con_miles(len(self.filas_visibles)) + " mensajes filtrados en Datos. "
-                     + "Filtros activos: " + filtros.describir_filtros(self.opciones_filtros) + ".")
+            texto = ("Simulating the " + con_miles(len(self.filas_visibles)) + " messages filtered in Data. "
+                     + "Active filters: " + filtros.describir_filtros(self.opciones_filtros) + ".")
         ventana.cambiar_texto(self.etiqueta_aviso_simulacion, texto)
 
     def actualizar_mensaje_mapa(self):
         """Si en el mapa no hay nada que ver, pone en el centro un mensaje que explica por qué y qué hacer."""
         mensaje = ""
         if self.fichero_decodificando != "":
-            mensaje = "Decodificando el fichero..."
+            mensaje = "Decoding the file..."
         elif len(self.filas_todas) == 0:
-            mensaje = "No hay ningún fichero cargado.\nAbre un fichero .ast con el botón de arriba a la derecha."
+            mensaje = "No file is loaded.\nOpen an .ast file with the button at the top right."
         elif len(self.filas_visibles) == 0:
-            mensaje = "Los filtros de la pestaña Datos no dejan ningún mensaje.\nQuita o cambia los filtros en Datos."
+            mensaje = "The filters of the Data tab leave no messages.\nClear or change the filters in Data."
         elif self.estado_simulacion is not None:
             sistema = self.selector_sistema.get()
             mensajes = self.estado_simulacion["mensajes_por_categoria"]
             if sistema == "ADS-B" and mensajes[21] == 0:
-                mensaje = ("No hay mensajes ADS-B (CAT021) entre los filtrados en Datos.\n"
-                           "Elige «Radar» o «Ambos» en Sistema, o cambia los filtros en Datos.")
+                mensaje = ("There are no ADS-B (CAT021) messages among those filtered in Data.\n"
+                           "Choose “Radar” or “Both” in System, or change the filters in Data.")
             elif sistema == "Radar" and mensajes[48] == 0:
-                mensaje = ("No hay mensajes de radar (CAT048) entre los filtrados en Datos.\n"
-                           "Elige «ADS-B» o «Ambos» en Sistema, o cambia los filtros en Datos.")
+                mensaje = ("There are no radar (CAT048) messages among those filtered in Data.\n"
+                           "Choose “ADS-B” or “Both” in System, or change the filters in Data.")
             elif len(self.marcadores) == 0:
-                mensaje = ("No hay aviones a la vista a las " + hora_sin_decimales(self.estado_simulacion["segundo"])
-                           + ".\nPulsa Reproducir o elige otra hora.")
+                mensaje = ("No aircraft in view at " + hora_sin_decimales(self.estado_simulacion["segundo"])
+                           + ".\nPress Play or choose another time.")
 
         if mensaje == "":
             self.mensaje_mapa.place_forget()
@@ -1071,8 +1067,8 @@ class Aplicacion:
         if self.ruta_exportando is None:
             self.raiz.destroy()
             return
-        cerrar = messagebox.askyesno("Exportación en curso", "Se está exportando el CSV. Si cierras ahora "
-                                                             "quedará incompleto.\n¿Cerrar igualmente?")
+        cerrar = messagebox.askyesno("Export in progress", "The CSV is being exported. If you close now, "
+                                                             "it will be incomplete.\nClose anyway?")
         if not cerrar:
             return
         if self.ruta_exportando is None:
@@ -1082,9 +1078,9 @@ class Aplicacion:
 
     def mostrar_error_inesperado(self, tipo, valor, traza):
         """Cualquier error no previsto en un botón se muestra en un diálogo, sin traza."""
-        messagebox.showerror("Error inesperado",
-                             "Ha ocurrido un error inesperado:\n" + str(valor)
-                             + "\n\nLos datos cargados siguen disponibles.")
+        messagebox.showerror("Unexpected error",
+                             "An unexpected error has occurred:\n" + str(valor)
+                             + "\n\nThe loaded data are still available.")
 
 
 class ExportacionCancelada(Exception):
@@ -1092,13 +1088,24 @@ class ExportacionCancelada(Exception):
 
 
 def con_miles(numero):
-    """Escribe un entero con punto de miles: 189594 -> '189.594'."""
-    return format(numero, ",").replace(",", ".")
+    """Escribe un entero con coma de miles, como en inglés (la interfaz va en inglés): 189594 -> '189,594'."""
+    return format(numero, ",")
 
 
 def formatear_segundos(segundos):
-    """Escribe un tiempo con una cifra decimal y coma: 17.04 -> '17,0 s'."""
-    return format(segundos, ".1f").replace(".", ",") + " s"
+    """Escribe un tiempo con una cifra decimal y punto decimal: 17.04 -> '17.0 s'."""
+    return format(segundos, ".1f") + " s"
+
+
+def celdas_tabla(fila):
+    """
+    Textos de las celdas de una fila para la tabla de la ventana: los mismos del CSV, pero con
+    punto decimal, porque la interfaz va en inglés. El CSV sigue con coma decimal.
+    """
+    celdas = []
+    for celda in exportar_csv.formatear_fila(fila):
+        celdas.append(celda.replace(",", "."))
+    return celdas
 
 
 def hora_sin_decimales(segundos):

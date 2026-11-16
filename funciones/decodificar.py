@@ -32,7 +32,7 @@ PIES_POR_FL = 100
 PASO_PROGRESO = 1           # se informa del progreso cada 1 %
 
 # CAT048 sin FL: no se conoce la altura del blanco, y la transformación necesita una.
-# Se usa 0 m y la columna H_SIN_FL lo marca con un 1.
+# Se usa 0 m y la columna H_NO_FL lo marca con un 1.
 ALTURA_SI_NO_HAY_FL_M = 0.0
 
 def crear_recuentos():
@@ -71,10 +71,10 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     # (la altitud corregida solo existe por debajo de 6000 ft). Sin FL, ALTURA_SI_NO_HAY_FL_M.
     if "FL" in fila:
         altura_m = fila["FL"] * PIES_POR_FL * geo.GeoUtils.FEET2METERS
-        fila["H_SIN_FL"] = 0
+        fila["H_NO_FL"] = 0
     else:
         altura_m = ALTURA_SI_NO_HAY_FL_M
-        fila["H_SIN_FL"] = 1
+        fila["H_NO_FL"] = 1
 
     latitud, longitud, altura_wgs84 = geo.posicion_wgs84_048(fila["I048_040_RHO_NM"],
                                                             fila["I048_040_THETA_DEG"],
@@ -90,7 +90,7 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     fila["H"] = altura_wgs84
 
     # Corrección QNH, solo con los mensajes que se quedan
-    fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
+    fila["ALT_CORRECTED_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_048)
     return fila, posicion
 
@@ -100,7 +100,7 @@ def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
     Decodifica un registro CAT021 y calcula su altitud corregida.
     Devuelve (fila, posicion_siguiente); fila es None si el mensaje se descarta.
     LAT y LON vienen ya en WGS84 (I021/131). CAT021 no tiene altura WGS84: no se decodifica
-    I021/140 (Geometric Height), así que H y H_SIN_FL quedan vacías.
+    I021/140 (Geometric Height), así que H y H_NO_FL quedan vacías.
     """
     fila, posicion, motivo = cat021.decodificar_registro(datos, posicion, lista_frn)
 
@@ -110,7 +110,7 @@ def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
         return None, posicion
 
     # Corrección QNH, solo con los mensajes que se quedan
-    fila["ALT_CORREGIDA_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
+    fila["ALT_CORRECTED_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_021)
     return fila, posicion
 
@@ -169,7 +169,7 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
 
     datos = lector.leer_fichero(ruta_ast)
     if len(datos) == 0:
-        raise ValueError("el fichero está vacío")
+        raise ValueError("the file is empty")
 
     filas = []
     recuentos = crear_recuentos()
@@ -195,7 +195,7 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
             for fila in filas_bloque:
                 if fila["CAT"] == CATEGORIA_048:
                     recuentos["filas_048"] += 1
-                    if fila["H_SIN_FL"] == 1:
+                    if fila["H_NO_FL"] == 1:
                         recuentos["filas_048_sin_fl"] += 1
                 else:
                     recuentos["filas_021"] += 1
@@ -211,7 +211,7 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
                 siguiente_aviso = porcentaje + PASO_PROGRESO
 
     if recuentos["registros_048"] + recuentos["registros_021"] == 0:
-        raise ValueError("no contiene ningún registro CAT048 ni CAT021")
+        raise ValueError("it contains no CAT048 or CAT021 records")
 
     recuentos["segundos"] = time.time() - instante_inicio
     return filas, recuentos

@@ -49,9 +49,9 @@ SEGUNDOS_PARA_CADUCAR = 12
 # Posiciones que se guardan para dibujar la estela de cada avión (unos 60 s de radar)
 POSICIONES_ESTELA = 15
 
-# Estado de un avión del tráfico. None es "desconocido".
-EN_TIERRA = "en tierra"
-EN_VUELO = "en vuelo"
+# Estado de un avión del tráfico (el texto es el que se ve en el panel). None es "desconocido".
+EN_TIERRA = "on ground"
+EN_VUELO = "airborne"
 
 # I048/230 STAT (CAT048 v1.31, §5.2.23): 0 = sin alerta en vuelo, 1 = sin alerta en tierra,
 # 2 = alerta en vuelo, 3 = alerta en tierra. 4 a 7 (alerta o SPI sin decir dónde, no asignado,
@@ -63,22 +63,23 @@ STAT_EN_VUELO = (0, 2)
 # un solo mensaje puede venir cambiado (un parpadeo) y daría despegues y aterrizajes falsos.
 MENSAJES_PARA_CAMBIAR_ESTADO = 2
 
-# Tipos de evento
-NUEVO_CONTACTO = "Nuevo contacto"
-DESPEGA = "Despega"
-ATERRIZA = "Aterriza"
-PERDIDA_CONTACTO = "Pérdida de contacto"
+# Tipos de evento (el texto es el que se ve en la ventana de eventos)
+NUEVO_CONTACTO = "New contact"
+DESPEGA = "Takeoff"
+ATERRIZA = "Landing"
+PERDIDA_CONTACTO = "Contact lost"
 EVENTOS_GUARDADOS = 300         # la lista guarda solo los últimos
 
-# Letra de cada sistema en las listas y los eventos
-LETRA_SISTEMA = {CATEGORIA_048: "R", CATEGORIA_021: "A"}
+# Nombre de cada sistema en la lista En vuelo (columna "Seen by") y en los eventos
+NOMBRE_SISTEMA = {CATEGORIA_048: "Radar", CATEGORIA_021: "ADS-B"}
+VISTO_POR_AMBOS = "Both"
 
 # Tendencia vertical. En radar se usa la velocidad vertical del BDS 6.0 (BAR o, si no, IVV);
 # si no la hay, y siempre en ADS-B, la variación del FL en los últimos SEGUNDOS_TENDENCIA.
 SUBE = "↑"
 BAJA = "↓"
 NIVELADO = "→"
-NOMBRE_TENDENCIA = {SUBE: "sube", BAJA: "baja", NIVELADO: "nivelado"}
+NOMBRE_TENDENCIA = {SUBE: "climbing", BAJA: "descending", NIVELADO: "level"}
 UMBRAL_TENDENCIA_FT_MIN = 300   # por encima de +300 ft/min sube; por debajo de -300, baja
 SEGUNDOS_TENDENCIA = 10
 # Para calcularla con el FL, los dos mensajes que se comparan tienen que estar separados al menos
@@ -425,13 +426,13 @@ def anotar_evento(estado, tipo, segundo, nombre, categoria, direccion_modo_s):
     Añade un evento a la lista (y cuenta los despegues y aterrizajes). La lista guarda solo los
     últimos EVENTOS_GUARDADOS. Mientras se recalcula en silencio (al saltar de hora) no se anota nada.
     Cada evento: numero (orden), segundo (hora del mensaje que lo provoca), tipo, nombre (callsign o
-    TA), sistema (R o A) y ta (para seleccionar el avión al pulsar el evento).
+    TA), sistema (Radar o ADS-B) y ta (para seleccionar el avión al pulsar el evento).
     """
     if estado["silencio"]:
         return
     estado["numero_eventos"] = estado["numero_eventos"] + 1
     estado["eventos"].append({"numero": estado["numero_eventos"], "segundo": segundo, "tipo": tipo,
-                              "nombre": nombre, "sistema": LETRA_SISTEMA[categoria], "ta": direccion_modo_s})
+                              "nombre": nombre, "sistema": NOMBRE_SISTEMA[categoria], "ta": direccion_modo_s})
     if len(estado["eventos"]) > EVENTOS_GUARDADOS:
         estado["eventos"].pop(0)
     if tipo == DESPEGA:
@@ -458,7 +459,7 @@ def texto_estado_avion(estado, identificador):
         return "-"
     estado_avion = estado["trafico"][direccion_modo_s]["estado"]
     if estado_avion is None:
-        return "desconocido"
+        return "unknown"
     return estado_avion
 
 
@@ -492,7 +493,7 @@ def texto_nivel(fila, tendencia, con_prefijo):
         - "---" si no hay ninguna de las dos.
     Sin prefijo (con_prefijo False, en las etiquetas del mapa) queda solo "025" o "045".
     """
-    altitud_corregida = valor(fila, "ALT_CORREGIDA_FT")
+    altitud_corregida = valor(fila, "ALT_CORRECTED_FT")
     nivel_vuelo = valor(fila, "FL")
     if altitud_corregida is not None:
         prefijo = "A"
@@ -513,8 +514,8 @@ def filas_trafico(estado, categorias_visibles):
     Filas de las listas del panel de tráfico, una por TA. Solo cuentan los sistemas de
     categorias_visibles (las que deja ver el selector Sistema). Devuelve (en_vuelo, en_tierra):
     diccionarios TA -> (nombre para ordenar, valores de la fila).
-        en vuelo:  (callsign, nivel, sistemas)   por ejemplo ("RYR1FB", "FL045↑", "RA")
-        en tierra: (callsign, sistemas)
+        en vuelo:  (callsign, nivel, visto por)   por ejemplo ("RYR1FB", "FL045↑", "Both")
+        en tierra: (callsign,)    en tierra solo lo ve el radar: el ADS-B en tierra se descarta
     El nivel y la tendencia salen del radar si se ve por radar y, si no, del ADS-B.
     Los aviones de estado desconocido no están en ninguna de las dos.
     """
@@ -525,21 +526,28 @@ def filas_trafico(estado, categorias_visibles):
         avion_trafico = estado["trafico"][direccion_modo_s]
         if avion_trafico["estado"] is None:
             continue
-        sistemas = ""
+        sistemas_que_lo_ven = []
         avion_referencia = None
         for categoria in (CATEGORIA_048, CATEGORIA_021):
             identificador = (categoria, direccion_modo_s)
             if categoria in categorias_visibles and identificador in aviones:
-                sistemas = sistemas + LETRA_SISTEMA[categoria]
+                sistemas_que_lo_ven.append(categoria)
                 if avion_referencia is None:
                     avion_referencia = aviones[identificador]
-        if sistemas == "":
+        if len(sistemas_que_lo_ven) == 0:
             continue
 
         nombre = avion_trafico["nombre"]
         if avion_trafico["estado"] == EN_VUELO:
             nivel = texto_nivel(avion_referencia["fila"], avion_referencia["tendencia"], True)
-            en_vuelo[direccion_modo_s] = (nombre, (nombre, nivel, sistemas))
+            en_vuelo[direccion_modo_s] = (nombre, (nombre, nivel, texto_visto_por(sistemas_que_lo_ven)))
         else:
-            en_tierra[direccion_modo_s] = (nombre, (nombre, sistemas))
+            en_tierra[direccion_modo_s] = (nombre, (nombre,))
     return en_vuelo, en_tierra
+
+
+def texto_visto_por(categorias):
+    """Columna "Seen by" de la lista En vuelo: "Radar", "ADS-B" o "Both" si lo ven los dos."""
+    if len(categorias) == 2:
+        return VISTO_POR_AMBOS
+    return NOMBRE_SISTEMA[categorias[0]]

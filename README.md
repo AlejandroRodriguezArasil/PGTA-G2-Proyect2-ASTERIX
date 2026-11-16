@@ -1,38 +1,39 @@
-# Decodificador ASTERIX CAT048 / CAT021
+# ASTERIX Decoder CAT048 / CAT021
 
-PGTA · Proyecto 2 · Grupo G2 · Repositorio: https://github.com/AlejandroRodriguezArasil/PGTA-G2-Proyect2-ASTERIX
+PGTA · Project 2 · Group G2 · Repository: https://github.com/AlejandroRodriguezArasil/PGTA-G2-Proyect2-ASTERIX
 
-Aplicación de escritorio que decodifica ficheros ASTERIX con mensajes CAT048 (radar de Barcelona) y CAT021 (ADS-B). Muestra los mensajes en una tabla, permite filtrarlos, exportarlos a CSV y simular las trayectorias en un mapa.
+Desktop application that decodes ASTERIX files with CAT048 (Barcelona radar) and CAT021 (ADS-B) messages. It shows the messages in a table, filters them, exports them to CSV and simulates the trajectories on a map.
 
-- **Manual de uso** (guía visual, paso a paso): `manual/Manual_de_uso.pdf` (en la entrega, también en `report/`).
-- **Este README:** la parte técnica, es decir, de qué dato sale cada funcionalidad, qué criterio aplica y en qué parte del código está.
+- **User manual** (visual, step-by-step guide): `manual/User_Manual.pdf` (in the delivery, also in `report/`).
+- **This README:** the technical part, that is, which data each feature comes from, which criterion it applies and where it is in the code.
 
-## Entrega
+## Delivery
 
 ```
-Group_02_P2.zip
-├── DecodificadorASTERIX.exe           el ejecutable
-├── code/                              este proyecto, igual que el repositorio de GitHub
+PGTA_Group_02_P2.zip
+├── ASTERIXDecoder.exe                 the executable
+├── code/                              this project, identical to the GitHub repository
 ├── report/
-│   ├── Flujo_motor_decodificacion.pdf  explicación del código de la decodificación
-│   ├── Manual_de_uso.pdf               guía de uso
-│   ├── README.md                       este mismo README
-│   └── Planificacion.pdf               planificación del proyecto
-└── Enlace_GitHub.txt                  enlace al repositorio
+│   ├── Decoding_Engine_Overview.pdf   explanation of the decoding code
+│   ├── Decoding_Flowchart.pdf         flowchart of the decoding code
+│   ├── User_Manual.pdf                user guide
+│   ├── README.md                      this same README
+│   └── Planning.pdf                   project planning
+└── GitHub_Link.txt                    link to the repository
 ```
 
-Los ficheros .ast no van en la entrega: son los de la asignatura (`asterix_radar.ast`, `asterix_adsb.ast` y `asterix_combinado.ast`).
+The .ast files are not part of the delivery: they are the course files (`asterix_radar.ast`, `asterix_adsb.ast` and `asterix_combinado.ast`).
 
-## El ejecutable
+## The executable
 
-- **Funciona solo:** no necesita Python ni ningún otro fichero. Es para Windows de 64 bits.
-- **Aviso de Windows:** la primera vez puede salir «Windows protegió su PC», porque el ejecutable no está firmado. Hay que pulsar «Más información» y después «Ejecutar de todas formas».
-- **Arranque:** tarda unos segundos en abrirse, porque lleva dentro todo lo que necesita y lo descomprime al arrancar.
-- **Internet:** el mapa de la simulación la necesita. Todo lo demás funciona sin conexión.
+- **Standalone:** it needs neither Python nor any other file. It is for 64-bit Windows.
+- **Windows warning:** the first time, "Windows protected your PC" may appear, because the executable is not signed. Click "More info" and then "Run anyway".
+- **Start-up:** it takes a few seconds to open, because it carries everything it needs inside and unpacks it when it starts.
+- **Internet:** the simulation map needs it. Everything else works offline.
 
-## Ejecutar desde el código
+## Running from the code
 
-Hace falta Windows y Python 3; el proyecto se ha probado con Python 3.14. Desde esta carpeta:
+Windows and Python 3 are needed; the project has been tested with Python 3.14. From this folder:
 
 ```
 python -m venv .venv
@@ -41,212 +42,215 @@ pip install -r requirements.txt
 python main.py
 ```
 
-**Regenerar el .exe:** doble clic en `crear_exe.bat`.
-- Crea `.venv` si no existe e instala siempre `requirements.txt` y PyInstaller. La primera vez tarda unos minutos y necesita internet; las siguientes, solo comprueba que esté todo.
-- Deja `DecodificadorASTERIX.exe` en esta carpeta, sin carpetas `build` ni `dist` ni fichero `.spec`.
+**Rebuilding the .exe:** double-click `crear_exe.bat`.
+- It creates `.venv` if it does not exist and always installs `requirements.txt` and PyInstaller. The first time it takes a few minutes and needs internet; after that, it only checks that everything is there.
+- It leaves `ASTERIXDecoder.exe` in this folder, with no `build` or `dist` folders and no `.spec` file.
 
-**Regenerar el manual:** doble clic en `crear_manual.bat`. Convierte `manual/manual.html` en `manual/Manual_de_uso.pdf` con Microsoft Edge.
+**Rebuilding the manual:** double-click `crear_manual.bat`. It converts `manual/manual.html` into `manual/User_Manual.pdf` with Microsoft Edge.
 
-**Prueba de los recuentos:** con el entorno activado, `python -m pruebas.prueba_recuentos`. Decodifica los tres ficheros de la asignatura (los busca en `../Docs.Proyecto 2/Aterix files/`) y compara los recuentos con los esperados.
+**Count test:** with the environment activated, `python -m pruebas.prueba_recuentos`. It decodes the three course files (it looks for them in `../Docs.Proyecto 2/Aterix files/`) and compares the counts with the expected ones.
 
-## Estructura de la carpeta
+## Folder structure
 
 ```
-main.py              punto de entrada: la clase Aplicacion, con los métodos en el orden del flujo
-funciones/           la lógica: lectura, decodificación, coordenadas, QNH, filtros, CSV y simulación
-interfaz/            la ventana (ventana.py), el mapa (mapa.py) y los colores y tipografías (estilo.py)
-pruebas/             prueba_recuentos.py, que no forma parte de la aplicación
-manual/              Manual_de_uso.pdf y su fuente: manual.html y capturas/
-crear_exe.bat        genera DecodificadorASTERIX.exe en esta carpeta
-crear_manual.bat     vuelve a generar manual\Manual_de_uso.pdf
-requirements.txt     librerías y versiones
+main.py              entry point: the Aplicacion class, with its methods in the order of the flow
+funciones/           the logic: reading, decoding, coordinates, QNH, filters, CSV and simulation
+interfaz/            the window (ventana.py), the map (mapa.py) and the colours and fonts (estilo.py)
+pruebas/             prueba_recuentos.py, which is not part of the application
+manual/              User_Manual.pdf and its source: manual.html and capturas/
+crear_exe.bat        builds ASTERIXDecoder.exe in this folder
+crear_manual.bat     rebuilds manual\User_Manual.pdf
+requirements.txt     libraries and versions
 ```
 
-Al ejecutar `crear_exe.bat` aparecen además `.venv/` y `DecodificadorASTERIX.exe`. Se generan en cada equipo, así que no están en el repositorio.
+Running `crear_exe.bat` also creates `.venv/` and `ASTERIXDecoder.exe`. They are generated on each computer, so they are not in the repository.
 
-## Cómo funciona por dentro
+The code (names of folders, modules, functions and variables, comments and docstrings) is in Spanish; everything the user sees is in English.
 
-### Decodificación
+## How it works inside
 
-| Paso | Qué hace | Dónde |
+### Decoding
+
+| Step | What it does | Where |
 | --- | --- | --- |
-| Lectura | El fichero se lee una sola vez. Se recorre bloque a bloque (CAT y LEN); en cada registro se lee el FSPEC (bit FX) | `funciones/lector.py` |
-| CAT048 | Los 14 DI que pide el enunciado, con una función por DI; los demás se saltan sumando su longitud. BDS 4.0, 5.0 y 6.0 dentro de I048/250 | `funciones/cat048.py`, `funciones/bds.py` |
-| CAT021 | Los 8 DI que el enunciado marca en verde, incluido el BPS del Reserved Expansion Field. De I021/040 solo se lee el bit GBS, para el descarte en tierra; el resto se salta por su longitud (FX) | `funciones/cat021.py` |
-| Fichero completo | Une los pasos, aplica los descartes y cuenta los recuentos del resumen. Se ejecuta en un hilo aparte, con barra de progreso | `funciones/decodificar.py`, `main.decodificar_en_segundo_plano` |
+| Reading | The file is read only once. It is walked block by block (CAT and LEN); in each record the FSPEC is read (FX bit) | `funciones/lector.py` |
+| CAT048 | The 14 data items required by the assignment, with one function per item; the others are skipped by adding their length. BDS 4.0, 5.0 and 6.0 inside I048/250 | `funciones/cat048.py`, `funciones/bds.py` |
+| CAT021 | The 8 data items the assignment marks in green, including the BPS of the Reserved Expansion Field. From I021/040 only the GBS bit is read, for the on-ground discard; the rest is skipped by its length (FX) | `funciones/cat021.py` |
+| Whole file | Joins the steps, applies the discards and computes the counts of the summary. It runs in a separate thread, with a progress bar | `funciones/decodificar.py`, `main.decodificar_en_segundo_plano` |
 
-- **Fichero vacío o que no es ASTERIX:** se rechaza con un mensaje.
-- **Si falla al abrir otro fichero:** se mantienen los datos que había cargados (tabla, filtros y simulación).
+- **Empty file or not ASTERIX:** it is rejected with a message.
+- **If opening another file fails:** the data already loaded are kept (table, filters and simulation).
 
-### Ficheros dañados
+### Damaged files
 
-- **Fichero cortado:** si se corta en mitad del último bloque, se lee hasta el bloque anterior y el resumen lo avisa.
-- **Bloque de otra categoría:** no es un error; se salta entero y se sigue con el siguiente.
-- **Registro mal formado:** si las longitudes de los registros de un bloque no cuadran con su LEN, el bloque se cuenta como «desincronizado» en el resumen y se sigue con el siguiente.
-- **LEN no válido (menor que 3):** en el primer bloque, el fichero se rechaza; más adelante, se para en ese bloque, se queda todo lo leído y el resumen dice en qué octeto está. Este caso y el del fichero cortado los comprueba `lector.problema_bloque`.
-- **Límites:** ASTERIX no tiene marcas de sincronización ni suma de control. Si un LEN está mal, lo que viene detrás no se puede recuperar de forma fiable, y un valor cambiado dentro de un registro de longitud correcta no se puede detectar. No se usan heurísticas que la norma no define.
+- **Cut file:** if it is cut in the middle of the last block, it is read up to the previous block and the summary warns about it.
+- **Block of another category:** it is not an error; the whole block is skipped and reading continues with the next one.
+- **Malformed record:** if the lengths of the records of a block do not match its LEN, the block is counted as "desynchronized" in the summary and reading continues with the next one.
+- **Invalid LEN (less than 3):** in the first block, the file is rejected; later on, reading stops at that block, everything read so far is kept and the summary says at which byte it is. This case and the cut file are checked by `lector.problema_bloque`.
+- **Limits:** ASTERIX has no synchronization marks or checksum. If a LEN is wrong, what follows cannot be recovered reliably, and a changed value inside a record of correct length cannot be detected. No heuristics that the standard does not define are used.
 
-### Descartes obligatorios
+### Mandatory discards
 
-Estos mensajes no entran en la tabla ni en el CSV. El resumen muestra cuántos se han descartado por cada motivo.
+These messages do not go into the table or the CSV. The summary shows how many have been discarded for each reason.
 
-| Motivo | Dato | Criterio | Dónde |
+| Reason | Data | Criterion | Where |
 | --- | --- | --- | --- |
-| Sin posición | I048/040 (CAT048), I021/131 (CAT021) | El mensaje no trae ese DI. Sin posición no se puede aplicar el filtro geográfico obligatorio | `decodificar.procesar_registro_048`, `cat021.decodificar_registro` |
-| Fuera de la zona | LAT y LON en WGS84 | Fuera de 40,9–41,7° N y 1,5–2,6° E (límites excluidos) | `geo.dentro_de_zona` |
-| CAT021 en tierra | GBS de I021/040 | GBS = 1. Se comprueba antes que la posición | `cat021.decodificar_registro` |
+| No position | I048/040 (CAT048), I021/131 (CAT021) | The message does not carry that data item. Without a position, the mandatory geographic filter cannot be applied | `decodificar.procesar_registro_048`, `cat021.decodificar_registro` |
+| Outside the area | LAT and LON in WGS84 | Outside 40.9–41.7° N and 1.5–2.6° E (limits excluded) | `geo.dentro_de_zona` |
+| CAT021 on ground | GBS of I021/040 | GBS = 1. It is checked before the position | `cat021.decodificar_registro` |
 
-Mensajes sin posición en `asterix_combinado.ast`: 6.025 CAT048 y 890 CAT021. De los 890, 333 están además en tierra y el resumen los cuenta como «en tierra», así que como «sin posición» salen 557.
+Messages without position in `asterix_combinado.ast`: 6,025 CAT048 and 890 CAT021. Of the 890, 333 are also on the ground and the summary counts them as "on ground", so 557 appear as "without position".
 
-### Coordenadas
+### Coordinates
 
-- **CAT048:** se parte de ρ y θ de I048/040 y de la altura, que es FL × 100 ft sin corregir. Sin FL se usa h = 0 y `H_SIN_FL` = 1.
-  - La cadena es la de GeoUtils, portada a Python con los mismos nombres: `CalculateElevation` → `change_radar_spherical2radar_cartesian` → `change_radar_cartesian2geocentric` → `change_geocentric2geodesic`.
-  - Usa el radar de Barcelona: 41° 18' 02,5284" N, 02° 06' 07,4095" E, a 2,007 m de terreno más 25,25 m de antena.
-  - Todo está en `geo.posicion_wgs84_048`.
-- **CAT021:** LAT y LON vienen ya en I021/131. No tiene altura WGS84 (no se decodifica I021/140), así que `H` y `H_SIN_FL` quedan vacías en todas sus filas.
+- **CAT048:** the starting point is ρ and θ of I048/040 and the height, which is FL × 100 ft without correction. Without FL, h = 0 is used and `H_NO_FL` = 1.
+  - The chain is the one of GeoUtils, ported to Python with the same names: `CalculateElevation` → `change_radar_spherical2radar_cartesian` → `change_radar_cartesian2geocentric` → `change_geocentric2geodesic`.
+  - It uses the Barcelona radar: 41° 18' 02.5284" N, 02° 06' 07.4095" E, at 2.007 m of terrain plus 25.25 m of antenna.
+  - Everything is in `geo.posicion_wgs84_048`.
+- **CAT021:** LAT and LON already come in I021/131. It has no WGS84 height (I021/140 is not decoded), so `H` and `H_NO_FL` are empty in all its rows.
 
-### Corrección de altitud (QNH)
+### Altitude correction (QNH)
 
-- **Fórmula:** altitud = FL × 100 + (BP − 1013,25) × 30 ft. BP es la presión de referencia que manda el avión: BDS 4.0 en CAT048 y BPS en CAT021.
-- **Cuándo se corrige:** solo si FL × 100 < 6000 ft. Con FL × 100 de 6000 ft o más, la celda queda vacía. Por debajo, la altitud corregida puede pasar un poco de 6000.
-- **BP guardado por avión** (por su TA, una tabla para CAT048 y otra para CAT021):
-  - Se guarda el último BP no estándar que ha mandado cada avión, a cualquier altitud.
-  - Si un mensaje trae un BP estándar (1013–1013,5 hPa en CAT048; 1012,8 o 1013,6 hPa en CAT021), se corrige con el BP guardado.
-  - Si el avión no tiene ningún BP guardado, la celda queda vacía.
-  - El BP guardado se borra cuando el avión cruza 6000 ft hacia arriba.
-- **Dónde:** `qnh.corregir_altitud`, y el resultado va a la columna `ALT_CORREGIDA_FT`.
+- **Formula:** altitude = FL × 100 + (BP − 1013.25) × 30 ft. BP is the reference pressure sent by the aircraft: BDS 4.0 in CAT048 and BPS in CAT021.
+- **When it is corrected:** only if FL × 100 < 6000 ft. With FL × 100 of 6000 ft or more, the cell is empty. Below that, the corrected altitude may go slightly above 6000.
+- **Stored BP per aircraft** (by its TA, one table for CAT048 and another for CAT021):
+  - The last non-standard BP sent by each aircraft is stored, at any altitude.
+  - If a message carries a standard BP (1013–1013.5 hPa in CAT048; 1012.8 or 1013.6 hPa in CAT021), it is corrected with the stored BP.
+  - If the aircraft has no stored BP, the cell is empty.
+  - The stored BP is cleared when the aircraft climbs through 6000 ft.
+- **Where:** `qnh.corregir_altitud`, and the result goes to the `ALT_CORRECTED_FT` column.
 
-### Tabla y CSV
+### Table and CSV
 
-- **Columnas:** siempre las mismas 82 columnas, en el mismo orden, para cualquier fichero. Si el mensaje no trae un dato, su celda queda vacía; por ejemplo, las columnas de CAT021 en un mensaje CAT048.
-- **Filas:** una por mensaje, en el orden del fichero. La tabla las muestra en páginas de 500.
-- **Formato:**
-  - Separador `;` y coma decimal, para que Excel en español lo abra bien con doble clic.
-  - LAT y LON con 8 decimales; H y ALT_CORREGIDA_FT con 2; el resto, con su valor exacto.
-  - TIME como hh:mm:ss,sss; texto en UTF-8.
-- **Columnas extra:** LAT, LON y H en WGS84, `H_SIN_FL` y `ALT_CORREGIDA_FT`. `H` y `H_SIN_FL` son solo de CAT048.
-- **Dónde:** `funciones/exportar_csv.py`, con `COLUMNAS` y `formatear_valor`.
+- **Columns:** always the same 82 columns, in the same order, for any file. If the message does not carry a data item, its cell is empty; for example, the CAT021 columns in a CAT048 message.
+- **Rows:** one per message, in the order of the file. The table shows them in pages of 500.
+- **CSV format:**
+  - `;` separator and decimal comma, so that Excel with a Spanish locale opens it correctly with a double click.
+  - LAT and LON with 8 decimals; H and ALT_CORRECTED_FT with 2; the rest, with their exact value.
+  - TIME as hh:mm:ss,sss; text in UTF-8.
+- **In the interface** the numbers use the English format (decimal point and comma as thousands separator, for example 1,478,799 or 41.43291°); the table shows the same values as the CSV, but with a decimal point. Only the CSV keeps the decimal comma.
+- **Extra columns:** LAT, LON and H in WGS84, `H_NO_FL` and `ALT_CORRECTED_FT`. `H` and `H_NO_FL` are only for CAT048.
+- **Where:** `funciones/exportar_csv.py`, with `COLUMNAS` and `formatear_valor`.
 
-**Exportar:**
-- **Exportar todo:** guarda todos los mensajes decodificados.
-- **Exportar lo filtrado:** guarda solo los que quedan tras los filtros. Se activa al aplicar un filtro que deje al menos un mensaje.
-- **Dónde se guarda:** en las dos opciones se elige carpeta y nombre en la ventana «Guardar CSV».
-- **Hilo aparte:** la escritura va en un hilo, con barra de progreso (`main.exportar`).
-- **Cerrar a media exportación:** si se cierra la ventana mientras se exporta, pregunta antes. Si se cierra igualmente, se borra el CSV incompleto (`main.al_cerrar_ventana`).
+**Export:**
+- **Export all:** saves all the decoded messages.
+- **Export filtered:** saves only those left after the filters. It is enabled when a filter that leaves at least one message is applied.
+- **Where it is saved:** in both options the folder and the name are chosen in the "Save CSV" dialog.
+- **Separate thread:** the writing runs in a thread, with a progress bar (`main.exportar`).
+- **Closing during an export:** if the window is closed while exporting, it asks first. If it is closed anyway, the incomplete CSV is deleted (`main.al_cerrar_ventana`).
 
 **Excel:**
-- Si sale «#######» en una celda (pasa con TIME), la columna es demasiado estrecha. Se arregla ensanchándola: doble clic en el borde derecho de la cabecera, o Formato > Autoajustar ancho de columna.
-- Al abrir con doble clic, Excel quita el cero inicial de `MODE3A` y puede leer alguna `TA` como número. Para verlas igual que en la aplicación, hay que importar esas columnas como texto.
+- If "#######" appears in a cell (it happens with TIME), the column is too narrow. It is fixed by widening it: double-click the right border of the header, or Format > AutoFit Column Width.
+- When opening with a double click, Excel removes the leading zero of `MODE3A` and may read some `TA` as a number. To see them as in the application, those columns have to be imported as text.
 
-### Filtros
+### Filters
 
-Se marcan las condiciones y se pulsa «Aplicar filtros» (o Intro en un campo de texto). Se combinan todas, una detrás de otra (`filtros.aplicar_filtros`). «Quitar filtros» deja el panel como al principio y vuelve a mostrar todo.
+The conditions are ticked and "Apply filters" is clicked (or Enter in a text field). They are all combined, one after another (`filtros.aplicar_filtros`). "Clear filters" resets the panel and shows everything again.
 
-| Filtro | Dato | Criterio | Dónde |
+| Filter | Data | Criterion | Where |
 | --- | --- | --- | --- |
-| Categoría | `CAT` | Se quedan los mensajes de la categoría elegida (048 o 021) | `filtros.filtrar_por_categoria` |
-| Quitar blancos puros | TYP de I048/020 (`I048_020_TYP`) | Se quitan los CAT048 con TYP = 0, 1, 2 o 3 (sin detección, PSR, SSR o PSR+SSR): no vienen de una interrogación Modo S | `filtros.es_blanco_puro` |
-| Quitar transponder fijo | Modo 3/A (`MODE3A`) | Se quitan los mensajes con Modo 3/A 7777 | `filtros.es_transponder_fijo` |
-| Quitar aeronaves en tierra | STAT de I048/230 (`I048_230_STAT`) | Se quitan los CAT048 con STAT = 1 o 3. Los CAT021 en tierra (GBS = 1) ya se descartaron al decodificar | `filtros.quitar_en_tierra` |
-| Solo mensajes con FL | `FL` | Se quedan los mensajes con nivel de vuelo | `filtros.solo_con_fl` |
-| Altitud máxima | `ALT_CORREGIDA_FT` o, si está vacía, `FL` × 100 | Se quedan los mensajes con altitud ≤ valor; los que no tienen ninguna se quitan | `filtros.filtrar_altitud_maxima` |
-| Aeronave | `TI`, `TA`, `MODE3A` | Se quedan los mensajes en los que el texto aparece en alguna de las tres, sin distinguir mayúsculas | `filtros.buscar_aeronave` |
+| Category | `CAT` | Keeps the messages of the chosen category (048 or 021) | `filtros.filtrar_por_categoria` |
+| Remove pure targets | TYP of I048/020 (`I048_020_TYP`) | Removes the CAT048 with TYP = 0, 1, 2 or 3 (no detection, PSR, SSR or PSR+SSR): they do not come from a Mode S interrogation | `filtros.es_blanco_puro` |
+| Remove fixed transponder | Mode 3/A (`MODE3A`) | Removes the messages with Mode 3/A 7777 | `filtros.es_transponder_fijo` |
+| Remove aircraft on ground | STAT of I048/230 (`I048_230_STAT`) | Removes the CAT048 with STAT = 1 or 3. CAT021 on ground (GBS = 1) were already discarded when decoding | `filtros.quitar_en_tierra` |
+| Only messages with FL | `FL` | Keeps the messages with a flight level | `filtros.solo_con_fl` |
+| Maximum altitude | `ALT_CORRECTED_FT` or, if empty, `FL` × 100 | Keeps the messages with altitude ≤ value; those with neither are removed | `filtros.filtrar_altitud_maxima` |
+| Aircraft | `TI`, `TA`, `MODE3A` | Keeps the messages in which the text appears in any of the three, case-insensitive | `filtros.buscar_aeronave` |
 
-Entrada del P3: Categoría CAT048 + Quitar aeronaves en tierra + Solo mensajes con FL + Altitud máxima 6000 (20.952 mensajes con `asterix_combinado.ast`).
+P3 input: Category CAT048 + Remove aircraft on ground + Only messages with FL + Maximum altitude 6000 (20,952 messages with `asterix_combinado.ast`).
 
-### Simulación
+### Simulation
 
-| Funcionalidad | Cómo funciona | Dónde |
+| Feature | How it works | Where |
 | --- | --- | --- |
-| Qué se simula | Los mensajes que quedan en la pestaña Datos, con sus filtros, ordenados por `TIME_S`. Un aviso encima del mapa lo recuerda | `simulacion.preparar` |
-| Saltos | Siempre de 1 s de hora del día. Reproducir, Pausa, +1 s y Reset (vuelve a la primera hora). Al pasar a la pestaña Datos, la simulación se pausa | `simulacion.avanzar_un_segundo`, `main.tic_reloj` |
-| Velocidad | De x1 a x60. Solo cambia la espera entre saltos: x1, un salto por segundo; x60, 60 por segundo | `main.ESPERA_POR_VELOCIDAD_MS` |
-| Avión en el mapa | La pareja (categoría, TA) o, sin TA, (categoría, track number). El mismo avión visto por radar y por ADS-B son dos siluetas | `simulacion.identificador_avion` |
-| Desaparición | Un avión desaparece si pasa más de 12 s sin mensajes | `simulacion.SEGUNDOS_PARA_CADUCAR` |
-| Ir a otra hora | Con «Ir a la hora» (hh:mm y Ir o Intro) o con la barra de tiempo, que va de la primera a la última hora de los datos y avanza sola al reproducir. Al arrastrarla, el reloj enseña la hora; el salto se hace al soltar. La simulación se repite segundo a segundo hasta esa hora, sin dibujar ni anotar eventos, así que cada avión queda igual que si se hubiera reproducido hasta ahí | `simulacion.ir_a_segundo`, `main.soltar_barra_tiempo` |
-| Sistema | Ambos, Radar (CAT048) o ADS-B (CAT021). También filtra las listas de tráfico | `mapa.sistema_visible`, `mapa.categorias_visibles` |
-| Dibujo | Radar en azul y ADS-B en naranja. El avión pulsado y su pareja, en rojo. Blancos puros: punto gris con su tipo y número («PSR 45»). Transponder fijo: antena. Radar de Barcelona: triángulo. Rectángulo de la zona del filtro geográfico | `interfaz/mapa.py` |
-| Siluetas | Apuntan al rumbo: en radar, el de I048/200; en ADS-B, la dirección en la que se ha movido (se recalcula cada 100 m, solo para dibujar). Sin rumbo, miran al norte | `mapa.rumbo_para_dibujar` |
-| Etiquetas | Bloque de datos de dos líneas, como en una pantalla radar: el callsign (o la TA) y, debajo, el nivel con su tendencia y la velocidad GS en nudos (I048/200 o, si no, BDS 5.0), por ejemplo «045↑ 210». En ADS-B no hay velocidad, porque no se decodifica. Un avión que ven los dos sistemas lleva una sola etiqueta, en la silueta de radar si está en el mapa y, si no, en la de ADS-B; la otra silueta va sin texto. Los aviones en tierra no llevan etiqueta (en LEBL se amontonan y tapan el aeropuerto), salvo el seleccionado: aparece al despegar y se quita al aterrizar. En cada salto solo se repasan las etiquetas de los aviones que han cambiado, y el texto de un marcador solo se cambia cuando es distinto | `mapa.texto_etiqueta`, `mapa.lleva_etiqueta`, `mapa.actualizar_etiquetas_de` |
-| Estelas | La línea con las últimas 15 posiciones de cada avión | `mapa.dibujar_estela` |
-| Seguir | Con un avión seleccionado, el mapa se centra en él cada vez que se mueve, sin cambiar el zoom. El mapa se mueve como al arrastrarlo (`draw_move`), que es más ligero que volver a crear todas las teselas. Si el avión desaparece, se deja de seguir | `main.seguir_avion`, `mapa.centrar_en` |
+| What is simulated | The messages left in the Data tab, with its filters, sorted by `TIME_S`. A notice above the map reminds it | `simulacion.preparar` |
+| Steps | Always 1 s of time of day. Play, Pause, +1 s and Reset (back to the first time). When switching to the Data tab, the simulation pauses | `simulacion.avanzar_un_segundo`, `main.tic_reloj` |
+| Speed | From x1 to x60. It only changes the wait between steps: x1, one step per second; x60, 60 per second | `main.ESPERA_POR_VELOCIDAD_MS` |
+| Aircraft on the map | The pair (category, TA) or, without TA, (category, track number). The same aircraft seen by radar and by ADS-B are two symbols | `simulacion.identificador_avion` |
+| Disappearance | An aircraft disappears if it spends more than 12 s without messages | `simulacion.SEGUNDOS_PARA_CADUCAR` |
+| Going to another time | With "Go to time" (hh:mm and Go or Enter) or with the time bar, which goes from the first to the last time of the data and moves on its own while playing. While dragging it, the clock shows the time; the jump is made on release. The simulation is repeated second by second up to that time, without drawing or logging events, so each aircraft ends up as if it had been played up to there | `simulacion.ir_a_segundo`, `main.soltar_barra_tiempo` |
+| System | Both, Radar (CAT048) or ADS-B (CAT021). It also filters the traffic lists | `mapa.sistema_visible`, `mapa.categorias_visibles` |
+| Drawing | Radar in blue and ADS-B in orange. The clicked aircraft and its pair, in red. Pure targets: grey dot with their type and number ("PSR 45"). Fixed transponder: antenna. Barcelona radar: triangle with its name ("Radar BCN"). The limit of the geographic filter, in a red rectangle: outside it the messages are discarded | `interfaz/mapa.py` |
+| Inside the map | Bottom left, the legend, with the same images that are drawn and the explanation of the labels; top right, the events window. Both are visible when the tab opens; clicking their title collapses them, in case they cover something on a laptop | `ventana.crear_leyenda_mapa`, `ventana.crear_ventana_eventos`, `ventana.Plegable` |
+| Symbols | They point to the heading: in radar, the one of I048/200; in ADS-B, the direction in which it has moved (recomputed every 100 m, only for drawing). Without heading, they face north | `mapa.rumbo_para_dibujar` |
+| Labels | Two-line data block, as on a radar display: the callsign (or the TA) and, below, the level with its trend and the ground speed (GS) in knots (I048/200 or, otherwise, BDS 5.0), for example "045↑ 210". In ADS-B there is no speed, because it is not decoded. An aircraft seen by both systems has a single label, on the radar symbol if it is on the map and, otherwise, on the ADS-B one; the other symbol has no text. Aircraft on the ground have no label (at LEBL they pile up and cover the airport), unless selected: it appears at takeoff and disappears at landing. The fixed transponder has none either: it only shows "7777" when selected. In each step only the labels of the aircraft that have changed are checked, and the text of a marker is only changed when it is different | `mapa.texto_etiqueta`, `mapa.lleva_etiqueta`, `mapa.actualizar_etiquetas_de` |
+| Trails | The line with the last 15 positions of each aircraft | `mapa.dibujar_estela` |
+| Follow | With a selected aircraft, the map centres on it every time it moves, without changing the zoom. The map moves as when it is dragged (`draw_move`), which is lighter than creating all the tiles again. If the aircraft disappears, following stops | `main.seguir_avion`, `mapa.centrar_en` |
 
-**Tráfico: en tierra o en vuelo.** En el tráfico (listas y eventos) un avión es su TA, lo vea un sistema o los dos. Los blancos puros (sin TA) y el transponder fijo no son tráfico, pero se siguen dibujando en el mapa.
+**Traffic: on ground or airborne.** In the traffic (lists and events) an aircraft is its TA, whether one system or both see it. Pure targets (without TA) and the fixed transponder are not traffic, but they are still drawn on the map.
 
-| Criterio | Cómo funciona | Dónde |
+| Criterion | How it works | Where |
 | --- | --- | --- |
-| Radar | STAT de I048/230 (CAT048 v1.31, §5.2.23): 1 y 3, en tierra; 0 y 2, en vuelo; 4 a 7 no dicen si está en tierra o en el aire. Un mensaje sin I048/230 tampoco dice nada | `simulacion.estado_observado` |
-| ADS-B | Los mensajes en tierra (GBS = 1) se descartan al decodificar, así que todo lo que llega por ADS-B está en vuelo | `simulacion.estado_observado` |
-| Los dos sistemas | Si el radar ve el avión con un STAT que dice tierra o vuelo, manda el radar y el mensaje ADS-B no cuenta | `simulacion.estado_observado` |
-| Confirmación | Un estado nuevo (también el primero) solo se acepta tras 2 mensajes seguidos que lo digan. Un mensaje que no dice nada no corta la cuenta; uno con el estado de antes, sí. Así un STAT que parpadea no da despegues falsos. Mientras no hay ninguno confirmado, el estado es desconocido y el avión no sale en ninguna lista | `simulacion.cambiar_estado`, `simulacion.MENSAJES_PARA_CAMBIAR_ESTADO` |
+| Radar | STAT of I048/230 (CAT048 v1.31, §5.2.23): 1 and 3, on ground; 0 and 2, airborne; 4 to 7 do not say whether it is on the ground or in the air. A message without I048/230 does not say anything either | `simulacion.estado_observado` |
+| ADS-B | The messages on ground (GBS = 1) are discarded when decoding, so everything received by ADS-B is airborne | `simulacion.estado_observado` |
+| Both systems | If the radar sees the aircraft with a STAT that says ground or airborne, the radar decides and the ADS-B message does not count | `simulacion.estado_observado` |
+| Confirmation | A new status (also the first one) is only accepted after 2 consecutive messages that say it. A message that says nothing does not break the count; one with the previous status does. This way a flickering STAT does not give false takeoffs. While none is confirmed, the status is unknown and the aircraft does not appear in any list | `simulacion.cambiar_estado`, `simulacion.MENSAJES_PARA_CAMBIAR_ESTADO` |
 
-**Eventos** (franja debajo del mapa, el más reciente arriba; se guardan los 300 últimos):
+**Events** (window inside the map, top right, with the most recent on top; the last 300 are kept):
 
-| Evento | Cuándo | Dónde |
+| Event | When | Where |
 | --- | --- | --- |
-| Nuevo contacto | La primera vez que aparece un avión, o cuando vuelve después de haber desaparecido | `simulacion.actualizar_trafico` |
-| Despega / Aterriza | Cambio confirmado de en tierra a en vuelo / de en vuelo a en tierra. A la derecha de la franja, los totales | `simulacion.cambiar_estado` |
-| Pérdida de contacto | El avión pasa más de 12 s sin mensajes por ningún sistema. Su hora es la de la simulación cuando desaparece | `simulacion.quitar_caducados` |
+| New contact | The first time an aircraft appears, or when it comes back after having disappeared | `simulacion.actualizar_trafico` |
+| Takeoff / Landing | Confirmed change from on ground to airborne / from airborne to on ground. The totals are in the title of the window | `simulacion.cambiar_estado` |
+| Contact lost | The aircraft spends more than 12 s without messages from any system. Its time is the simulation time when it disappears | `simulacion.quitar_caducados` |
 
-- Cada evento lleva la hora del mensaje que lo provoca, el callsign (o la TA) y el sistema (R radar, A ADS-B). Con un clic se selecciona el avión y se centra el mapa en él, si sigue a la vista.
-- Solo salen al reproducir o al avanzar 1 s. Al saltar de hora (Ir a la hora, la barra de tiempo o Reset) el estado se recalcula en silencio, el registro se vacía y los totales empiezan de cero.
-- Con `asterix_radar.ast` entero salen 123 despegues y 83 aterrizajes, todos a menos de 2 km de LEBL y con FL entre −0,75 y 1,75 (uno no trae FL): son despegues y aterrizajes en la pista.
+- Each event carries the time of the message that causes it, the callsign (or the TA) and the system (Radar or ADS-B). One click selects the aircraft and centres the map on it, if it is still in view.
+- They only appear when playing or stepping 1 s. When jumping in time (Go to time, the time bar or Reset) the status is recomputed silently, the log is cleared and the totals start from zero.
+- With the whole `asterix_radar.ast` there are 123 takeoffs and 83 landings, all less than 2 km from LEBL and with FL between −0.75 and 1.75 (one carries no FL): they are takeoffs and landings on the runway.
 
-**Tendencia vertical y nivel** (`simulacion.calcular_tendencia`, `simulacion.texto_nivel`):
-- **Tendencia:** ↑ sube, ↓ baja, → nivelado. En radar, con la velocidad vertical del BDS 6.0 (BAR o, si no viene, IVV). Si no la hay, y siempre en ADS-B, con la variación del FL entre el mensaje más antiguo y el más reciente de los últimos 10 s (separados al menos 4 s, una vuelta de antena). Umbral: ±300 ft/min (`UMBRAL_TENDENCIA_FT_MIN`).
-- **Nivel, al estilo de control aéreo:** «A025» si hay altitud corregida por QNH (en cientos de pies) y «FL045» si no, con la flecha de tendencia: «FL045↑». En las etiquetas del mapa va sin el prefijo, para que sea corto.
+**Vertical trend and level** (`simulacion.calcular_tendencia`, `simulacion.texto_nivel`):
+- **Trend:** ↑ climbing, ↓ descending, → level. In radar, with the vertical rate of BDS 6.0 (BAR or, if it does not come, IVV). If there is none, and always in ADS-B, with the change of FL between the oldest and the most recent message of the last 10 s (at least 4 s apart, one antenna turn). Threshold: ±300 ft/min (`UMBRAL_TENDENCIA_FT_MIN`).
+- **Level, in air traffic control style:** "A025" if there is a QNH-corrected altitude (in hundreds of feet) and "FL045" otherwise, with the trend arrow: "FL045↑". In the map labels it goes without the prefix, to keep it short.
 
-**Panel derecho**, de arriba abajo:
-- **Tráfico:** los contadores «✈ N en vuelo» y «▣ N en tierra», cada uno encima de su lista, y las cifras de lo dibujado en el mapa (radar, ADS-B y blancos puros; los blancos puros no cuentan como radar y el transponder fijo no se cuenta).
-  - En vuelo: Callsign | Nivel | Sist.; en tierra: Callsign | Sist. Sist. es R, A o RA según qué sistemas lo ven. Una fila por TA, en orden alfabético, y solo con los sistemas que deja ver el selector Sistema (`simulacion.filas_trafico`).
-  - Clic en una fila: se selecciona el avión como en el mapa (su silueta de radar si la tiene; si no, la de ADS-B) y se centra el mapa en él (`main.al_pulsar_fila_trafico`).
-  - Para que vaya fluido a x60, las listas no se rehacen en cada salto: se añaden, quitan o cambian solo las filas que cambian, y solo se reordena cuando entra o sale alguien (`ventana.ListaIncremental`). El registro de eventos igual: solo se añaden los nuevos (`ventana.RegistroEventos`).
-- **Avión seleccionado:** los datos del último mensaje del avión pulsado, con su estado y su tendencia (`mapa.texto_informacion`). Con el selector Radar / ADS-B se pasa a su pareja del otro sistema (misma TA); la opción sale en gris si la pareja no está en el mapa.
-- **Leyenda:** plegable y recogida al empezar.
-- **Desplazamiento:** el panel se desplaza con la rueda del ratón o con el panel táctil, como el panel lateral y la tabla de la pestaña Datos (`ventana.Desplazador`). Encima de una lista con filas ocultas se desplaza la lista.
+**Right panel**, from top to bottom:
+- **Traffic:** the counters "✈ N airborne" and "▣ N on ground", each one above its list, and the figures of what is drawn on the map (radar, ADS-B and pure targets; pure targets do not count as radar and the fixed transponder is not counted).
+  - Airborne: Callsign | Level | Seen by (Radar, ADS-B or Both); on ground: Callsign, because on the ground only the radar sees it (ADS-B on ground is discarded). One row per TA, in alphabetical order, and only with the systems allowed by the System selector (`simulacion.filas_trafico`).
+  - Click on a row: the aircraft is selected as on the map (its radar symbol if it has one; otherwise, the ADS-B one) and the map centres on it (`main.al_pulsar_fila_trafico`).
+  - To keep it smooth at x60, the lists are not rebuilt in each step: only the rows that change are added, removed or changed, and they are only re-sorted when someone enters or leaves (`ventana.ListaIncremental`). The event log works the same way: only the new ones are added (`ventana.RegistroEventos`).
+- **Selected aircraft:** the data of the last message of the clicked aircraft, with its status and its trend (`mapa.texto_informacion`). With the Radar / ADS-B selector it switches to its pair in the other system (same TA); the option is greyed out if the pair is not on the map.
+- **Scrolling:** the panel scrolls with the mouse wheel or the touchpad, like the side panel and the table of the Data tab (`ventana.Desplazador`). Over a list with hidden rows, the list scrolls.
 
-**Rendimiento:** con `asterix_combinado.ast` a x60, un salto (lógica, mapa y paneles) tarda de media 2,6 ms y se mantienen los 60 saltos por segundo.
+**Performance:** with `asterix_combinado.ast` at x60, a step (logic, map and panels) takes 2.6 ms on average and the 60 steps per second are kept.
 
-**Mapa:** usa las teselas de OpenStreetMap. Su [política de uso](https://operations.osmfoundation.org/policies/tiles/) bloquea la identificación genérica de tkintermapview, por eso `interfaz/mapa.py` pide las teselas con un User-Agent propio. Se muestra la atribución, solo se descargan las teselas que se ven y no se guardan para usarlas sin conexión.
+**Map:** it uses the OpenStreetMap tiles. Its [usage policy](https://operations.osmfoundation.org/policies/tiles/) blocks the generic identification of tkintermapview, so `interfaz/mapa.py` requests the tiles with its own User-Agent. The attribution is shown, only the visible tiles are downloaded and they are not stored for offline use.
 
-**Mapa oscuro:** cada tesela, al descargarla, se pasa a gris, se invierte y se tiñe de azul noche (`mapa.oscurecer_tesela`); se guarda ya oscurecida, así que se hace una sola vez y la simulación va igual de fluida. El selector «Mapa: Oscuro | Claro» cambia entre este mapa y el original y vuelve a pedir las teselas.
+**Dark map:** each tile, when downloaded, is turned grey, inverted and tinted night blue (`mapa.oscurecer_tesela`); it is stored already darkened, so this is done only once and the simulation runs just as smoothly. The "Map: Dark | Light" selector switches between this map and the original one and requests the tiles again. At start-up, the map is the light one.
 
-### Aspecto
+### Appearance
 
-Tema oscuro de sala de control, con todos los colores en `interfaz/estilo.py`: fondo azul noche, tarjetas algo más claras, un solo color de acento (cian) para las acciones principales y radar y ADS-B en azul y naranja, como siempre. customtkinter va en modo oscuro; las tablas (ttk) y la barra de título de Windows se oscurecen a mano (`ventana.configurar_estilo_tabla`, `ventana.poner_barra_titulo_oscura`). Todos los textos tienen un contraste WCAG de al menos 4,5:1 sobre su fondo.
+Dark control-room theme, with all the colours in `interfaz/estilo.py`: night-blue background, slightly lighter cards, a single accent colour (cyan) for the main actions, and radar and ADS-B in blue and orange, as always. customtkinter runs in dark mode; the tables (ttk) and the Windows title bar are darkened by hand (`ventana.configurar_estilo_tabla`, `ventana.poner_barra_titulo_oscura`). All texts have a WCAG contrast of at least 4.5:1 on their background.
 
-## En qué orden leer el código
+## In which order to read the code
 
-1. `main.py`: la aplicación. Los métodos van en el orden del flujo: elegir fichero → decodificar → mostrar → filtrar → exportar → simular.
-2. `funciones/decodificar.py`: decodifica un fichero completo y aplica los descartes.
-3. `funciones/lector.py`: bloques, FSPEC y funciones de bits.
-4. `funciones/cat048.py` y `funciones/bds.py`: los DI de CAT048 y los BDS 4.0, 5.0 y 6.0.
-5. `funciones/cat021.py`: los DI de CAT021, el bit GBS de I021/040 y el BPS del Reserved Expansion Field.
-6. `funciones/geo.py`: port de GeoUtils.cs (radar → WGS84 y proyección estereográfica para el P3).
-7. `funciones/qnh.py`: corrección de altitud con el QNH por debajo de 6000 ft.
-8. `funciones/exportar_csv.py`: columnas y formato del CSV.
-9. `funciones/filtros.py`: un filtro por función.
-10. `funciones/simulacion.py` e `interfaz/mapa.py`: lógica de la simulación y lo que se dibuja en el mapa.
-11. `interfaz/ventana.py` e `interfaz/estilo.py`: construcción de la ventana, colores y tipografías.
+1. `main.py`: the application. The methods follow the order of the flow: choose file → decode → show → filter → export → simulate.
+2. `funciones/decodificar.py`: decodes a whole file and applies the discards.
+3. `funciones/lector.py`: blocks, FSPEC and bit functions.
+4. `funciones/cat048.py` and `funciones/bds.py`: the CAT048 data items and BDS 4.0, 5.0 and 6.0.
+5. `funciones/cat021.py`: the CAT021 data items, the GBS bit of I021/040 and the BPS of the Reserved Expansion Field.
+6. `funciones/geo.py`: port of GeoUtils.cs (radar → WGS84 and stereographic projection for P3).
+7. `funciones/qnh.py`: altitude correction with the QNH below 6000 ft.
+8. `funciones/exportar_csv.py`: columns and format of the CSV.
+9. `funciones/filtros.py`: one filter per function.
+10. `funciones/simulacion.py` and `interfaz/mapa.py`: logic of the simulation and what is drawn on the map.
+11. `interfaz/ventana.py` and `interfaz/estilo.py`: construction of the window, colours and fonts.
 
-## Criterios aplicados
+## Applied criteria
 
-Cada constante está en el módulo que la usa, con un comentario que explica el criterio.
+Each constant is in the module that uses it, with a comment that explains the criterion.
 
-| Criterio | Motivo |
+| Criterion | Reason |
 | --- | --- |
-| Presión estándar: 1013–1013,5 hPa en CAT048; 1012,8 y 1013,6 hPa en CAT021 | El rango es el del enunciado. En ADS-B el BPS va en saltos de 0,8 hPa y nunca cae en 1013–1013,5: 1012,8 y 1013,6 son su presión estándar (`qnh.py`) |
-| El umbral de 6000 ft se compara con FL × 100 sin corregir | Hay que decidir si se corrige antes de tener la altitud corregida (`qnh.UMBRAL_QNH_FT`) |
-| Por debajo de 6000 ft, sin ningún BP no estándar guardado: altitud corregida vacía | Sin un QNH del avión no hay con qué corregir |
-| A 6000 ft o más: altitud corregida vacía | Por encima de la altitud de transición no se corrige; la columna solo se rellena cuando hay altitud corregida |
-| El BP guardado se borra al cruzar 6000 ft hacia arriba; un BP no estándar se guarda a cualquier altitud | Al pasar la altitud de transición el avión pone la presión estándar; un BP no estándar siempre es el QNH que ha puesto |
-| Un FL con V = 1 o G = 1 se corrige igual | El enunciado no los excluye; V y G quedan en sus columnas del CSV |
-| CAT048 se transforma a WGS84 con el FL sin corregir | Es la altura que da el radar; la altitud corregida solo existe por debajo de 6000 ft |
-| CAT048 sin FL: se transforma con altura 0 y `H_SIN_FL` = 1 | La transformación necesita una altura; `H_SIN_FL` marca que H no sale de un FL (`decodificar.ALTURA_SI_NO_HAY_FL_M`) |
-| CAT021 no tiene altura WGS84: `H` y `H_SIN_FL` vacías | No se decodifica I021/140 (Geometric Height); LAT y LON vienen ya en I021/131 |
-| Los mensajes sin posición se descartan: 6.025 CAT048 y 890 CAT021 en `asterix_combinado.ast` | Sin posición no se puede aplicar el filtro geográfico obligatorio |
-| Un solo CSV para el fichero combinado, con la columna CAT | Todos los CSV tienen las mismas columnas; CAT dice la categoría de cada fila |
-| De I021/040 solo se lee el bit GBS | En CAT021 el enunciado pide los DI en verde, e I021/040 no lo está; el GBS hace falta para descartar los aviones en tierra |
-| TYP = 0 (sin detección) es blanco puro | Como PSR, SSR y PSR+SSR, no viene de una interrogación Modo S (`filtros.TIPOS_BLANCO_PURO`) |
-| Transponder fijo: solo Modo 3/A 7777 | Es el código del transponder de referencia en tierra (`filtros.MODO_3A_TRANSPONDER_FIJO`). La columna `I048_020_RAB` se queda en el CSV porque es un subcampo de I048/020, que sí se decodifica |
+| Standard pressure: 1013–1013.5 hPa in CAT048; 1012.8 and 1013.6 hPa in CAT021 | The range is the one of the assignment. In ADS-B the BPS goes in steps of 0.8 hPa and never falls in 1013–1013.5: 1012.8 and 1013.6 are its standard pressure (`qnh.py`) |
+| The 6000 ft threshold is compared with FL × 100 without correction | It has to be decided whether to correct before having the corrected altitude (`qnh.UMBRAL_QNH_FT`) |
+| Below 6000 ft, without any stored non-standard BP: empty corrected altitude | Without a QNH from the aircraft there is nothing to correct with |
+| At 6000 ft or more: empty corrected altitude | Above the transition altitude no correction is made; the column is only filled when there is a corrected altitude |
+| The stored BP is cleared when climbing through 6000 ft; a non-standard BP is stored at any altitude | When passing the transition altitude the aircraft sets the standard pressure; a non-standard BP is always the QNH it has set |
+| An FL with V = 1 or G = 1 is corrected the same way | The assignment does not exclude them; V and G stay in their CSV columns |
+| CAT048 is transformed to WGS84 with the uncorrected FL | It is the height given by the radar; the corrected altitude only exists below 6000 ft |
+| CAT048 without FL: transformed with height 0 and `H_NO_FL` = 1 | The transformation needs a height; `H_NO_FL` marks that H does not come from an FL (`decodificar.ALTURA_SI_NO_HAY_FL_M`) |
+| CAT021 has no WGS84 height: `H` and `H_NO_FL` empty | I021/140 (Geometric Height) is not decoded; LAT and LON already come in I021/131 |
+| Messages without position are discarded: 6,025 CAT048 and 890 CAT021 in `asterix_combinado.ast` | Without a position, the mandatory geographic filter cannot be applied |
+| A single CSV for the combined file, with the CAT column | All the CSVs have the same columns; CAT gives the category of each row |
+| From I021/040 only the GBS bit is read | In CAT021 the assignment asks for the data items in green, and I021/040 is not; the GBS is needed to discard the aircraft on ground |
+| TYP = 0 (no detection) is a pure target | Like PSR, SSR and PSR+SSR, it does not come from a Mode S interrogation (`filtros.TIPOS_BLANCO_PURO`) |
+| Fixed transponder: only Mode 3/A 7777 | It is the code of the reference transponder on the ground (`filtros.MODO_3A_TRANSPONDER_FIJO`). The `I048_020_RAB` column stays in the CSV because it is a subfield of I048/020, which is decoded |

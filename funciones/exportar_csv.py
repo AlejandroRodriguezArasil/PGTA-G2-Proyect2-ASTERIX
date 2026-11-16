@@ -27,13 +27,13 @@ COLUMNAS = [
     "TIME", "TIME_S",                   # I048/140 - I021/073
     "LAT", "LON",                       # WGS84: calculadas (CAT048) o de I021/131 (CAT021)
     "H",                                # altura WGS84, solo CAT048 (CAT021 no la tiene)
-    "H_SIN_FL",                         # solo CAT048: 1 si no había FL y H se calculó con altura 0
+    "H_NO_FL",                         # solo CAT048: 1 si no había FL y H se calculó con altura 0
     "TA",                               # I048/220 - I021/080
     "TI",                               # I048/240 - I021/170
     "MODE3A",                           # I048/070 - I021/070
     "FL",                               # I048/090 - I021/145
     "BP",                               # BDS 4.0 de I048/250 - BPS del RE de CAT021
-    "ALT_CORREGIDA_FT",                 # corrección QNH (qnh.py)
+    "ALT_CORRECTED_FT",                 # corrección QNH (qnh.py)
 
     # --- CAT048: I048/020 Target Report Descriptor ---
     "I048_020_TYP", "I048_020_SIM", "I048_020_RDP", "I048_020_SPI", "I048_020_RAB",
@@ -72,7 +72,7 @@ DECIMALES_FIJOS = {
     "LAT": 8,
     "LON": 8,
     "H": 2,
-    "ALT_CORREGIDA_FT": 2,
+    "ALT_CORRECTED_FT": 2,
 }
 
 

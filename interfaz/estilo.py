@@ -81,10 +81,10 @@ ESTELA_ADSB = "#B97B32"
 TRANSPONDER_FIJO = "#B3BECC"
 BLANCO_PURO = "#8A97A9"
 ESTACION_RADAR = "#E2E9F2"
-ZONA_FILTRO = "#7C8BA1"
+ZONA_FILTRO = "#E03131"                   # rojo: es el límite del filtro geográfico (fuera se descarta todo)
 BORDE_ICONO = "#09101A"                   # borde oscuro: las siluetas luminosas resaltan sobre el mapa
 FONDO_ATRIBUCION = TARJETA
-# Etiquetas de los aviones: claras sobre el mapa oscuro y oscuras sobre el claro
+# Etiquetas de los aviones y de "Radar BCN": claras sobre el mapa oscuro y oscuras sobre el claro
 ETIQUETA_MAPA_OSCURO = TEXTO
 ETIQUETA_MAPA_CLARO = "#1B2430"
 

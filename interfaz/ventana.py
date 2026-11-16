@@ -9,9 +9,9 @@ usa después, por ejemplo app.boton_abrir o app.tabla.
 
     cabecera:         título, grupo, selector de pestaña, fichero cargado y "Abrir fichero"
     pestaña Datos:    resumen, filtros y exportar a la izquierda; tabla por páginas a la derecha
-    pestaña Simulación: controles y hora (con la barra de tiempo) arriba; aviso de qué se simula,
-                      mapa y registro de eventos en el centro; tráfico, avión seleccionado y
-                      leyenda en el panel derecho
+    pestaña Simulación: controles y hora (con la barra de tiempo) arriba; aviso de qué se simula
+                      y mapa, con la leyenda y los eventos dentro; tráfico y avión seleccionado
+                      en el panel derecho
     barra de estado:  qué está pasando y barra de progreso
 """
 
@@ -28,7 +28,7 @@ from funciones.exportar_csv import COLUMNAS
 from interfaz import estilo
 from interfaz import mapa
 
-TITULO = "Decodificador ASTERIX CAT048 / CAT021 - PGTA Proyecto 2"
+TITULO = "ASTERIX Decoder"
 # Tamaño mínimo de la ventana: cabe en un portátil de 1920x1080 al 150 % (unos 1280 x 690 útiles)
 ANCHO_MINIMO = 1100
 ALTO_MINIMO = 600
@@ -54,31 +54,38 @@ RADIO_PESTANA = 18              # la mitad del alto: los extremos quedan redondo
 MARGEN_PESTANAS = 4             # cápsula de fondo que se ve alrededor de las pestañas
 TAMANO_ICONO_PESTANA = 18
 
-# Cuadro "Avión seleccionado": líneas de su versión más larga (mapa.texto_informacion de un avión
+# Cuadro "Selected aircraft": líneas de su versión más larga (mapa.texto_informacion de un avión
 # de radar que además es el transponder fijo) y margen interior en píxeles
 LINEAS_INFO_AVION = 28
 MARGEN_CUADRO_INFO = 20
-TEXTO_SIN_AVION = "Haz clic en un avión del mapa o de las listas de tráfico para ver su información."
+TEXTO_SIN_AVION = "Click an aircraft on the map or in the traffic lists to see its details."
 
 # Listas En vuelo / En tierra del panel de tráfico: filas que se ven sin desplazar y ancho de
-# cada columna (píxeles). En vuelo: callsign, nivel y sistemas; en tierra: callsign y sistemas.
+# cada columna (píxeles). En vuelo: callsign, nivel y "Seen by"; en tierra: callsign.
 FILAS_LISTA_TRAFICO = 8
 ANCHO_COLUMNA_CALLSIGN = 86
 ANCHO_COLUMNA_NIVEL = 68
-ANCHO_COLUMNA_SISTEMAS = 42
+ANCHO_COLUMNA_VISTO_POR = 80
 ANCHO_BARRA_LISTA = 12
 # CTkScrollbar pide 200 píxeles de alto si no se le da otro: con uno pequeño, la barra se estira
-# hasta el alto de su lista en lugar de hacer más alta la tarjeta (sobre todo el registro de eventos)
+# hasta el alto de su lista en lugar de hacer más alta la tarjeta (sobre todo la de eventos)
 ALTO_MINIMO_BARRA_LISTA = 40
 
-# Registro de eventos debajo del mapa: filas que se ven sin desplazar y ancho de sus columnas
-FILAS_REGISTRO_EVENTOS = 5
-ANCHO_EVENTO_HORA = 78
-ANCHO_EVENTO_ICONO = 26
-ANCHO_EVENTO_TIPO = 168
-ANCHO_EVENTO_CALLSIGN = 76          # 8 caracteres de ancho fijo; la letra del sistema va justo detrás
-ANCHO_EVENTO_SISTEMA = 24
-ANCHO_TOTALES_EVENTOS = 220
+# Recuadros dentro del mapa (leyenda y eventos): separación con el borde del mapa y alto de su
+# título, que se pulsa para recogerlos o mostrarlos (ver Plegable), en píxeles
+MARGEN_VENTANA_MAPA = 10
+ALTO_TITULO_PLEGABLE = 24
+ALTO_FILA_LEYENDA = 20
+FLECHA_DESPLEGADA = "▾"
+FLECHA_RECOGIDA = "▸"
+
+# Ventana de eventos dentro del mapa: filas que se ven sin desplazar y ancho de sus columnas (píxeles)
+FILAS_VENTANA_EVENTOS = 4
+ANCHO_EVENTO_HORA = 66
+ANCHO_EVENTO_ICONO = 20
+ANCHO_EVENTO_TIPO = 146
+ANCHO_EVENTO_CALLSIGN = 70          # 8 caracteres de ancho fijo; el sistema va justo detrás
+ANCHO_EVENTO_SISTEMA = 50
 
 # Etiqueta (tag de ttk), icono y color de cada tipo de evento en el registro
 ESTILO_EVENTO = {
@@ -88,12 +95,8 @@ ESTILO_EVENTO = {
     simulacion.PERDIDA_CONTACTO: ("perdida", estilo.EVENTO_PERDIDA_ICONO, estilo.EVENTO_PERDIDA_COLOR),
 }
 
-# Campo de la hora de "Ir a la hora" (píxeles)
+# Campo de la hora de "Go to time" (píxeles)
 ANCHO_ENTRADA_HORA = 70
-
-# Flecha de la cabecera de la leyenda plegable del panel de la simulación
-FLECHA_RECOGIDA = "▸"
-FLECHA_DESPLEGADA = "▾"
 
 # Desplazamiento (ver Desplazador): delta que equivale a una unidad. En la tabla, un clic de la
 # rueda (120) baja una fila, como hace Tk; en los paneles, cada 6 de delta es un píxel, como hace
@@ -329,9 +332,9 @@ def crear_iconos_pestanas():
     avion = mapa.dibujar_icono_avion(estilo.TEXTO_SOBRE_PRINCIPAL, tamano)
     avion_suave = mapa.dibujar_icono_avion(estilo.CABECERA_PESTANA_TEXTO, tamano)
     return {
-        "Datos": (ctk.CTkImage(light_image=tabla, size=(tamano, tamano)),
+        "Data": (ctk.CTkImage(light_image=tabla, size=(tamano, tamano)),
                   ctk.CTkImage(light_image=tabla_suave, size=(tamano, tamano))),
-        "Simulación": (ctk.CTkImage(light_image=avion, size=(tamano, tamano)),
+        "Simulation": (ctk.CTkImage(light_image=avion, size=(tamano, tamano)),
                        ctk.CTkImage(light_image=avion_suave, size=(tamano, tamano))),
     }
 
@@ -571,7 +574,7 @@ class RegistroEventos:
     def anadir(self, eventos):
         """Pone arriba los eventos de la lista, del más antiguo al más nuevo (el último queda el primero)."""
         for evento in eventos:
-            etiqueta = ESTILO_EVENTO[evento["tipo"]][0]       # el color va en la etiqueta (crear_registro_eventos)
+            etiqueta = ESTILO_EVENTO[evento["tipo"]][0]       # el color va en la etiqueta (crear_ventana_eventos)
             icono = ESTILO_EVENTO[evento["tipo"]][1]
             fila = str(evento["numero"])
             hora = lector.formatear_hora(evento["segundo"])[:8]
@@ -660,23 +663,23 @@ def crear_cabecera(app):
 
     titulos = ctk.CTkFrame(cabecera, fg_color="transparent")
     titulos.grid(row=0, column=0, sticky="w", padx=20, pady=10)
-    ctk.CTkLabel(titulos, text="Decodificador ASTERIX", font=estilo.fuente(estilo.TAMANO_TITULO, True),
+    ctk.CTkLabel(titulos, text="ASTERIX Decoder", font=estilo.fuente(estilo.TAMANO_TITULO, True),
                  text_color=estilo.CABECERA_TEXTO, anchor="w").pack(anchor="w")
-    ctk.CTkLabel(titulos, text="CAT048 · CAT021     PGTA · Grupo G2", font=estilo.fuente(estilo.TAMANO_AYUDA),
+    ctk.CTkLabel(titulos, text="CAT048 · CAT021     PGTA · Group G2", font=estilo.fuente(estilo.TAMANO_AYUDA),
                  text_color=estilo.CABECERA_TEXTO_SUAVE, anchor="w").pack(anchor="w")
 
-    app.selector_pestana = Pestanas(cabecera, ["Datos", "Simulación"], crear_iconos_pestanas(), app.cambiar_pestana)
+    app.selector_pestana = Pestanas(cabecera, ["Data", "Simulation"], crear_iconos_pestanas(), app.cambiar_pestana)
     app.selector_pestana.grid(row=0, column=1)
 
     derecha = ctk.CTkFrame(cabecera, fg_color="transparent")
     derecha.grid(row=0, column=2, sticky="e", padx=20)
-    app.etiqueta_fichero = ctk.CTkLabel(derecha, text="Ningún fichero cargado",
+    app.etiqueta_fichero = ctk.CTkLabel(derecha, text="No file loaded",
                                         font=estilo.fuente(estilo.TAMANO_TEXTO),
                                         text_color=estilo.CABECERA_TEXTO_SUAVE)
     app.etiqueta_fichero.pack(side="left", padx=(0, 14))
-    app.boton_abrir = crear_boton_principal(derecha, "Abrir fichero .ast", app.elegir_fichero, 160)
+    app.boton_abrir = crear_boton_principal(derecha, "Open .ast file", app.elegir_fichero, 160)
     app.boton_abrir.pack(side="left")
-    Tooltip(app.boton_abrir, "Elige un fichero ASTERIX (.ast) con mensajes CAT048 y/o CAT021.")
+    Tooltip(app.boton_abrir, "Choose an ASTERIX file (.ast) with CAT048 and/or CAT021 messages.")
 
 
 def crear_barra_estado(app):
@@ -691,7 +694,7 @@ def crear_barra_estado(app):
     app.punto_estado = ctk.CTkLabel(barra, text="●", font=estilo.fuente(estilo.TAMANO_TEXTO),
                                     text_color=estilo.TEXTO_SUAVE)
     app.punto_estado.pack(side="left", padx=(16, 6))
-    app.etiqueta_estado = crear_etiqueta(barra, "Abre un fichero .ast para empezar",
+    app.etiqueta_estado = crear_etiqueta(barra, "Open an .ast file to start",
                                          estilo.TAMANO_AYUDA + 1, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_estado.pack(side="left")
 
@@ -737,17 +740,17 @@ def crear_tarjeta_resumen(app, padre):
     Guarda: app.cifra_leidos, app.cifra_filas, app.cifra_descartados, app.cifra_tiempo,
             app.etiqueta_detalle_resumen.
     """
-    tarjeta = crear_tarjeta(padre, "Resumen del fichero")
+    tarjeta = crear_tarjeta(padre, "File summary")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
 
     cifras = ctk.CTkFrame(tarjeta, fg_color="transparent")
     cifras.pack(fill="x")
-    app.cifra_leidos = crear_cifra(cifras, 0, 0, "registros leídos")
-    app.cifra_filas = crear_cifra(cifras, 0, 1, "mensajes en la tabla")
-    app.cifra_descartados = crear_cifra(cifras, 1, 0, "descartados")
-    app.cifra_tiempo = crear_cifra(cifras, 1, 1, "segundos")
+    app.cifra_leidos = crear_cifra(cifras, 0, 0, "records read")
+    app.cifra_filas = crear_cifra(cifras, 0, 1, "messages in the table")
+    app.cifra_descartados = crear_cifra(cifras, 1, 0, "discarded")
+    app.cifra_tiempo = crear_cifra(cifras, 1, 1, "seconds")
 
-    app.etiqueta_detalle_resumen = crear_etiqueta(tarjeta, "Abre un fichero .ast para ver el resumen.",
+    app.etiqueta_detalle_resumen = crear_etiqueta(tarjeta, "Open an .ast file to see its summary.",
                                                   estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_detalle_resumen.configure(wraplength=estilo.ANCHO_PANEL_LATERAL - 40)
     app.etiqueta_detalle_resumen.pack(fill="x", padx=16, pady=(6, 14))
@@ -759,48 +762,48 @@ def crear_tarjeta_filtros(app, padre):
     Guarda: app.selector_categoria, las casillas, app.entrada_altitud, app.entrada_aeronave,
             app.boton_aplicar y app.boton_quitar.
     """
-    tarjeta = crear_tarjeta(padre, "Filtros")
+    tarjeta = crear_tarjeta(padre, "Filters")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
 
-    crear_etiqueta(tarjeta, "Categoría ASTERIX", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(fill="x", padx=16)
-    app.selector_categoria = crear_selector(tarjeta, ["Ambas", "CAT048", "CAT021"], None)
+    crear_etiqueta(tarjeta, "ASTERIX category", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(fill="x", padx=16)
+    app.selector_categoria = crear_selector(tarjeta, ["Both", "CAT048", "CAT021"], None)
     app.selector_categoria.pack(fill="x", padx=16, pady=(4, 10))
 
-    app.casilla_blancos_puros = crear_casilla(tarjeta, "Quitar blancos puros (CAT048)", None)
+    app.casilla_blancos_puros = crear_casilla(tarjeta, "Remove pure targets (CAT048)", None)
     app.casilla_blancos_puros.pack(fill="x", padx=16, pady=4)
-    Tooltip(app.casilla_blancos_puros, "Quita los mensajes CAT048 que no vienen de una interrogación "
-                                       "Modo S: I048/020 TYP = 0, 1, 2 o 3 (sin detección, PSR, SSR o PSR+SSR).")
-    app.casilla_transponder_fijo = crear_casilla(tarjeta, "Quitar transponder fijo (7777)", None)
+    Tooltip(app.casilla_blancos_puros, "Removes the CAT048 messages that do not come from a Mode S interrogation: "
+                                       "I048/020 TYP = 0, 1, 2 or 3 (no detection, PSR, SSR or PSR+SSR).")
+    app.casilla_transponder_fijo = crear_casilla(tarjeta, "Remove fixed transponder (7777)", None)
     app.casilla_transponder_fijo.pack(fill="x", padx=16, pady=4)
-    Tooltip(app.casilla_transponder_fijo, "Quita los mensajes con Modo 3/A 7777: "
-                                          "un transponder fijo de referencia en tierra.")
-    app.casilla_en_tierra = crear_casilla(tarjeta, "Quitar aeronaves en tierra (CAT048)", None)
+    Tooltip(app.casilla_transponder_fijo, "Removes the messages with Mode 3/A 7777: "
+                                          "a fixed reference transponder on the ground.")
+    app.casilla_en_tierra = crear_casilla(tarjeta, "Remove aircraft on ground (CAT048)", None)
     app.casilla_en_tierra.pack(fill="x", padx=16, pady=4)
-    Tooltip(app.casilla_en_tierra, "Quita los mensajes CAT048 con I048/230 STAT = 1 o 3 (en tierra).")
-    app.casilla_solo_fl = crear_casilla(tarjeta, "Solo mensajes con FL", None)
+    Tooltip(app.casilla_en_tierra, "Removes the CAT048 messages with I048/230 STAT = 1 or 3 (on ground).")
+    app.casilla_solo_fl = crear_casilla(tarjeta, "Only messages with FL", None)
     app.casilla_solo_fl.pack(fill="x", padx=16, pady=4)
 
-    crear_etiqueta(tarjeta, "Altitud máxima (ft)", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(
+    crear_etiqueta(tarjeta, "Maximum altitude (ft)", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(
         fill="x", padx=16, pady=(10, 0))
-    app.entrada_altitud = crear_entrada(tarjeta, 200, "Por ejemplo: 6000")
+    app.entrada_altitud = crear_entrada(tarjeta, 200, "For example: 6000")
     app.entrada_altitud.pack(fill="x", padx=16, pady=(4, 0))
-    Tooltip(app.entrada_altitud, "Usa la altitud corregida por QNH y, si no la hay, FL x 100. "
-                                 "Los mensajes sin ninguna de las dos se quitan.")
+    Tooltip(app.entrada_altitud, "Uses the QNH-corrected altitude or, if there is none, FL x 100. "
+                                 "Messages with neither are removed.")
 
-    crear_etiqueta(tarjeta, "Aeronave", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(fill="x", padx=16, pady=(10, 0))
-    app.entrada_aeronave = crear_entrada(tarjeta, 200, "Callsign, dirección o Modo 3/A")
+    crear_etiqueta(tarjeta, "Aircraft", estilo.TAMANO_TEXTO, estilo.TEXTO).pack(fill="x", padx=16, pady=(10, 0))
+    app.entrada_aeronave = crear_entrada(tarjeta, 200, "Callsign, address or Mode 3/A")
     app.entrada_aeronave.pack(fill="x", padx=16, pady=(4, 0))
-    Tooltip(app.entrada_aeronave, "Busca el texto dentro del callsign (TI), la dirección Modo S (TA) "
-                                  "o el Modo 3/A. Por ejemplo, RYR encuentra todos los Ryanair.")
+    Tooltip(app.entrada_aeronave, "Searches the text in the callsign (TI), the Mode S address (TA) "
+                                  "or the Mode 3/A. For example, RYR finds every Ryanair flight.")
 
     app.entrada_altitud.bind("<Return>", app.aplicar_filtros_con_intro)
     app.entrada_aeronave.bind("<Return>", app.aplicar_filtros_con_intro)
 
     botones = ctk.CTkFrame(tarjeta, fg_color="transparent")
     botones.pack(fill="x", padx=16, pady=(14, 16))
-    app.boton_aplicar = crear_boton_principal(botones, "Aplicar filtros", app.aplicar_filtros, 130)
+    app.boton_aplicar = crear_boton_principal(botones, "Apply filters", app.aplicar_filtros, 130)
     app.boton_aplicar.pack(side="left")
-    app.boton_quitar = crear_boton_secundario(botones, "Quitar filtros", app.quitar_filtros, 120)
+    app.boton_quitar = crear_boton_secundario(botones, "Clear filters", app.quitar_filtros, 120)
     app.boton_quitar.pack(side="right")
 
 
@@ -809,17 +812,17 @@ def crear_tarjeta_exportar(app, padre):
     Exportar a CSV.
     Guarda: app.boton_exportar_todo y app.boton_exportar_filtrado.
     """
-    tarjeta = crear_tarjeta(padre, "Exportar a CSV")
+    tarjeta = crear_tarjeta(padre, "Export to CSV")
     tarjeta.pack(fill="x")
 
-    app.boton_exportar_todo = crear_boton_principal(tarjeta, "Exportar todo", app.exportar_todo, 200)
+    app.boton_exportar_todo = crear_boton_principal(tarjeta, "Export all", app.exportar_todo, 200)
     app.boton_exportar_todo.pack(fill="x", padx=16, pady=4)
-    app.boton_exportar_filtrado = crear_boton_secundario(tarjeta, "Exportar lo filtrado",
+    app.boton_exportar_filtrado = crear_boton_secundario(tarjeta, "Export filtered",
                                                          app.exportar_filtrado, 200)
     app.boton_exportar_filtrado.pack(fill="x", padx=16, pady=4)
-    Tooltip(app.boton_exportar_filtrado, "Exporta solo los mensajes que quedan tras los filtros. "
-                                         "Se activa al aplicar algún filtro.")
-    crear_etiqueta(tarjeta, "Separador ';' y coma decimal", estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE).pack(
+    Tooltip(app.boton_exportar_filtrado, "Exports only the messages left after the filters. "
+                                         "Enabled once a filter is applied.")
+    crear_etiqueta(tarjeta, "';' separator and decimal comma", estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE).pack(
         fill="x", padx=16, pady=(2, 14))
 
 
@@ -861,7 +864,7 @@ def crear_tarjeta_tabla(app, padre):
 
     encabezado = ctk.CTkFrame(tarjeta, fg_color="transparent")
     encabezado.pack(fill="x", padx=16, pady=(12, 8))
-    ctk.CTkLabel(encabezado, text="Mensajes decodificados", font=estilo.fuente(estilo.TAMANO_SECCION, True),
+    ctk.CTkLabel(encabezado, text="Decoded messages", font=estilo.fuente(estilo.TAMANO_SECCION, True),
                  text_color=estilo.TEXTO).pack(side="left")
     app.etiqueta_total = crear_etiqueta(encabezado, "", estilo.TAMANO_TEXTO, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_total.pack(side="right")
@@ -908,7 +911,7 @@ def crear_estado_vacio_tabla(app, marco):
                                             font=estilo.fuente(estilo.TAMANO_SECCION),
                                             text_color=estilo.TEXTO_SECUNDARIO, justify="center")
     app.etiqueta_vacio_tabla.pack(padx=30, pady=(24, 12))
-    app.boton_vacio_tabla = crear_boton_principal(app.estado_vacio_tabla, "Abrir fichero .ast",
+    app.boton_vacio_tabla = crear_boton_principal(app.estado_vacio_tabla, "Open .ast file",
                                                   app.elegir_fichero, 180)
     app.boton_vacio_tabla.pack(pady=(0, 24))
 
@@ -935,12 +938,12 @@ def crear_paginacion(app, tarjeta):
     """
     paginacion = ctk.CTkFrame(tarjeta, fg_color="transparent")
     paginacion.pack(fill="x", padx=16, pady=(8, 12))
-    app.boton_anterior = crear_boton_secundario(paginacion, "◀  Anterior", app.pagina_anterior, 110)
+    app.boton_anterior = crear_boton_secundario(paginacion, "◀  Previous", app.pagina_anterior, 110)
     app.boton_anterior.pack(side="left")
     app.etiqueta_pagina = ctk.CTkLabel(paginacion, text="", width=150, font=estilo.fuente(estilo.TAMANO_TEXTO),
                                        text_color=estilo.TEXTO)
     app.etiqueta_pagina.pack(side="left", padx=8)
-    app.boton_siguiente = crear_boton_secundario(paginacion, "Siguiente  ▶", app.pagina_siguiente, 110)
+    app.boton_siguiente = crear_boton_secundario(paginacion, "Next  ▶", app.pagina_siguiente, 110)
     app.boton_siguiente.pack(side="left")
 
 
@@ -987,7 +990,7 @@ def crear_controles_simulacion(app, padre):
     """
     Controles de la simulación en dos filas: arriba los botones y la velocidad; abajo las
     casillas y el sistema. Repartidos así caben en un portátil de 1280 píxeles de ancho.
-    La hora, "Ir a la hora" y la barra de tiempo van en su propia tarjeta (crear_tarjeta_tiempo).
+    La hora, "Go to time" y la barra de tiempo van en su propia tarjeta (crear_tarjeta_tiempo).
     Lo que guarda cada parte está en su función.
     """
     tarjeta = crear_tarjeta(padre, "")
@@ -1010,47 +1013,48 @@ def crear_botones_reproduccion(app, fila_1):
     Reproducir, Pausa, +1 s y Reset.
     Guarda: app.boton_play, app.boton_pausa, app.boton_paso, app.boton_reset.
     """
-    app.boton_play = crear_boton_principal(fila_1, "▶  Reproducir", app.play, 120)
+    app.boton_play = crear_boton_principal(fila_1, "▶  Play", app.play, 120)
     app.boton_play.pack(side="left")
-    Tooltip(app.boton_play, "Avanza la simulación de 1 s en 1 s de hora del día.")
+    Tooltip(app.boton_play, "Runs the simulation in steps of 1 s of time of day.")
     # Símbolos de texto normales: los de pausa y avance (⏸, ⏭) salen como emojis en Windows
-    app.boton_pausa = crear_boton_secundario(fila_1, "❚❚  Pausa", app.pausa, 92)
+    app.boton_pausa = crear_boton_secundario(fila_1, "❚❚  Pause", app.pausa, 92)
     app.boton_pausa.pack(side="left", padx=(8, 0))
     app.boton_paso = crear_boton_secundario(fila_1, "▶❚  +1 s", app.avanzar_un_segundo, 82)
     app.boton_paso.pack(side="left", padx=(8, 0))
-    Tooltip(app.boton_paso, "Avanza un solo salto de 1 s.")
+    Tooltip(app.boton_paso, "Advances a single 1 s step.")
     app.boton_reset = crear_boton_secundario(fila_1, "⟲  Reset", app.reset_simulacion, 86)
     app.boton_reset.pack(side="left", padx=(8, 0))
-    Tooltip(app.boton_reset, "Para la simulación y vuelve a la primera hora de los datos.")
+    Tooltip(app.boton_reset, "Stops the simulation and goes back to the first time in the data.")
 
 
 def crear_selector_velocidad(app, fila_1):
     """Selector de velocidad. Guarda: app.selector_velocidad."""
     # La ayuda de los selectores va en su etiqueta
-    etiqueta_velocidad = crear_etiqueta(fila_1, "Velocidad", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_velocidad = crear_etiqueta(fila_1, "Speed", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_velocidad.pack(side="left", padx=(18, 6))
-    Tooltip(etiqueta_velocidad, "Cada salto es siempre de 1 s; la velocidad cambia cada cuánto se dibuja.")
+    Tooltip(etiqueta_velocidad, "Each step is always 1 s; the speed changes how often a step is drawn.")
     app.selector_velocidad = crear_selector(fila_1, ["x1", "x2", "x5", "x10", "x30", "x60"], app.cambiar_velocidad)
     app.selector_velocidad.pack(side="left")
 
 
 def crear_selector_sistema(app, fila_2):
     """Selector Radar / ADS-B / Ambos. Guarda: app.selector_sistema."""
-    etiqueta_sistema = crear_etiqueta(fila_2, "Sistema", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_sistema = crear_etiqueta(fila_2, "System", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_sistema.pack(side="left", padx=(24, 6))
-    Tooltip(etiqueta_sistema, "Aviones vistos por el radar (CAT048), por ADS-B (CAT021) o por los dos. "
-                              "También filtra las listas de tráfico.")
-    app.selector_sistema = crear_selector(fila_2, ["Ambos", "Radar", "ADS-B"], app.cambiar_sistema)
+    Tooltip(etiqueta_sistema, "Aircraft seen by the radar (CAT048), by ADS-B (CAT021) or by both. "
+                              "It also filters the traffic lists.")
+    app.selector_sistema = crear_selector(fila_2, ["Both", "Radar", "ADS-B"], app.cambiar_sistema)
     app.selector_sistema.pack(side="left")
 
 
 def crear_selector_mapa(app, fila_2):
     """Selector del aspecto del mapa: Oscuro (el de la aplicación) o Claro (el original). Guarda: app.selector_mapa."""
-    etiqueta_mapa = crear_etiqueta(fila_2, "Mapa", estilo.TAMANO_TEXTO, estilo.TEXTO)
+    etiqueta_mapa = crear_etiqueta(fila_2, "Map", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_mapa.pack(side="left", padx=(20, 6))
-    Tooltip(etiqueta_mapa, "Oscuro: el mapa de OpenStreetMap oscurecido, para que destaquen los aviones. "
-                           "Claro: el mapa original.")
-    app.selector_mapa = crear_selector(fila_2, ["Oscuro", "Claro"], app.cambiar_mapa)
+    Tooltip(etiqueta_mapa, "Dark: the OpenStreetMap map darkened, so that the aircraft stand out. "
+                           "Light: the original map.")
+    app.selector_mapa = crear_selector(fila_2, ["Dark", "Light"], app.cambiar_mapa)
+    app.selector_mapa.set("Light")              # al empezar, el mapa claro (MapaOSM empieza así)
     app.selector_mapa.pack(side="left")
 
 
@@ -1059,28 +1063,29 @@ def crear_casillas_simulacion(app, fila_2):
     Casillas Etiquetas y Estelas (marcadas al empezar) y Seguir (sin marcar).
     Guarda: app.casilla_etiquetas, app.casilla_estelas, app.casilla_seguir.
     """
-    app.casilla_etiquetas = crear_casilla(fila_2, "Etiquetas", app.cambiar_etiquetas)
+    app.casilla_etiquetas = crear_casilla(fila_2, "Labels", app.cambiar_etiquetas)
     app.casilla_etiquetas.select()
     app.casilla_etiquetas.pack(side="left")
-    Tooltip(app.casilla_etiquetas, "Bloque de datos de cada avión, como en una pantalla radar: el callsign "
-                                   "(o la dirección Modo S) y, debajo, el nivel en cientos de pies con su "
-                                   "tendencia y la velocidad GS en nudos (en ADS-B, sin velocidad). Si lo ven "
-                                   "los dos sistemas, la etiqueta va en la silueta de radar. Los aviones en "
-                                   "tierra no llevan etiqueta, salvo el seleccionado. Los blancos puros llevan "
-                                   "su tipo y número, por ejemplo PSR 45.")
-    app.casilla_estelas = crear_casilla(fila_2, "Estelas", app.cambiar_estelas)
+    Tooltip(app.casilla_etiquetas, "Data block of each aircraft, as on a radar display: the callsign "
+                                   "(or the Mode S address) and, below, the level in hundreds of feet with its "
+                                   "trend and the ground speed (GS) in knots (no speed in ADS-B). If both "
+                                   "systems see it, the label goes on the radar symbol. Aircraft on the "
+                                   "ground and the fixed transponder have no label, unless selected. "
+                                   "Pure targets show "
+                                   "their type and number, for example PSR 45.")
+    app.casilla_estelas = crear_casilla(fila_2, "Trails", app.cambiar_estelas)
     app.casilla_estelas.select()
     app.casilla_estelas.pack(side="left", padx=(16, 0))
-    Tooltip(app.casilla_estelas, "Línea con las últimas posiciones de cada avión.")
-    app.casilla_seguir = crear_casilla(fila_2, "Seguir", app.cambiar_seguir)
+    Tooltip(app.casilla_estelas, "Line with the last positions of each aircraft.")
+    app.casilla_seguir = crear_casilla(fila_2, "Follow", app.cambiar_seguir)
     app.casilla_seguir.pack(side="left", padx=(16, 0))
-    Tooltip(app.casilla_seguir, "Mantiene el avión seleccionado en el centro del mapa, sin cambiar el zoom. "
-                                "Si el avión desaparece, se deja de seguir.")
+    Tooltip(app.casilla_seguir, "Keeps the selected aircraft in the centre of the map, without changing the zoom. "
+                                "If the aircraft disappears, following stops.")
 
 
 def crear_tarjeta_tiempo(app, padre):
     """
-    Hora del día de la simulación, grande y legible, con "Ir a la hora" a su derecha y, debajo,
+    Hora del día de la simulación, grande y legible, con "Go to time" a su derecha y, debajo,
     la barra de tiempo, que va de la primera a la última hora de los datos.
     Guarda: app.etiqueta_reloj, app.entrada_hora, app.boton_ir, app.barra_tiempo,
             app.etiqueta_hora_inicio, app.etiqueta_hora_fin.
@@ -1092,7 +1097,7 @@ def crear_tarjeta_tiempo(app, padre):
     fila_hora.pack(fill="x", padx=16, pady=(10, 0))
     reloj = ctk.CTkFrame(fila_hora, fg_color="transparent")
     reloj.pack(side="left")
-    crear_etiqueta(reloj, "Hora de la simulación (UTC)", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
+    crear_etiqueta(reloj, "Simulation time (UTC)", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
     app.etiqueta_reloj = ctk.CTkLabel(reloj, text="--:--:--",
                                       font=estilo.fuente_numeros(estilo.TAMANO_RELOJ, True),
                                       text_color=estilo.TEXTO, anchor="w", width=ANCHO_RELOJ)
@@ -1100,15 +1105,15 @@ def crear_tarjeta_tiempo(app, padre):
 
     ir_a_hora = ctk.CTkFrame(fila_hora, fg_color="transparent")
     ir_a_hora.pack(side="right", anchor="s", pady=(0, 4))
-    crear_etiqueta(ir_a_hora, "Ir a la hora", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
+    crear_etiqueta(ir_a_hora, "Go to time", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
     campos = ctk.CTkFrame(ir_a_hora, fg_color="transparent")
     campos.pack(anchor="w")
     app.entrada_hora = crear_entrada(campos, ANCHO_ENTRADA_HORA, "hh:mm")
     app.entrada_hora.pack(side="left")
     app.entrada_hora.bind("<Return>", app.ir_a_hora_con_intro)
-    Tooltip(app.entrada_hora, "Escribe la hora (UTC) como hh:mm y pulsa Intro. Cada avión aparece en "
-                              "su última posición conocida antes de esa hora.")
-    app.boton_ir = crear_boton_secundario(campos, "Ir", app.ir_a_hora, 44)
+    Tooltip(app.entrada_hora, "Type the time (UTC) as hh:mm and press Enter. Each aircraft appears at "
+                              "its last known position before that time.")
+    app.boton_ir = crear_boton_secundario(campos, "Go", app.ir_a_hora, 44)
     app.boton_ir.pack(side="left", padx=(6, 0))
 
     fila_barra = ctk.CTkFrame(tarjeta, fg_color="transparent")
@@ -1125,7 +1130,7 @@ def crear_tarjeta_tiempo(app, padre):
     app.barra_tiempo.set(0)
     app.barra_tiempo.pack(side="left", fill="x", expand=True, padx=8)
     app.barra_tiempo.bind("<ButtonRelease-1>", app.soltar_barra_tiempo, add="+")
-    Tooltip(app.barra_tiempo, "Arrastra para ir a otra hora: el reloj enseña la hora y el salto se hace al soltar.")
+    Tooltip(app.barra_tiempo, "Drag to go to another time: the clock shows the time and the jump is made on release.")
 
 
 def configurar_barra_tiempo(app, inicio, fin, texto_inicio, texto_fin):
@@ -1140,10 +1145,12 @@ def configurar_barra_tiempo(app, inicio, fin, texto_inicio, texto_fin):
 
 def crear_zona_mapa(app, padre):
     """
-    Aviso de qué se simula, el mapa, el mensaje que se ve cuando no hay nada que mostrar,
-    la atribución de OpenStreetMap y, debajo, el registro de eventos.
+    Aviso de qué se simula y el mapa, que ocupa todo el alto que queda. Dentro del mapa, en las
+    esquinas: la leyenda (abajo a la izquierda), la ventana de eventos (arriba a la derecha), la
+    atribución de OpenStreetMap (abajo a la derecha) y, en el centro, el mensaje que se ve cuando no
+    hay nada que mostrar.
     Guarda: app.etiqueta_aviso_simulacion, app.mapa, app.mensaje_mapa, app.etiqueta_mensaje_mapa
-            y lo que guarda crear_registro_eventos.
+            y lo que guardan crear_leyenda_mapa y crear_ventana_eventos.
     """
     zona = ctk.CTkFrame(padre, fg_color="transparent")
     zona.grid(row=1, column=0, sticky="nsew", padx=(0, estilo.MARGEN))
@@ -1154,14 +1161,15 @@ def crear_zona_mapa(app, padre):
                                                  text_color=estilo.AVISO_TEXTO, anchor="w", justify="left")
     app.etiqueta_aviso_simulacion.pack(fill="x", padx=16, pady=5)
 
-    # El registro se coloca antes que el mapa (abajo) para que, si falta alto, encoja el mapa y no el registro
-    crear_registro_eventos(app, zona)
-
     marco_mapa = ctk.CTkFrame(zona, fg_color=estilo.TARJETA, corner_radius=0, border_width=1,
                               border_color=estilo.BORDE)
     marco_mapa.pack(fill="both", expand=True)
     app.mapa = mapa.MapaOSM(marco_mapa, corner_radius=0)
     app.mapa.pack(fill="both", expand=True, padx=1, pady=1)
+
+    # Lo que va encima del mapa se crea después del mapa, para que quede por encima
+    crear_leyenda_mapa(app, marco_mapa)
+    crear_ventana_eventos(app, marco_mapa)
 
     # Mensaje en el centro del mapa cuando no hay nada que ver (main.py dice cuál)
     app.mensaje_mapa = crear_tarjeta(marco_mapa, "")
@@ -1175,11 +1183,114 @@ def crear_zona_mapa(app, padre):
     atribucion.place(relx=1.0, rely=1.0, x=-2, y=-2, anchor="se")
 
 
+def crear_ventana_mapa(marco_mapa):
+    """
+    Recuadro que va encima del mapa (la leyenda y la ventana de eventos): del color de las tarjetas,
+    con borde y sin esquinas redondeadas, porque sus esquinas no pueden ser transparentes sobre el mapa.
+    """
+    return ctk.CTkFrame(marco_mapa, fg_color=estilo.TARJETA, corner_radius=0, border_width=1,
+                        border_color=estilo.CONTROL_BORDE)
+
+
+class Plegable:
+    """
+    Título de un recuadro del mapa (leyenda o eventos) que, al pulsarlo, recoge o vuelve a mostrar
+    su contenido. Empieza desplegado, para que se vea nada más abrir la pestaña; recogerlo sirve
+    para ver más mapa en una pantalla pequeña. El contenido son los elementos colocados con grid():
+    grid_remove() los quita y grid() los vuelve a poner donde estaban.
+    """
+
+    def __init__(self, padre, texto):
+        self.texto = texto
+        self.partes = []
+        self.desplegado = True
+        self.boton = ctk.CTkButton(padre, text="", command=self.cambiar, anchor="w", width=0,
+                                   height=ALTO_TITULO_PLEGABLE, fg_color="transparent",
+                                   hover_color=estilo.SECUNDARIO_HOVER, text_color=estilo.TEXTO,
+                                   font=estilo.fuente(estilo.TAMANO_TEXTO, True))
+        self.pintar()
+
+    def anadir(self, parte):
+        """Añade un elemento al contenido que se recoge."""
+        self.partes.append(parte)
+
+    def cambiar(self):
+        """Clic en el título: recoge el contenido si se ve y al revés."""
+        self.desplegado = not self.desplegado
+        for parte in self.partes:
+            if self.desplegado:
+                parte.grid()
+            else:
+                parte.grid_remove()
+        self.pintar()
+
+    def pintar(self):
+        """Flecha delante del título: ▾ desplegado, ▸ recogido."""
+        if self.desplegado:
+            self.boton.configure(text=FLECHA_DESPLEGADA + "  " + self.texto)
+        else:
+            self.boton.configure(text=FLECHA_RECOGIDA + "  " + self.texto)
+
+
+def crear_fila_leyenda(padre, fila, columna, imagen, texto, ayuda):
+    """
+    Un elemento de la leyenda, en su fila y columna: la misma imagen que se dibuja en el mapa y lo que
+    significa. Si se da 'ayuda', sale al dejar el ratón encima. Devuelve el elemento.
+    """
+    icono = ctk.CTkImage(light_image=imagen, size=(imagen.width, imagen.height))
+    # height: CTkLabel mide 28 píxeles de alto si no se le dice otra cosa; con 20 la leyenda tapa menos mapa
+    elemento = ctk.CTkLabel(padre, text="  " + texto, image=icono, compound="left", anchor="w", height=ALTO_FILA_LEYENDA,
+                            font=estilo.fuente(estilo.TAMANO_AYUDA), text_color=estilo.TEXTO)
+    elemento.grid(row=fila, column=columna, sticky="w", padx=(10, 6), pady=1)
+    if ayuda != "":
+        Tooltip(elemento, ayuda)
+    return elemento
+
+
+def crear_leyenda_mapa(app, marco_mapa):
+    """
+    Leyenda dentro del mapa, abajo a la izquierda, a la vista nada más abrir la pestaña. Usa las
+    mismas imágenes que se dibujan en el mapa, en dos columnas para que ocupe poco, y debajo explica
+    las etiquetas. Pulsando su título se recoge (Plegable), por si en un portátil tapa algo.
+    """
+    leyenda = crear_ventana_mapa(marco_mapa)
+    leyenda.place(relx=0.0, rely=1.0, x=MARGEN_VENTANA_MAPA, y=-MARGEN_VENTANA_MAPA, anchor="sw")
+    plegable = Plegable(leyenda, "Legend")
+    plegable.boton.grid(row=0, column=0, columnspan=2, sticky="w", padx=4, pady=(4, 0))
+    imagenes = app.imagenes_leyenda
+    elementos = [
+        (1, 0, imagenes["radar"], "Radar (CAT048)", ""),
+        (1, 1, imagenes["adsb"], "ADS-B (CAT021)", ""),
+        (2, 0, imagenes["resaltado"], "Selected and its pair",
+         "The clicked aircraft and, if the other system also sees it, its symbol in that system."),
+        (2, 1, imagenes["blanco_puro"], "Pure target (no Mode S)",
+         "Primary or secondary radar echo, without Mode S. They are removed with “Remove pure targets” "
+         "in the Data tab."),
+        (3, 0, imagenes["transponder_fijo"], "Fixed transponder (7777)",
+         "Reference transponder on the ground, always stationary."),
+        (3, 1, imagenes["estacion"], "Barcelona radar", ""),
+        (4, 0, imagenes["zona"], "Geographic filter limit",
+         "Messages outside this rectangle are discarded when decoding."),
+        (4, 1, imagenes["estela"], "Trail: last positions", ""),
+    ]
+    for fila, columna, imagen, texto, ayuda in elementos:
+        plegable.anadir(crear_fila_leyenda(leyenda, fila, columna, imagen, texto, ayuda))
+    # Tres líneas cortas escritas a mano, para que ninguna se parta a mitad de una idea
+    explicacion = crear_etiqueta(leyenda,
+                                 "Label: callsign and, below, level in hundreds of ft\n"
+                                 "with its trend (" + simulacion.SUBE + " climbing, " + simulacion.BAJA + " descending, "
+                                 + simulacion.NIVELADO + " level) and speed in kt.\n"
+                                 "Aircraft on ground and 7777: no label, unless selected.",
+                                 estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
+    explicacion.grid(row=5, column=0, columnspan=2, sticky="w", padx=10, pady=(2, 6))
+    plegable.anadir(explicacion)
+
+
 def configurar_estilo_eventos(app):
     """
-    Estilo del registro de eventos: letra de ancho fijo (como en una pantalla de control, para que
+    Estilo de la lista de eventos: letra de ancho fijo (como en una pantalla de control, para que
     las columnas queden alineadas) y filas más bajas que las de la tabla de Datos. Cada tipo de
-    evento tiene su color (las etiquetas se configuran en crear_registro_eventos).
+    evento tiene su color (las etiquetas se configuran en crear_ventana_eventos).
     """
     app.fuente_eventos = tkinter.font.Font(family=estilo.FAMILIA_NUMEROS, size=estilo.TAMANO_TABLA)
     alto_fila = app.fuente_eventos.metrics("linespace") + 4
@@ -1191,83 +1302,69 @@ def configurar_estilo_eventos(app):
     eventos.map("Eventos.Treeview", background=[("selected", estilo.TABLA_SELECCION)])
 
 
-def crear_registro_eventos(app, zona):
+def crear_ventana_eventos(app, marco_mapa):
     """
-    Franja baja debajo del mapa con los eventos más recientes arriba (hora, icono, tipo, callsign y
-    sistema), su barra de desplazamiento y, a la derecha, los totales de despegues y aterrizajes.
+    Ventana de eventos dentro del mapa, arriba a la derecha, como la de mensajes de una pantalla radar:
+    arriba, el título y los totales de despegues y aterrizajes; debajo, los eventos más recientes
+    (hora, icono, tipo, callsign y sistema), con su barra de desplazamiento.
     Guarda: app.registro_eventos (RegistroEventos), app.etiqueta_totales_eventos.
     """
     configurar_estilo_eventos(app)
-    franja = crear_tarjeta(zona, "")
-    franja.pack(side="bottom", fill="x", pady=(8, 0))
-    franja.grid_columnconfigure(0, weight=1)
+    ventana_eventos = crear_ventana_mapa(marco_mapa)
+    ventana_eventos.place(relx=1.0, rely=0.0, x=-MARGEN_VENTANA_MAPA, y=MARGEN_VENTANA_MAPA, anchor="ne")
+    ventana_eventos.grid_columnconfigure(0, weight=1)
+
+    cabecera = ctk.CTkFrame(ventana_eventos, fg_color="transparent")
+    cabecera.grid(row=0, column=0, columnspan=2, sticky="ew", padx=(4, 10), pady=(4, 0))
+    plegable = Plegable(cabecera, "Events")
+    plegable.boton.pack(side="left")
+    Tooltip(plegable.boton, "New contact, takeoff, landing and contact lost, the most recent "
+                            "on top. They appear when playing or stepping 1 s; when going to another time (Go to time, "
+                            "the time bar or Reset) the list is cleared. Click an event: selects the "
+                            "aircraft. Click the title: hides or shows the list.")
+    app.etiqueta_totales_eventos = crear_etiqueta(cabecera, "Takeoffs: 0 · Landings: 0",
+                                                  estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
+    app.etiqueta_totales_eventos.pack(side="right")
+    Tooltip(app.etiqueta_totales_eventos, "Since playback started or since the last time jump. "
+                                          "A takeoff or a landing is a status change confirmed by "
+                                          + str(simulacion.MENSAJES_PARA_CAMBIAR_ESTADO) + " consecutive messages.")
 
     columnas = ("hora", "icono", "tipo", "callsign", "sistema")
     anchos = (ANCHO_EVENTO_HORA, ANCHO_EVENTO_ICONO, ANCHO_EVENTO_TIPO, ANCHO_EVENTO_CALLSIGN, ANCHO_EVENTO_SISTEMA)
     # show="": sin cabecera, para que quepan más eventos en poco alto
-    tabla = ttk.Treeview(franja, columns=columnas, show="", style="Eventos.Treeview", selectmode="browse",
-                         height=FILAS_REGISTRO_EVENTOS)
+    tabla = ttk.Treeview(ventana_eventos, columns=columnas, show="", style="Eventos.Treeview", selectmode="browse",
+                         height=FILAS_VENTANA_EVENTOS)
     for posicion in range(len(columnas)):
         tabla.column(columnas[posicion], width=anchos[posicion], minwidth=anchos[posicion], stretch=False,
                      anchor="w")
     tabla.column("icono", anchor="center")
-    tabla.column("sistema", anchor="center")      # ninguna columna se estira: lo que sobra queda a la derecha
     for tipo in ESTILO_EVENTO:
         etiqueta = ESTILO_EVENTO[tipo][0]
         color = ESTILO_EVENTO[tipo][2]
         tabla.tag_configure(etiqueta, foreground=color)
-    tabla.grid(row=0, column=0, sticky="nsew", padx=(12, 0), pady=8)
-    barra = crear_barra_desplazamiento(franja, "vertical", tabla.yview)
+    tabla.grid(row=1, column=0, sticky="nsew", padx=(10, 0), pady=(0, 8))
+    barra = crear_barra_desplazamiento(ventana_eventos, "vertical", tabla.yview)
     barra.configure(width=ANCHO_BARRA_LISTA, height=ALTO_MINIMO_BARRA_LISTA)
     tabla.configure(yscrollcommand=barra.set)
-    barra.grid(row=0, column=1, sticky="ns", pady=8)
+    barra.grid(row=1, column=1, sticky="ns", padx=(0, 6), pady=(0, 8))
+    plegable.anadir(tabla)
+    plegable.anadir(barra)
     activar_desplazamiento_lista(tabla)
     tabla.bind("<ButtonRelease-1>", app.al_pulsar_evento)
     app.registro_eventos = RegistroEventos(tabla)
 
-    # A la derecha, en poco alto para no hacer la franja más alta que sus filas: título, totales y
-    # una línea de ayuda (lo demás va en las ayudas que salen con el ratón encima)
-    totales = ctk.CTkFrame(franja, fg_color="transparent", width=ANCHO_TOTALES_EVENTOS)
-    totales.grid(row=0, column=2, sticky="nw", padx=(14, 16), pady=8)
-    titulo = ctk.CTkLabel(totales, text="Registro de eventos", font=estilo.fuente(estilo.TAMANO_SECCION, True),
-                          text_color=estilo.TEXTO, anchor="w")
-    titulo.pack(fill="x")
-    Tooltip(titulo, "Nuevo contacto, despegue, aterrizaje y pérdida de contacto, el más reciente arriba. "
-                    "Salen al reproducir o al avanzar 1 s; al ir a otra hora (Ir a la hora, la barra de "
-                    "tiempo o Reset) el registro se vacía. Clic en un evento: selecciona el avión.")
-    app.etiqueta_totales_eventos = crear_etiqueta(totales, "Despegues: 0 · Aterrizajes: 0",
-                                                  estilo.TAMANO_TEXTO, estilo.TEXTO)
-    app.etiqueta_totales_eventos.pack(fill="x")
-    Tooltip(app.etiqueta_totales_eventos, "Desde que empieza la reproducción o desde el último salto de hora. "
-                                          "Un despegue o un aterrizaje es un cambio de estado confirmado con "
-                                          + str(simulacion.MENSAJES_PARA_CAMBIAR_ESTADO) + " mensajes seguidos.")
-    crear_etiqueta(totales, "Clic en un evento: ver el avión", estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE).pack(fill="x")
-
-
-def crear_fila_leyenda(padre, imagen, texto):
-    """
-    Una fila de la leyenda: la misma imagen que se dibuja en el mapa y lo que significa.
-    Si el texto ocupa varias líneas, cada una se separa del icono con los mismos tres espacios.
-    """
-    icono = ctk.CTkImage(light_image=imagen, size=(imagen.width, imagen.height))
-    texto_separado = "   " + texto.replace("\n", "\n   ")
-    fila = ctk.CTkLabel(padre, text=texto_separado, image=icono, compound="left", anchor="w", justify="left",
-                        font=estilo.fuente(estilo.TAMANO_TEXTO), text_color=estilo.TEXTO)
-    fila.pack(fill="x", padx=16, pady=2)
-
 
 def crear_panel_simulacion(app, padre):
     """
-    Panel derecho de la simulación, de arriba abajo: tráfico (lo que más se consulta), información
-    del avión seleccionado y leyenda (plegable y recogida al empezar, porque es de consulta y es lo
-    que más ocupa). En pantallas bajas (portátiles) el panel se desplaza con la rueda del ratón o el
-    panel táctil, como el de la pestaña Datos.
+    Panel derecho de la simulación, de arriba abajo: tráfico (lo que más se consulta) e información
+    del avión seleccionado. La leyenda y los eventos van dentro del mapa. En pantallas bajas
+    (portátiles) el panel se desplaza con la rueda del ratón o el panel táctil, como el de la
+    pestaña Datos.
     """
     panel = PanelDesplazable(padre, width=estilo.ANCHO_PANEL_SIMULACION, fg_color="transparent")
     panel.grid(row=1, column=1, sticky="nsew")
     crear_tarjeta_trafico(app, panel)
     crear_tarjeta_avion(app, panel)
-    crear_tarjeta_leyenda(app, panel)
 
 
 def crear_lista_trafico(app, padre, columna, columnas, titulos, anchos):
@@ -1310,10 +1407,12 @@ def crear_tarjeta_trafico(app, panel):
     """
     Panel de tráfico: dos contadores (en vuelo y en tierra), cada uno encima de su lista, y debajo
     las cifras de lo que hay dibujado en el mapa (radar, ADS-B y blancos puros).
+    La lista En vuelo dice por qué sistema se ve cada avión ("Seen by": Radar, ADS-B o Ambos). La
+    lista En tierra no lo necesita: en tierra solo lo ve el radar (el ADS-B en tierra se descarta).
     Guarda: app.contador_en_vuelo, app.contador_en_tierra, app.lista_en_vuelo, app.lista_en_tierra
             (ListaIncremental), app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros.
     """
-    tarjeta = crear_tarjeta(panel, "Tráfico")
+    tarjeta = crear_tarjeta(panel, "Traffic")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
     cuerpo = ctk.CTkFrame(tarjeta, fg_color="transparent")
     cuerpo.pack(fill="x", padx=12, pady=(0, 4))
@@ -1326,37 +1425,37 @@ def crear_tarjeta_trafico(app, panel):
                                           text_color=estilo.TRAFICO_EN_TIERRA, anchor="w")
     app.contador_en_tierra.grid(row=0, column=1, sticky="w", pady=(0, 4))
     escribir_contadores_trafico(app, 0, 0)
-    Tooltip(app.contador_en_vuelo, "En radar, según el STAT de I048/230 (0 y 2: en vuelo). Todo lo que llega "
-                                   "por ADS-B está en vuelo. Si lo ven los dos sistemas, manda el radar.")
-    Tooltip(app.contador_en_tierra, "Según el STAT de I048/230 del radar (1 y 3: en tierra). Los ADS-B en "
-                                    "tierra (GBS = 1) no aparecen: se descartan al decodificar.")
+    Tooltip(app.contador_en_vuelo, "Radar: by the STAT of I048/230 (0 and 2: airborne). Everything received "
+                                   "by ADS-B is airborne. If both systems see it, the radar decides.")
+    Tooltip(app.contador_en_tierra, "By the radar STAT of I048/230 (1 and 3: on ground). ADS-B aircraft on "
+                                    "the ground (GBS = 1) do not appear: they are discarded when decoding.")
 
-    app.lista_en_vuelo = crear_lista_trafico(app, cuerpo, 0, ("callsign", "nivel", "sistemas"),
-                                             ("Callsign", "Nivel", "Sist."),
-                                             (ANCHO_COLUMNA_CALLSIGN, ANCHO_COLUMNA_NIVEL, ANCHO_COLUMNA_SISTEMAS))
-    app.lista_en_tierra = crear_lista_trafico(app, cuerpo, 1, ("callsign", "sistemas"), ("Callsign", "Sist."),
-                                              (ANCHO_COLUMNA_CALLSIGN, ANCHO_COLUMNA_SISTEMAS))
+    app.lista_en_vuelo = crear_lista_trafico(app, cuerpo, 0, ("callsign", "nivel", "visto_por"),
+                                             ("Callsign", "Level", "Seen by"),
+                                             (ANCHO_COLUMNA_CALLSIGN, ANCHO_COLUMNA_NIVEL, ANCHO_COLUMNA_VISTO_POR))
+    app.lista_en_tierra = crear_lista_trafico(app, cuerpo, 1, ("callsign",), ("Callsign",),
+                                              (ANCHO_COLUMNA_CALLSIGN,))
 
-    nota = crear_etiqueta(tarjeta, "Nivel: A = altitud corregida, FL = nivel de vuelo (cientos de ft).  "
-                                   "Sist.: R radar, A ADS-B.", estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE)
+    nota = crear_etiqueta(tarjeta, "Level, in hundreds of feet: A = QNH-corrected altitude, FL = flight "
+                                   "level.", estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE)
     nota.configure(wraplength=estilo.ANCHO_PANEL_SIMULACION - 40)
     nota.pack(fill="x", padx=16, pady=(4, 0))
 
     en_el_mapa = ctk.CTkFrame(tarjeta, fg_color="transparent")
     en_el_mapa.pack(fill="x", padx=16, pady=(4, 12))
-    etiqueta_mapa = crear_etiqueta(en_el_mapa, "En el mapa:", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
+    etiqueta_mapa = crear_etiqueta(en_el_mapa, "On the map:", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     etiqueta_mapa.pack(side="left")
-    Tooltip(etiqueta_mapa, "Siluetas dibujadas en el mapa con el sistema elegido. Los blancos puros no "
-                           "cuentan como radar y el transponder fijo no se cuenta.")
+    Tooltip(etiqueta_mapa, "Symbols drawn on the map with the chosen system. Pure targets do not "
+                           "count as radar and the fixed transponder is not counted.")
     app.cifra_radar = crear_cifra_pequena(en_el_mapa, estilo.RADAR, "radar")
     app.cifra_adsb = crear_cifra_pequena(en_el_mapa, estilo.ADSB, "ADS-B")
-    app.cifra_blancos_puros = crear_cifra_pequena(en_el_mapa, estilo.BLANCO_PURO, "blancos puros")
+    app.cifra_blancos_puros = crear_cifra_pequena(en_el_mapa, estilo.BLANCO_PURO, "pure targets")
 
 
 def escribir_contadores_trafico(app, en_vuelo, en_tierra):
-    """Textos de los contadores del panel de tráfico, por ejemplo "✈ 12 en vuelo" y "▣ 3 en tierra"."""
-    cambiar_texto(app.contador_en_vuelo, estilo.ICONO_EN_VUELO + "  " + str(en_vuelo) + " en vuelo")
-    cambiar_texto(app.contador_en_tierra, estilo.ICONO_EN_TIERRA + "  " + str(en_tierra) + " en tierra")
+    """Textos de los contadores del panel de tráfico, por ejemplo "✈ 12 airborne" y "▣ 3 on ground"."""
+    cambiar_texto(app.contador_en_vuelo, estilo.ICONO_EN_VUELO + "  " + str(en_vuelo) + " airborne")
+    cambiar_texto(app.contador_en_tierra, estilo.ICONO_EN_TIERRA + "  " + str(en_tierra) + " on ground")
 
 
 def crear_tarjeta_avion(app, panel):
@@ -1366,7 +1465,7 @@ def crear_tarjeta_avion(app, panel):
     si no cabe en la pantalla, se ve desplazando el panel.
     Guarda: app.selector_sistema_avion, app.cuadro_info.
     """
-    informacion = crear_tarjeta(panel, "Avión seleccionado")
+    informacion = crear_tarjeta(panel, "Selected aircraft")
     informacion.pack(fill="x", pady=(0, estilo.MARGEN))
     # Radar / ADS-B: pasa a los datos del mismo avión visto por el otro sistema (main.py lo pone al día)
     app.selector_sistema_avion = crear_selector(informacion, ["Radar", "ADS-B"], app.cambiar_sistema_avion)
@@ -1381,60 +1480,8 @@ def crear_tarjeta_avion(app, panel):
     escribir_texto(app.cuadro_info, TEXTO_SIN_AVION)
 
 
-def crear_tarjeta_leyenda(app, panel):
-    """
-    Leyenda del mapa, con las mismas imágenes que se dibujan en él. Es plegable: al pulsar su
-    cabecera se despliega o se recoge (main.py, cambiar_leyenda). Al empezar está recogida.
-    Guarda: app.cabecera_leyenda, app.contenido_leyenda, app.leyenda_desplegada.
-    """
-    leyenda = crear_tarjeta(panel, "")
-    leyenda.pack(fill="x", pady=(0, estilo.MARGEN))
-    # Botón plano con aspecto de título; customtkinter ya pone el cursor de mano encima
-    app.cabecera_leyenda = ctk.CTkButton(leyenda, text="", command=app.cambiar_leyenda, anchor="w",
-                                         height=estilo.ALTO_BOTON, fg_color="transparent",
-                                         hover_color=estilo.SECUNDARIO_HOVER, text_color=estilo.TEXTO,
-                                         font=estilo.fuente(estilo.TAMANO_SECCION, True))
-    app.cabecera_leyenda.pack(fill="x", padx=8, pady=6)
-
-    app.contenido_leyenda = ctk.CTkFrame(leyenda, fg_color="transparent")
-    imagenes = app.imagenes_leyenda
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["radar"], "Radar (CAT048)")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["adsb"], "ADS-B (CAT021)")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["blanco_puro"], "Blanco puro (sin Modo S): eco de\n"
-                                                                       "radar primario o secundario. Se\n"
-                                                                       "quitan con «Quitar blancos puros»")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["resaltado"], "Avión seleccionado y su pareja")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["transponder_fijo"], "Transponder fijo (7777), siempre quieto")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["estacion"], "Radar de Barcelona")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["zona"], "Zona del filtro geográfico")
-    crear_fila_leyenda(app.contenido_leyenda, imagenes["estela"], "Estela: últimas posiciones")
-    explicacion = crear_etiqueta(app.contenido_leyenda,
-                                 "La silueta apunta al rumbo del avión.\n"
-                                 "Etiqueta: callsign y, debajo, nivel en cientos de pies (altitud corregida "
-                                 "o FL), tendencia (" + simulacion.SUBE + " sube, " + simulacion.BAJA + " baja, "
-                                 + simulacion.NIVELADO + " nivelado) y velocidad GS en nudos.\n"
-                                 "Un avión que ven los dos sistemas lleva una sola etiqueta.\n"
-                                 "Los aviones en tierra no llevan etiqueta, salvo el seleccionado.",
-                                 estilo.TAMANO_AYUDA, estilo.TEXTO_SUAVE)
-    explicacion.configure(wraplength=estilo.ANCHO_PANEL_SIMULACION - 50)
-    explicacion.pack(fill="x", padx=16, pady=(4, 2))
-    mostrar_leyenda(app, False)
-
-
-def mostrar_leyenda(app, desplegada):
-    """Despliega o recoge la leyenda y cambia la flecha de su cabecera (▸ recogida, ▾ desplegada)."""
-    app.leyenda_desplegada = desplegada
-    if desplegada:
-        app.cabecera_leyenda.configure(text=FLECHA_DESPLEGADA + "  Leyenda")
-        # Margen para no tapar el borde ni las esquinas redondeadas de abajo de la tarjeta
-        app.contenido_leyenda.pack(fill="x", padx=1, pady=(0, estilo.RADIO_TARJETA))
-    else:
-        app.cabecera_leyenda.configure(text=FLECHA_RECOGIDA + "  Leyenda")
-        app.contenido_leyenda.pack_forget()
-
-
 def crear_pestana_simulacion(app):
-    """Pestaña Simulación: controles y hora arriba; mapa con el registro de eventos y panel debajo."""
+    """Pestaña Simulación: controles y hora arriba; mapa (con la leyenda y los eventos dentro) y panel debajo."""
     pestana = app.pestana_simulacion
     pestana.grid_rowconfigure(1, weight=1)
     pestana.grid_columnconfigure(0, weight=1)

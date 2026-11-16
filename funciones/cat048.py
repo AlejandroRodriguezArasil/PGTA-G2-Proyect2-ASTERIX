@@ -351,7 +351,7 @@ def saltar_item_048(frn, datos, posicion):
     if frn == FRN_SP or frn == FRN_RE:
         # Part 1, §4.3.5: el primer octeto da la longitud total, incluido él mismo
         return posicion + datos[posicion]
-    raise ValueError("FRN " + str(frn) + " no existe en la UAP de CAT048")
+    raise ValueError("FRN " + str(frn) + " does not exist in the CAT048 UAP")
 
 
 # =============================================================================

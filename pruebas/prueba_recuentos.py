@@ -27,6 +27,16 @@ PRUEBAS = [
     ("asterix_combinado.ast", RADAR, ADSB),
 ]
 
+# Nombre en inglés de cada recuento, para escribir el resultado
+NOMBRE_RECUENTO = {
+    "bloques_desincronizados": "desynchronized blocks",
+    "registros_048": "CAT048 records",
+    "filas_048": "CAT048 rows",
+    "filas_048_sin_fl": "CAT048 rows without FL",
+    "registros_021": "CAT021 records",
+    "filas_021": "CAT021 rows",
+}
+
 
 def probar_fichero(nombre_fichero, esperado_048, esperado_021):
     """Decodifica un fichero y compara sus recuentos con los esperados. Devuelve True si cuadran todos."""
@@ -42,10 +52,10 @@ def probar_fichero(nombre_fichero, esperado_048, esperado_021):
         if recuentos[clave] == esperado[clave]:
             resultado = "OK"
         else:
-            resultado = "NO CUADRA (esperado " + str(esperado[clave]) + ")"
+            resultado = "MISMATCH (expected " + str(esperado[clave]) + ")"
             todo_bien = False
-        print("  " + clave.ljust(26) + str(recuentos[clave]).rjust(8) + "   " + resultado)
-    print("  tiempo: " + format(recuentos["segundos"], ".1f") + " s")
+        print("  " + NOMBRE_RECUENTO[clave].ljust(26) + str(recuentos[clave]).rjust(8) + "   " + resultado)
+    print("  time: " + format(recuentos["segundos"], ".1f") + " s")
     return todo_bien
 
 
@@ -55,9 +65,9 @@ def main():
         if not probar_fichero(nombre_fichero, esperado_048, esperado_021):
             todo_bien = False
     if todo_bien:
-        print("Todos los recuentos cuadran.")
+        print("All counts match.")
     else:
-        print("Hay recuentos que NO cuadran.")
+        print("Some counts do NOT match.")
 
 
 if __name__ == "__main__":

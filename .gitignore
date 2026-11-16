@@ -5,7 +5,7 @@
 __pycache__/
 
 # El ejecutable que genera crear_exe.bat (cada uno lo genera con doble clic)
-DecodificadorASTERIX.exe
+ASTERIXDecoder.exe
 
 # Caché de un complemento del editor, no es del proyecto
 .impeccable/

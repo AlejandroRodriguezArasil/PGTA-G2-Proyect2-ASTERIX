@@ -111,10 +111,10 @@ def solo_con_fl(filas):
 
 def altitud_de_fila(fila):
     """
-    Altitud en ft que usa el filtro de altitud máxima: ALT_CORREGIDA_FT si existe y,
+    Altitud en ft que usa el filtro de altitud máxima: ALT_CORRECTED_FT si existe y,
     si no, FL x 100. Devuelve None si la fila no tiene ninguna de las dos.
     """
-    altitud_corregida = valor(fila, "ALT_CORREGIDA_FT")
+    altitud_corregida = valor(fila, "ALT_CORRECTED_FT")
     if altitud_corregida is not None:
         return altitud_corregida
     nivel_vuelo = valor(fila, "FL")
@@ -126,7 +126,7 @@ def altitud_de_fila(fila):
 def filtrar_altitud_maxima(filas, altitud_maxima_ft):
     """
     Altitud máxima (filtro adicional, lo usa el P3 con 6000 ft).
-    Columnas: ALT_CORREGIDA_FT y, si está vacía, FL x 100.
+    Columnas: ALT_CORRECTED_FT y, si está vacía, FL x 100.
     Se quedan las filas con altitud <= altitud_maxima_ft. Las que no tienen ninguna
     de las dos columnas se quitan, porque no se puede saber si cumplen.
     """
@@ -170,22 +170,22 @@ def hay_filtros_activos(opciones):
 
 
 def describir_filtros(opciones):
-    """Texto corto con los filtros activos, por ejemplo "CAT048, sin aeronaves en tierra"."""
+    """Texto corto con los filtros activos (lo que ve el usuario), por ejemplo "CAT048, no aircraft on ground"."""
     partes = []
     if opciones["categoria"] is not None:
         partes.append("CAT0" + str(opciones["categoria"]))
     if opciones["quitar_blancos_puros"]:
-        partes.append("sin blancos puros")
+        partes.append("no pure targets")
     if opciones["quitar_transponder_fijo"]:
-        partes.append("sin transponder fijo")
+        partes.append("no fixed transponder")
     if opciones["quitar_en_tierra"]:
-        partes.append("sin aeronaves en tierra")
+        partes.append("no aircraft on ground")
     if opciones["solo_con_fl"]:
-        partes.append("solo con FL")
+        partes.append("FL only")
     if opciones["altitud_maxima_ft"] is not None:
-        partes.append("altitud ≤ " + format(opciones["altitud_maxima_ft"], "g").replace(".", ",") + " ft")
+        partes.append("altitude ≤ " + format(opciones["altitud_maxima_ft"], "g") + " ft")
     if opciones["aeronave"] != "":
-        partes.append("aeronave «" + opciones["aeronave"] + "»")
+        partes.append("aircraft \"" + opciones["aeronave"] + "\"")
     return ", ".join(partes)
 
 

@@ -284,7 +284,7 @@ def longitud_item_021(frn, datos, posicion):
         return longitud_i021_295(datos, posicion)
     if frn == FRN_RE or frn == FRN_SP:
         return datos[posicion]                  # el primer octeto es la longitud total
-    raise ValueError("FRN " + str(frn) + " no existe en la UAP de CAT021")
+    raise ValueError("FRN " + str(frn) + " does not exist in the CAT021 UAP")
 
 
 # =============================================================================
