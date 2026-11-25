@@ -1,39 +1,7 @@
 """
-simulacion.py
-
-Lógica de la simulación de trayectorias, sin nada de ventana ni mapa.
-Lo que se dibuja está en interfaz/mapa.py, los paneles en interfaz/ventana.py y main.py
-solo conecta los botones con estas funciones.
-
-Cómo funciona:
-    1. preparar() ordena por hora (TIME_S) las filas que hay que simular. En el
-       fichero los mensajes no van en orden de tiempo (retrocesos de hasta 0,7 s
-       en CAT048 y 2 s en CAT021), así que hay que ordenarlos. La lista ordenada
-       solo guarda referencias a las mismas tuplas, no las copia.
-    2. avanzar_un_segundo() suma 1 s a la hora de la simulación y procesa los
-       mensajes con TIME_S <= esa hora. Cada mensaje actualiza la última posición
-       conocida de su avión.
-    3. Un avión que lleva más de SEGUNDOS_PARA_CADUCAR sin mensajes desaparece.
-
-Hay dos formas de ver los aviones:
-    - En el mapa, un avión es la pareja (categoría, dirección Modo S). Si el mensaje no
-      trae dirección (TA), se usa (categoría, track number). Radar y ADS-B nunca se
-      juntan: el mismo avión visto por los dos sistemas son dos siluetas.
-    - En el tráfico (listas En vuelo / En tierra y eventos), un avión es su TA, lo vea
-      un sistema o los dos. Los blancos puros (sin TA) y el transponder fijo no son tráfico.
-
-Estado en tierra / en vuelo de cada avión del tráfico (ver estado_observado y cambiar_estado):
-    - CAT048: el STAT de I048/230 (CAT048 v1.31, §5.2.23). 1 y 3 = en tierra; 0 y 2 = en vuelo;
-      4 a 7 no dicen si está en tierra o en el aire. Sin I048/230 el mensaje no dice nada.
-    - CAT021: los mensajes en tierra (GBS = 1) se descartan al decodificar, así que todo lo
-      que llega de ADS-B está en vuelo.
-    - Si el radar ve el avión con un STAT que dice tierra o vuelo, manda el radar.
-    - Un estado nuevo solo se acepta tras MENSAJES_PARA_CAMBIAR_ESTADO mensajes seguidos
-      que lo digan. Mientras no se acepta ninguno, el estado es desconocido (None).
-
-Eventos (ver anotar_evento): nuevo contacto, despega, aterriza y pérdida de contacto. Solo
-salen al reproducir o al avanzar 1 s: al saltar a otra hora (ir_a_segundo) el estado se
-recalcula en silencio y la lista de eventos y los totales empiezan de cero.
+Lógica de la simulación (sin ventana ni mapa): avanza segundo a segundo, guarda la última posición
+de cada avión, su estado en tierra / en vuelo y los eventos.
+En el mapa un avión es (categoría, TA); en el tráfico es solo su TA, lo vea radar, ADS-B o los dos.
 """
 
 from funciones import filtros
@@ -42,48 +10,41 @@ from funciones.exportar_csv import valor
 CATEGORIA_048 = 48
 CATEGORIA_021 = 21
 
-# El radar refresca cada 4 s. Con 12 s sin mensajes (3 vueltas de antena) el avión desaparece;
-# así una vuelta perdida suelta (huecos de 7 u 11 s en los datos) no lo hace parpadear.
+# El radar da una vuelta cada 4 s. Con 12 s (3 vueltas) una vuelta perdida no hace parpadear al avión
 SEGUNDOS_PARA_CADUCAR = 12
 
-# Posiciones que se guardan para dibujar la estela de cada avión (unos 60 s de radar)
+# Puntos de la estela (unos 60 s de radar)
 POSICIONES_ESTELA = 15
 
-# Estado de un avión del tráfico (el texto es el que se ve en el panel). None es "desconocido".
+# None = desconocido
 EN_TIERRA = "on ground"
 EN_VUELO = "airborne"
 
-# I048/230 STAT (CAT048 v1.31, §5.2.23): 0 = sin alerta en vuelo, 1 = sin alerta en tierra,
-# 2 = alerta en vuelo, 3 = alerta en tierra. 4 a 7 (alerta o SPI sin decir dónde, no asignado,
-# desconocido) no sirven para saber si está en tierra.
+# STAT de I048/230: 1 y 3 = en tierra, 0 y 2 = en vuelo. De 4 a 7 no dicen dónde está
 STAT_EN_TIERRA = (1, 3)
 STAT_EN_VUELO = (0, 2)
 
-# Un cambio de estado se confirma con 2 mensajes seguidos que digan el estado nuevo. El STAT de
-# un solo mensaje puede venir cambiado (un parpadeo) y daría despegues y aterrizajes falsos.
+# Con un solo mensaje bastaría un STAT raro para sacar un despegue o aterrizaje falso
 MENSAJES_PARA_CAMBIAR_ESTADO = 2
 
-# Tipos de evento (el texto es el que se ve en la ventana de eventos)
+# Tipos de evento
 NUEVO_CONTACTO = "New contact"
 DESPEGA = "Takeoff"
 ATERRIZA = "Landing"
 PERDIDA_CONTACTO = "Contact lost"
-EVENTOS_GUARDADOS = 300         # la lista guarda solo los últimos
+EVENTOS_GUARDADOS = 300
 
-# Nombre de cada sistema en la lista En vuelo (columna "Seen by") y en los eventos
 NOMBRE_SISTEMA = {CATEGORIA_048: "Radar", CATEGORIA_021: "ADS-B"}
 VISTO_POR_AMBOS = "Both"
 
-# Tendencia vertical. En radar se usa la velocidad vertical del BDS 6.0 (BAR o, si no, IVV);
-# si no la hay, y siempre en ADS-B, la variación del FL en los últimos SEGUNDOS_TENDENCIA.
+# Tendencia vertical
 SUBE = "↑"
 BAJA = "↓"
 NIVELADO = "→"
 NOMBRE_TENDENCIA = {SUBE: "climbing", BAJA: "descending", NIVELADO: "level"}
-UMBRAL_TENDENCIA_FT_MIN = 300   # por encima de +300 ft/min sube; por debajo de -300, baja
+UMBRAL_TENDENCIA_FT_MIN = 300   # +-300 ft/min
 SEGUNDOS_TENDENCIA = 10
-# Para calcularla con el FL, los dos mensajes que se comparan tienen que estar separados al menos
-# una vuelta de antena (4 s): con menos, un cambio de 1/4 de FL ya parecería una subida.
+# Al menos una vuelta de antena entre los dos FL, si no 1/4 de FL ya parece que sube
 SEGUNDOS_MINIMOS_TENDENCIA = 4
 PIES_POR_FL = 100
 SEGUNDOS_POR_MINUTO = 60
@@ -94,15 +55,12 @@ SEGUNDOS_POR_MINUTO = 60
 # =============================================================================
 
 def tiempo_de_fila(fila):
-    """Hora del mensaje en segundos desde medianoche (se usa para ordenar)."""
+    """Hora del mensaje en segundos desde medianoche."""
     return valor(fila, "TIME_S")
 
 
 def identificador_avion(fila):
-    """
-    Devuelve el identificador de avión de una fila: (CAT, TA) o, si no hay TA,
-    (CAT, "TN" + track number). Si no hay ninguno de los dos, devuelve None.
-    """
+    """(CAT, TA), o (CAT, "TN" + track number) si no hay TA. None si no hay ninguno."""
     categoria = valor(fila, "CAT")
     direccion_modo_s = valor(fila, "TA")
     if direccion_modo_s is not None:
@@ -115,21 +73,8 @@ def identificador_avion(fila):
 
 def preparar(filas):
     """
-    Prepara la simulación de las filas indicadas (las filtradas en la pestaña Datos).
-    Devuelve el estado de la simulación, un diccionario con:
-        filas:    las filas ordenadas por hora
-        indice:   posición de la siguiente fila por procesar
-        inicio:   primer segundo de los datos
-        fin:      último segundo de los datos
-        segundo:  hora actual de la simulación (segundos desde medianoche)
-        aviones:  identificador -> {"fila", "tiempo", "estela", ...} de cada avión del mapa
-        trafico:  TA -> {"estado", "nombre", ...} de cada avión del tráfico (ver nuevo_avion_trafico)
-        eventos:  los últimos EVENTOS_GUARDADOS eventos, del más antiguo al más reciente
-        numero_eventos: eventos anotados desde el último salto de hora (la ventana lo usa para
-                  saber cuáles le faltan por mostrar)
-        despegues, aterrizajes: totales desde el último salto de hora
-        silencio: True mientras se recalcula el estado al saltar de hora (no se anotan eventos)
-        mensajes_por_categoria: {48: n, 21: n}, para avisar si un sistema no tiene mensajes
+    Crea el diccionario con el estado de la simulación a partir de las filas filtradas.
+    Las filas se ordenan por TIME_S porque en el fichero no vienen del todo en orden.
     """
     filas_validas = []
     mensajes_por_categoria = {CATEGORIA_048: 0, CATEGORIA_021: 0}
@@ -138,7 +83,7 @@ def preparar(filas):
             if identificador_avion(fila) is not None:
                 filas_validas.append(fila)
                 mensajes_por_categoria[valor(fila, "CAT")] += 1
-    filas_ordenadas = sorted(filas_validas, key=tiempo_de_fila)   # orden estable: a igual hora, el del fichero
+    filas_ordenadas = sorted(filas_validas, key=tiempo_de_fila)   # a igual hora se queda el orden del fichero
 
     estado = {"filas": filas_ordenadas, "indice": 0, "inicio": 0, "fin": 0, "segundo": 0,
               "aviones": {}, "trafico": {}, "eventos": [], "numero_eventos": 0,
@@ -152,17 +97,14 @@ def preparar(filas):
 
 
 def procesar_hasta(estado, segundo):
-    """
-    Procesa las filas con TIME_S <= segundo: cada una pasa a ser la última posición
-    conocida de su avión y pone al día el tráfico. Devuelve el conjunto de aviones que han cambiado.
-    """
+    """Procesa las filas hasta ese segundo y devuelve los aviones que han cambiado."""
     cambiados = set()
     filas = estado["filas"]
     while estado["indice"] < len(filas) and tiempo_de_fila(filas[estado["indice"]]) <= segundo:
         fila = filas[estado["indice"]]
         identificador = identificador_avion(fila)
         if identificador not in estado["aviones"]:
-            # rumbo_dibujo y posicion_rumbo los usa mapa.py para orientar la silueta de ADS-B
+            # rumbo_dibujo y posicion_rumbo son para girar la silueta ADS-B en mapa.py
             estado["aviones"][identificador] = {"fila": None, "tiempo": 0, "estela": [],
                                                 "rumbo_dibujo": None, "posicion_rumbo": None,
                                                 "historial_fl": [], "tendencia": ""}
@@ -173,8 +115,7 @@ def procesar_hasta(estado, segundo):
         if len(avion["estela"]) > POSICIONES_ESTELA:
             avion["estela"].pop(0)
         guardar_fl(avion)
-        # Al recalcular en silencio la tendencia no se calcula mensaje a mensaje: se calcula una
-        # sola vez al final, para los aviones que quedan (ver ir_a_segundo)
+        # En silencio la tendencia se calcula una vez al final (ir_a_segundo), no en cada mensaje
         if not estado["silencio"]:
             avion["tendencia"] = calcular_tendencia(identificador, avion)
         actualizar_trafico(estado, identificador, fila)
@@ -185,8 +126,8 @@ def procesar_hasta(estado, segundo):
 
 def quitar_caducados(estado):
     """
-    Quita los aviones sin mensajes desde hace más de SEGUNDOS_PARA_CADUCAR. Devuelve la lista de
-    los quitados. Si un avión del tráfico ya no se ve por ningún sistema, es una pérdida de contacto.
+    Quita los aviones que llevan demasiado sin mensajes y devuelve cuáles.
+    Si ya no lo ve ningún sistema, se anota la pérdida de contacto.
     """
     caducados = []
     for identificador in estado["aviones"]:
@@ -201,7 +142,7 @@ def quitar_caducados(estado):
             continue                                # blanco puro, transponder fijo o sin TA
         avion_trafico = estado["trafico"][direccion_modo_s]
         if categoria == CATEGORIA_048:
-            avion_trafico["estado_radar"] = None    # el radar ya no lo ve: su último STAT ya no vale
+            avion_trafico["estado_radar"] = None    # el último STAT ya no vale
         if (otra_categoria(categoria), direccion_modo_s) not in estado["aviones"]:
             anotar_evento(estado, PERDIDA_CONTACTO, estado["segundo"], avion_trafico["nombre"], categoria,
                           direccion_modo_s)
@@ -210,10 +151,7 @@ def quitar_caducados(estado):
 
 
 def avanzar_un_segundo(estado):
-    """
-    Un salto de la simulación: la hora avanza 1 s.
-    Devuelve (cambiados, caducados): los aviones con posición nueva y los que han desaparecido.
-    """
+    """Avanza 1 s. Devuelve (cambiados, caducados)."""
     estado["segundo"] = estado["segundo"] + 1
     cambiados = procesar_hasta(estado, estado["segundo"])
     caducados = quitar_caducados(estado)
@@ -224,11 +162,8 @@ def avanzar_un_segundo(estado):
 
 def ir_a_segundo(estado, segundo):
     """
-    Salta a una hora concreta (también lo usan Reset y la barra de tiempo). Empieza desde la
-    primera fila y repite la simulación segundo a segundo hasta esa hora, sin dibujar y sin anotar
-    eventos: así cada avión queda igual que si se hubiera reproducido hasta ahí (en su última
-    posición conocida, con su estado en tierra / en vuelo y sin los que ya habían desaparecido).
-    Después la lista de eventos y los totales empiezan de cero.
+    Salta a una hora: repite la simulación desde el principio en silencio, sin anotar eventos,
+    para que los aviones queden como si se hubiera reproducido. Luego vacía los eventos.
     """
     estado["indice"] = 0
     estado["aviones"] = {}
@@ -260,7 +195,7 @@ def ha_terminado(estado):
 
 
 def otra_categoria(categoria):
-    """La categoría del otro sistema: 21 para 48 y 48 para 21."""
+    """21 si es 48 y al revés."""
     if categoria == CATEGORIA_048:
         return CATEGORIA_021
     return CATEGORIA_048
@@ -271,7 +206,7 @@ def otra_categoria(categoria):
 # =============================================================================
 
 def guardar_fl(avion):
-    """Guarda el FL del último mensaje con su hora y olvida los de hace más de SEGUNDOS_TENDENCIA."""
+    """Guarda el FL con su hora y tira los de hace más de SEGUNDOS_TENDENCIA."""
     nivel_vuelo = valor(avion["fila"], "FL")
     if nivel_vuelo is None:
         return
@@ -282,7 +217,7 @@ def guardar_fl(avion):
 
 
 def clasificar_tendencia(pies_por_minuto):
-    """Flecha de la tendencia según la velocidad vertical en ft/min."""
+    """Pasa la velocidad vertical (ft/min) a flecha."""
     if pies_por_minuto > UMBRAL_TENDENCIA_FT_MIN:
         return SUBE
     if pies_por_minuto < -UMBRAL_TENDENCIA_FT_MIN:
@@ -292,10 +227,8 @@ def clasificar_tendencia(pies_por_minuto):
 
 def calcular_tendencia(identificador, avion):
     """
-    Tendencia vertical del avión: SUBE, BAJA, NIVELADO o "" si no se puede saber.
-        - Radar con BDS 6.0: su velocidad vertical, BAR (barométrica) o, si no viene, IVV (inercial).
-        - Si no (y siempre en ADS-B): la variación del FL entre el mensaje más antiguo y el más
-          reciente de los últimos SEGUNDOS_TENDENCIA, pasada a ft/min.
+    Tendencia vertical ("" si no se sabe). En radar se usa BAR o IVV del BDS 6.0 si vienen;
+    si no, y siempre en ADS-B, lo que ha cambiado el FL en los últimos segundos, en ft/min.
     """
     fila = avion["fila"]
     if identificador[0] == CATEGORIA_048:
@@ -322,7 +255,7 @@ def calcular_tendencia(identificador, avion):
 # =============================================================================
 
 def es_del_trafico(identificador, fila):
-    """True si el avión entra en el tráfico: tiene TA y no es un blanco puro ni el transponder fijo."""
+    """Tiene que tener TA y no ser blanco puro ni el transponder fijo."""
     if identificador[1].startswith("TN"):
         return False
     if filtros.es_blanco_puro(fila) or filtros.es_transponder_fijo(fila):
@@ -331,19 +264,12 @@ def es_del_trafico(identificador, fila):
 
 
 def nuevo_avion_trafico(nombre):
-    """
-    Datos de un avión del tráfico:
-        estado:       EN_TIERRA, EN_VUELO o None (desconocido)
-        candidato:    estado nuevo que aún no se ha confirmado (None si no hay)
-        repeticiones: mensajes seguidos que han dicho el candidato
-        estado_radar: lo que dijo el último STAT útil del radar (None si el radar no lo ve)
-        nombre:       callsign o, si no hay, la TA
-    """
+    """Avión nuevo del tráfico. candidato es el estado que aún falta confirmar."""
     return {"estado": None, "candidato": None, "repeticiones": 0, "estado_radar": None, "nombre": nombre}
 
 
 def actualizar_trafico(estado, identificador, fila):
-    """Pone al día el avión del tráfico de este mensaje: su nombre y su estado en tierra / en vuelo."""
+    """Actualiza el nombre y el estado del avión del tráfico con este mensaje."""
     if not es_del_trafico(identificador, fila):
         return
     categoria = identificador[0]
@@ -360,18 +286,15 @@ def actualizar_trafico(estado, identificador, fila):
 
     avion_trafico = estado["trafico"][direccion_modo_s]
     if callsign is not None and callsign != "":
-        avion_trafico["nombre"] = callsign      # el callsign puede llegar después que la TA
+        avion_trafico["nombre"] = callsign      # a veces el callsign llega más tarde que la TA
     observado = estado_observado(categoria, fila, avion_trafico)
     cambiar_estado(estado, avion_trafico, observado, fila, categoria, direccion_modo_s)
 
 
 def estado_observado(categoria, fila, avion_trafico):
     """
-    Lo que dice este mensaje sobre si el avión está en tierra o en vuelo: EN_TIERRA, EN_VUELO o
-    None si no dice nada.
-        - CAT048: según el STAT de I048/230. 4 a 7, o sin I048/230, no dicen nada.
-        - CAT021: en vuelo (los de tierra ya se descartaron), salvo que el radar lo esté viendo
-          con un STAT útil: entonces manda el radar y el mensaje ADS-B no dice nada.
+    Si el mensaje dice en tierra, en vuelo o nada (None). En CAT048 sale del STAT; el ADS-B
+    siempre es en vuelo (los de tierra se descartan al decodificar), salvo si el radar ya lo ve.
     """
     if categoria == CATEGORIA_048:
         stat = valor(fila, "I048_230_STAT")
@@ -389,13 +312,9 @@ def estado_observado(categoria, fila, avion_trafico):
 
 def cambiar_estado(estado, avion_trafico, observado, fila, categoria, direccion_modo_s):
     """
-    Máquina de estados de un avión del tráfico (desconocido, en tierra, en vuelo):
-        - un mensaje que no dice nada (observado None) no cambia nada;
-        - un mensaje que dice el estado actual anula el candidato que hubiera;
-        - un mensaje que dice otro estado suma una repetición a ese candidato (o lo empieza);
-        - con MENSAJES_PARA_CAMBIAR_ESTADO repeticiones seguidas, el candidato pasa a ser el estado.
-    Un cambio de en tierra a en vuelo es un despegue y uno de en vuelo a en tierra, un aterrizaje.
-    El primer estado (desde desconocido) también se confirma, pero no es un evento.
+    Máquina de estados del avión. Un estado distinto del actual tiene que repetirse
+    MENSAJES_PARA_CAMBIAR_ESTADO veces seguidas para aceptarlo. Tierra -> vuelo es un despegue
+    y vuelo -> tierra un aterrizaje; el primer estado (desde None) no da evento.
     """
     if observado is None:
         return
@@ -422,12 +341,7 @@ def cambiar_estado(estado, avion_trafico, observado, fila, categoria, direccion_
 
 
 def anotar_evento(estado, tipo, segundo, nombre, categoria, direccion_modo_s):
-    """
-    Añade un evento a la lista (y cuenta los despegues y aterrizajes). La lista guarda solo los
-    últimos EVENTOS_GUARDADOS. Mientras se recalcula en silencio (al saltar de hora) no se anota nada.
-    Cada evento: numero (orden), segundo (hora del mensaje que lo provoca), tipo, nombre (callsign o
-    TA), sistema (Radar o ADS-B) y ta (para seleccionar el avión al pulsar el evento).
-    """
+    """Añade un evento y suma los despegues y aterrizajes. En silencio no hace nada."""
     if estado["silencio"]:
         return
     estado["numero_eventos"] = estado["numero_eventos"] + 1
@@ -442,18 +356,14 @@ def anotar_evento(estado, tipo, segundo, nombre, categoria, direccion_modo_s):
 
 
 def esta_en_tierra(estado, direccion_modo_s):
-    """True si el avión del tráfico con esa TA está confirmado en tierra (False si no es tráfico)."""
+    """True si el avión con esa TA está en tierra (confirmado)."""
     if direccion_modo_s not in estado["trafico"]:
         return False
     return estado["trafico"][direccion_modo_s]["estado"] == EN_TIERRA
 
 
 def texto_estado_avion(estado, identificador):
-    """
-    Estado del avión del mapa para el panel "Avión seleccionado": "en vuelo", "en tierra",
-    "desconocido" (aún no hay mensajes que lo digan) o "-" si no es tráfico (blanco puro,
-    transponder fijo o sin TA).
-    """
+    """Texto del estado para el panel del avión seleccionado ("-" si no es tráfico)."""
     direccion_modo_s = identificador[1]
     if direccion_modo_s not in estado["trafico"]:
         return "-"
@@ -464,14 +374,14 @@ def texto_estado_avion(estado, identificador):
 
 
 def texto_tendencia(tendencia):
-    """La flecha de la tendencia con su nombre ("↑ sube"), o "-" si no se sabe."""
+    """Flecha más el nombre, p. ej. "↑ climbing"."""
     if tendencia == "":
         return "-"
     return tendencia + " " + NOMBRE_TENDENCIA[tendencia]
 
 
 def eventos_nuevos(estado, ultimo_mostrado):
-    """Eventos con número mayor que ultimo_mostrado (los que la ventana aún no ha puesto), del más antiguo al más nuevo."""
+    """Los eventos que la ventana todavía no ha mostrado, en orden."""
     nuevos = []
     for evento in reversed(estado["eventos"]):
         if evento["numero"] <= ultimo_mostrado:
@@ -487,11 +397,8 @@ def eventos_nuevos(estado, ultimo_mostrado):
 
 def texto_nivel(fila, tendencia, con_prefijo):
     """
-    Nivel al estilo de control aéreo, en cientos de pies y con la flecha de tendencia:
-        - "A025" si hay altitud corregida por QNH (2.500 ft);
-        - "FL045" si no la hay (FL 45, referido a la presión estándar);
-        - "---" si no hay ninguna de las dos.
-    Sin prefijo (con_prefijo False, en las etiquetas del mapa) queda solo "025" o "045".
+    Nivel como en control aéreo: "A025" con altitud corregida, "FL045" si no, "---" si no hay nada.
+    Sin prefijo (para las etiquetas del mapa) queda "025".
     """
     altitud_corregida = valor(fila, "ALT_CORRECTED_FT")
     nivel_vuelo = valor(fila, "FL")
@@ -511,13 +418,8 @@ def texto_nivel(fila, tendencia, con_prefijo):
 
 def filas_trafico(estado, categorias_visibles):
     """
-    Filas de las listas del panel de tráfico, una por TA. Solo cuentan los sistemas de
-    categorias_visibles (las que deja ver el selector Sistema). Devuelve (en_vuelo, en_tierra):
-    diccionarios TA -> (nombre para ordenar, valores de la fila).
-        en vuelo:  (callsign, nivel, visto por)   por ejemplo ("RYR1FB", "FL045↑", "Both")
-        en tierra: (callsign,)    en tierra solo lo ve el radar: el ADS-B en tierra se descarta
-    El nivel y la tendencia salen del radar si se ve por radar y, si no, del ADS-B.
-    Los aviones de estado desconocido no están en ninguna de las dos.
+    Filas de las listas En vuelo y En tierra (TA -> (nombre, valores)), solo con los sistemas visibles.
+    Si lo ven los dos, el nivel se coge del radar.
     """
     en_vuelo = {}
     en_tierra = {}
@@ -547,7 +449,7 @@ def filas_trafico(estado, categorias_visibles):
 
 
 def texto_visto_por(categorias):
-    """Columna "Seen by" de la lista En vuelo: "Radar", "ADS-B" o "Both" si lo ven los dos."""
+    """Texto de la columna "Seen by"."""
     if len(categorias) == 2:
         return VISTO_POR_AMBOS
     return NOMBRE_SISTEMA[categorias[0]]

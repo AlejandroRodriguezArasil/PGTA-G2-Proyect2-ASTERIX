@@ -1,18 +1,6 @@
 """
-mapa.py
-
-Lo que se dibuja en el mapa de la pestaña Simulación (tkintermapview, teselas de OpenStreetMap):
-    - el propio mapa (MapaOSM), que pide las teselas con nuestro User-Agent y, en modo oscuro, las oscurece
-    - los iconos: siluetas de avión giradas según su rumbo, blancos puros, transponder fijo y
-      radar de BCN; también los de las pestañas Datos y Simulación de la cabecera
-    - la zona del filtro geográfico y el radar de Barcelona
-    - el marcador de cada avión, su etiqueta tipo radar (callsign, nivel y velocidad) y su estela
-    - mover el mapa para centrarlo en un avión (al pulsarlo en una lista o con "Seguir")
-    - el texto del panel con la información del avión seleccionado
-
-La lógica de la simulación (qué aviones hay y dónde) está en simulacion.py.
-Cada avión tiene un solo marcador, que se crea cuando aparece, se mueve en cada
-salto y se quita cuando caduca.
+Todo lo que se dibuja en el mapa de la simulación: iconos, marcadores con su etiqueta, estelas,
+la zona del filtro y el texto del avión seleccionado. Qué aviones hay lo decide simulacion.py.
 """
 
 import math
@@ -31,57 +19,52 @@ from interfaz import estilo
 CATEGORIA_048 = 48
 CATEGORIA_021 = 21
 
-# Servidor de teselas de OpenStreetMap. Su política de uso
-# (https://operations.osmfoundation.org/policies/tiles/) pide que cada aplicación se identifique
-# con un User-Agent propio y bloquea los genéricos de las librerías, como el "TkinterMapView" de
-# tkintermapview. También pide mostrar la atribución y no descargar teselas de forma masiva ni para
-# usarlas sin conexión: aquí solo se descargan las que se ven y se guardan en memoria durante la sesión.
+# La política de OpenStreetMap pide un User-Agent propio (bloquea el "TkinterMapView" de la
+# librería), poner la atribución y no bajar teselas en masa. Aquí solo se piden las que se ven.
 SERVIDOR_TESELAS = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 ZOOM_MAXIMO_SERVIDOR = 19
 USER_AGENT = "ASTERIXDecoder-PGTA-G2/1.0 (UPC university project)"
 ATRIBUCION_MAPA = "© OpenStreetMap contributors"
-TIEMPO_MAXIMO_TESELA_S = 10     # si el servidor no responde en este tiempo, se deja de esperar esa tesela
+TIEMPO_MAXIMO_TESELA_S = 10
 
-# Mapa oscuro (oscurecer_tesela): factores de Pillow, donde 1 deja la imagen igual
+# Factores de Pillow para el mapa oscuro (1 = sin cambio)
 CONTRASTE_MAPA_OSCURO = 0.85
 BRILLO_MAPA_OSCURO = 0.9
 
-# Tamaño de los iconos en píxeles
+# Tamaños en píxeles
 TAMANO_SILUETA = 22
 TAMANO_SILUETA_RESALTADA = 30
 TAMANO_ANTENA = 26
 TAMANO_ESTACION = 18
 TAMANO_BLANCO_PURO = 10
 TAMANO_BLANCO_PURO_RESALTADO = 14
-TAMANO_LEYENDA = 16           # la leyenda va dentro del mapa: iconos algo más pequeños
+TAMANO_LEYENDA = 16
 ANCHO_ESTELA = 2
-ANCHO_ZONA_FILTRO = 3           # el límite del filtro geográfico, más grueso que las estelas
+ANCHO_ZONA_FILTRO = 3
 FUENTE_ETIQUETA = (estilo.FAMILIA, estilo.TAMANO_ETIQUETA_MAPA, "bold")
 
-# Las siluetas se generan una sola vez, giradas cada PASO_GIRO_DEG grados, y se reutilizan
+# Las siluetas giradas se crean una vez al principio, de 10 en 10 grados
 PASO_GIRO_DEG = 10
 NUMERO_GIROS = 36
 
-# Dirección de las siluetas ADS-B (ver rumbo_para_dibujar)
+# Para el rumbo de las siluetas ADS-B
 DISTANCIA_MINIMA_RUMBO_M = 100
-METROS_POR_GRADO = 111320       # un grado de latitud, en metros (aproximado)
+METROS_POR_GRADO = 111320       # 1 grado de latitud, aprox.
 
-# Silueta de avión mirando al norte, en un cuadrado de lado 1 (x a la derecha, y hacia abajo).
-# Solo la mitad derecha, de la nariz a la cola; la izquierda es simétrica.
+# Mitad derecha de la silueta mirando al norte, en un cuadrado de lado 1 (la y crece hacia abajo).
+# La otra mitad se saca por simetría
 SILUETA_MITAD_DERECHA = [
     (0.50, 0.03), (0.56, 0.11), (0.57, 0.37), (0.95, 0.58), (0.95, 0.66),
     (0.57, 0.55), (0.55, 0.80), (0.70, 0.90), (0.70, 0.95), (0.50, 0.91),
 ]
-ESCALA_DIBUJO = 4       # se dibuja 4 veces más grande y se reduce, para que los bordes salgan suaves
+ESCALA_DIBUJO = 4       # se dibuja más grande y luego se reduce, así los bordes quedan suaves
 
-# Etiqueta de los blancos puros según su TYP de I048/020 (CAT048 v1.31, §5.2.2), delante del
-# Modo 3/A o, si no hay, del track number
+# Según el TYP de I048/020
 TIPO_BLANCO_PURO_ETIQUETA = {0: "No det.", 1: "PSR", 2: "SSR", 3: "PSR+SSR"}
 
-# Unidad de los ángulos del panel del avión: va pegada al número (41.43291°), las demás con un espacio
+# Los grados van pegados al número (41.43291°), las otras unidades con espacio
 UNIDAD_GRADOS = "°"
 
-# Esquinas de la zona del filtro geográfico
 ESQUINA_NOROESTE = (geo.LATITUD_MAXIMA_DEG, geo.LONGITUD_MINIMA_DEG)
 ESQUINA_SURESTE = (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MAXIMA_DEG)
 
@@ -92,46 +75,32 @@ ESQUINA_SURESTE = (geo.LATITUD_MINIMA_DEG, geo.LONGITUD_MAXIMA_DEG)
 
 def oscurecer_tesela(imagen):
     """
-    Convierte una tesela de OpenStreetMap (clara) en una oscura, del azul noche de la aplicación.
-    Si solo se invirtiera, quedaría como un negativo fotográfico; con los pasos 3 a 5 queda en pocos
-    tonos de azul, con la costa, las carreteras principales y los nombres a la vista, pero apagados
-    para que no compitan con los aviones.
+    Pasa una tesela de OpenStreetMap a la versión oscura: gris, invertida, con menos contraste
+    y teñida de azul. Invertirla sin más quedaba como un negativo y los nombres deslumbraban.
     """
-    # 1. Gris: el color de OpenStreetMap (verde de los parques, naranja de las carreteras...) ya no hace falta
     gris = imagen.convert("L")
-    # 2. Invertida: el suelo, que era casi blanco, pasa a casi negro, y los nombres, negros, pasan a claros
     invertida = ImageOps.invert(gris)
-    # 3. Menos contraste, para que los nombres no deslumbren y el suelo no sea negro del todo
+    # Bajando contraste y brillo los aviones son lo más claro del mapa
     suave = ImageEnhance.Contrast(invertida).enhance(CONTRASTE_MAPA_OSCURO)
-    # 4. Un poco más oscura, para que los aviones sean lo más claro del mapa
     apagada = ImageEnhance.Brightness(suave).enhance(BRILLO_MAPA_OSCURO)
-    # 5. Tono azul: cada gris pasa a un color entre MAPA_OSCURO_NEGRO, MAPA_OSCURO_MEDIO y MAPA_OSCURO_BLANCO
     return ImageOps.colorize(apagada, black=estilo.MAPA_OSCURO_NEGRO, mid=estilo.MAPA_OSCURO_MEDIO,
                              white=estilo.MAPA_OSCURO_BLANCO)
 
 
 class MapaOSM(tkintermapview.TkinterMapView):
     """
-    El mapa de tkintermapview, con dos cambios:
-      - pide las teselas con nuestro User-Agent. tkintermapview 1.29 escribe el User-Agent
-        "TkinterMapView" dentro de request_image y no permite cambiarlo, así que esta clase hija
-        sobrescribe ese método;
-      - en modo oscuro (self.oscuro), cada tesela se oscurece al descargarla (oscurecer_tesela). Se
-        guarda ya oscurecida en la caché, así que se oscurece una sola vez y no frena la simulación.
+    TkinterMapView con nuestro User-Agent (la librería lo tiene fijo en request_image, por eso
+    se sobrescribe) y con modo oscuro. Las teselas oscuras se guardan ya oscurecidas en la caché.
     """
 
     def __init__(self, padre, **opciones):
-        # Antes de crear el mapa: al crearse, tkintermapview ya empieza a pedir teselas
-        self.oscuro = False             # al empezar, el mapa claro (el original de OpenStreetMap)
+        # Tiene que ir antes del super(): al crearse ya empieza a pedir teselas
+        self.oscuro = False
         super().__init__(padre, **opciones)
         self.poner_teselas_vacias()
 
     def poner_teselas_vacias(self):
-        """
-        Teselas que tkintermapview pone mientras una no ha llegado (empty_tile_image) o si no existe
-        (not_loaded_tile_image). Las suyas son gris claro y blanca: en el mapa oscuro se verían como
-        cuadros claros, así que se cambian por unas del color del mapa.
-        """
+        """Cambia las teselas de relleno por unas del color del mapa (en oscuro se veían cuadros claros)."""
         if self.oscuro:
             vacia = Image.new("RGB", (self.tile_size, self.tile_size), estilo.TESELA_VACIA_OSCURO)
             no_encontrada = vacia
@@ -142,7 +111,7 @@ class MapaOSM(tkintermapview.TkinterMapView):
         self.not_loaded_tile_image = ImageTk.PhotoImage(no_encontrada)
 
     def cambiar_modo(self, oscuro):
-        """Pasa a mapa oscuro o claro: vacía la caché de teselas y las vuelve a pedir todas."""
+        """Cambia entre oscuro y claro; vacía la caché y vuelve a pedir las teselas."""
         self.oscuro = oscuro
         self.poner_teselas_vacias()
         self.tile_image_cache = {}
@@ -150,46 +119,39 @@ class MapaOSM(tkintermapview.TkinterMapView):
 
     def request_image(self, zoom, x, y, db_cursor=None):
         """
-        Copia de TkinterMapView.request_image (tkintermapview 1.29, map_widget.py) con estos cambios:
-          - la petición lleva USER_AGENT en lugar de "TkinterMapView";
-          - la petición espera como mucho TIEMPO_MAXIMO_TESELA_S (el original no tenía límite);
-          - en modo oscuro, la tesela se oscurece antes de mostrarla y guardarla;
-          - se quita la lectura de teselas de una base de datos (es para usar el mapa sin conexión,
-            que la política de OpenStreetMap no permite) y la capa superpuesta, que no se usa.
-        Las variables tienen los nombres del original para poder compararlo.
-        tkintermapview llama a este método desde su hilo de carga de teselas, no desde el de la ventana.
+        Versión de request_image de tkintermapview 1.29 con nuestro User-Agent, un timeout y el
+        oscurecido. Sin la parte de base de datos ni la capa superpuesta (no se usan).
+        Se llama desde el hilo de teselas de la librería; las variables se llaman como en el original.
         """
         try:
-            oscuro = self.oscuro        # el modo cuando se pide; si cambia mientras llega, no se guarda
+            oscuro = self.oscuro        # si cambia el modo mientras llega, no se guarda
             url = self.tile_server.replace("{x}", str(x)).replace("{y}", str(y)).replace("{z}", str(zoom))
-            # El original ponía headers={"User-Agent": "TkinterMapView"} y no tenía timeout
             respuesta = requests.get(url, stream=True, headers={"User-Agent": USER_AGENT},
                                      timeout=TIEMPO_MAXIMO_TESELA_S)
             image = Image.open(respuesta.raw)
             if oscuro:
                 image = oscurecer_tesela(image)
 
-            # Si la ventana se ha cerrado, o se ha cambiado de mapa mientras llegaba, no se usa la imagen
+            # Ventana cerrada o modo cambiado mientras llegaba
             if self.running and oscuro == self.oscuro:
                 image_tk = ImageTk.PhotoImage(image)
             else:
                 return self.empty_tile_image
 
-            # Caché en memoria, solo durante la sesión
             self.tile_image_cache[f"{zoom}{x}{y}"] = image_tk
             return image_tk
 
         except PIL.UnidentifiedImageError:
-            # No hay tesela para esa posición
+            # No existe tesela ahí
             self.tile_image_cache[f"{zoom}{x}{y}"] = self.empty_tile_image
             return self.empty_tile_image
 
         except requests.exceptions.ConnectionError:
-            # Sin conexión: tesela vacía (gris); los aviones se siguen viendo
+            # Sin internet los aviones se siguen viendo
             return self.empty_tile_image
 
         except Exception:
-            # Sin conexión, sin respuesta a tiempo u otro fallo: tesela vacía para que el mapa siga funcionando
+            # Timeout u otro error, que el mapa siga funcionando
             return self.empty_tile_image
 
 
@@ -198,18 +160,18 @@ class MapaOSM(tkintermapview.TkinterMapView):
 # =============================================================================
 
 def puntos_silueta(tamano):
-    """Puntos del polígono de la silueta completa, escalados a un cuadrado de 'tamano' píxeles."""
+    """Polígono de la silueta entera, escalado a 'tamano' píxeles."""
     puntos = []
     for x, y in SILUETA_MITAD_DERECHA:
         puntos.append((x * tamano, y * tamano))
-    # Mitad izquierda: los mismos puntos reflejados, de la cola a la nariz
+    # Mitad izquierda reflejada, de la cola a la nariz
     for x, y in reversed(SILUETA_MITAD_DERECHA[1:-1]):
         puntos.append(((1 - x) * tamano, y * tamano))
     return puntos
 
 
 def dibujar_silueta(color, tamano, color_borde, ancho_borde):
-    """Silueta de avión mirando al norte, con fondo transparente (imagen de Pillow)."""
+    """Silueta mirando al norte con fondo transparente."""
     grande = tamano * ESCALA_DIBUJO
     imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
     dibujo = ImageDraw.Draw(imagen)
@@ -219,9 +181,8 @@ def dibujar_silueta(color, tamano, color_borde, ancho_borde):
 
 def dibujar_antena(color, tamano):
     """
-    Icono del transponder fijo: una torre con dos ondas a cada lado. Se dibuja dos veces: primero
-    más gruesa y del color del borde de los iconos, y encima, del color de la antena. Así lleva un
-    contorno oscuro, como las siluetas, y se ve sobre el mapa oscuro y sobre el claro.
+    Antena del transponder fijo. Se pinta dos veces (gruesa y oscura, y encima fina) para que
+    tenga borde y se vea en los dos mapas.
     """
     grande = tamano * ESCALA_DIBUJO
     imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
@@ -230,14 +191,14 @@ def dibujar_antena(color, tamano):
     punta_y = grande * 0.32
     pasadas = [(estilo.BORDE_ICONO, 4 * ESCALA_DIBUJO), (color, 2 * ESCALA_DIBUJO)]
     for tono, grosor in pasadas:
-        # Torre: mástil y patas
+        # mástil y patas
         dibujo.line([(centro_x, punta_y), (centro_x, grande * 0.95)], fill=tono, width=grosor)
         dibujo.line([(centro_x, grande * 0.55), (grande * 0.30, grande * 0.95)], fill=tono, width=grosor)
         dibujo.line([(centro_x, grande * 0.55), (grande * 0.70, grande * 0.95)], fill=tono, width=grosor)
         radio_punta = grande * 0.07 + grosor / 4
         dibujo.ellipse((centro_x - radio_punta, punta_y - radio_punta, centro_x + radio_punta,
                         punta_y + radio_punta), fill=tono)
-        # Ondas: arcos a la derecha (de -45° a 45°) y a la izquierda (de 135° a 225°)
+        # ondas a los dos lados
         for radio in (grande * 0.18, grande * 0.32):
             caja = (centro_x - radio, punta_y - radio, centro_x + radio, punta_y + radio)
             dibujo.arc(caja, start=-45, end=45, fill=tono, width=grosor)
@@ -246,7 +207,7 @@ def dibujar_antena(color, tamano):
 
 
 def dibujar_triangulo(color, tamano):
-    """Triángulo con borde blanco: la estación radar de Barcelona."""
+    """Triángulo del radar de Barcelona."""
     imagen = Image.new("RGBA", (tamano, tamano), (0, 0, 0, 0))
     dibujo = ImageDraw.Draw(imagen)
     dibujo.polygon([(tamano / 2, 1), (tamano - 2, tamano - 2), (1, tamano - 2)],
@@ -255,7 +216,7 @@ def dibujar_triangulo(color, tamano):
 
 
 def dibujar_punto(color, tamano, color_borde, ancho_borde):
-    """Punto redondo con borde: los blancos puros, que no tienen silueta ni rumbo."""
+    """Punto para los blancos puros (no tienen rumbo)."""
     grande = tamano * ESCALA_DIBUJO
     imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
     ImageDraw.Draw(imagen).ellipse((0, 0, grande - 1, grande - 1), fill=color, outline=color_borde,
@@ -264,7 +225,7 @@ def dibujar_punto(color, tamano, color_borde, ancho_borde):
 
 
 def dibujar_icono_tabla(color, tamano):
-    """Icono de la pestaña Datos: una tabla con su fila de cabecera y una columna."""
+    """Icono de la pestaña Datos."""
     grande = tamano * ESCALA_DIBUJO
     imagen = Image.new("RGBA", (grande, grande), (0, 0, 0, 0))
     dibujo = ImageDraw.Draw(imagen)
@@ -277,37 +238,33 @@ def dibujar_icono_tabla(color, tamano):
 
 
 def dibujar_icono_avion(color, tamano):
-    """Icono de la pestaña Simulación: la misma silueta de los aviones del mapa, girada hacia el noreste."""
+    """Icono de la pestaña Simulación, la silueta girada 45 grados."""
     return dibujar_silueta(color, tamano, color, 1).rotate(-45, resample=Image.BICUBIC)
 
 
 def dibujar_rectangulo(color, tamano):
-    """Rectángulo vacío: la zona del filtro geográfico, para la leyenda."""
+    """Rectángulo de la leyenda (zona del filtro)."""
     imagen = Image.new("RGBA", (tamano, tamano), (0, 0, 0, 0))
     ImageDraw.Draw(imagen).rectangle((1, 4, tamano - 2, tamano - 5), outline=color, width=2)
     return imagen
 
 
 def dibujar_linea(color, tamano):
-    """Línea horizontal: la estela, para la leyenda."""
+    """Línea de la estela para la leyenda."""
     imagen = Image.new("RGBA", (tamano, tamano), (0, 0, 0, 0))
     ImageDraw.Draw(imagen).line([(1, tamano / 2), (tamano - 2, tamano / 2)], fill=color, width=3)
     return imagen
 
 
 def crear_iconos(app):
-    """
-    Crea todos los iconos una sola vez, con la ventana ya creada.
-    Guarda: app.siluetas (categoría, resaltada, giro) -> imagen para el mapa,
-            app.iconos (iconos fijos del mapa) y app.imagenes_leyenda (imágenes de Pillow para la leyenda).
-    """
+    """Crea todos los iconos al principio (hace falta que la ventana ya exista)."""
     colores = {CATEGORIA_048: estilo.RADAR, CATEGORIA_021: estilo.ADSB}
     app.siluetas = {}
     for categoria in colores:
         normal = dibujar_silueta(colores[categoria], TAMANO_SILUETA, estilo.BORDE_ICONO, 1)
         resaltada = dibujar_silueta(colores[categoria], TAMANO_SILUETA_RESALTADA, estilo.RESALTADO, 2)
         for giro in range(NUMERO_GIROS):
-            # rotate() gira en sentido antihorario y el rumbo se mide en sentido horario
+            # rotate() gira al revés que el rumbo, por eso el signo menos
             angulo = -giro * PASO_GIRO_DEG
             app.siluetas[(categoria, False, giro)] = ImageTk.PhotoImage(
                 normal.rotate(angulo, resample=Image.BICUBIC))
@@ -324,7 +281,7 @@ def crear_iconos(app):
         "blanco_puro": ImageTk.PhotoImage(blanco_puro),
         "blanco_puro_resaltado": ImageTk.PhotoImage(blanco_puro_resaltado),
     }
-    # El punto de la leyenda va centrado en un cuadrado del tamaño de los demás iconos
+    # El punto se centra en un cuadrado como el de los demás iconos de la leyenda
     punto_leyenda = Image.new("RGBA", (TAMANO_LEYENDA, TAMANO_LEYENDA), (0, 0, 0, 0))
     margen = (TAMANO_LEYENDA - TAMANO_BLANCO_PURO) // 2
     punto_leyenda.paste(blanco_puro, (margen, margen))
@@ -345,7 +302,7 @@ def crear_iconos(app):
 # =============================================================================
 
 def configurar_mapa(app):
-    """Elige el servidor de teselas (OpenStreetMap) y dibuja la zona del filtro y el radar de BCN."""
+    """Pone el servidor de teselas y dibuja la zona del filtro y el radar."""
     app.mapa.set_tile_server(SERVIDOR_TESELAS, max_zoom=ZOOM_MAXIMO_SERVIDOR)
 
     esquinas = [
@@ -363,17 +320,14 @@ def configurar_mapa(app):
 
 
 def color_etiquetas(app):
-    """Color de las etiquetas del mapa: claro sobre el mapa oscuro y oscuro sobre el claro."""
+    """Color de las etiquetas según el mapa."""
     if app.mapa.oscuro:
         return estilo.ETIQUETA_MAPA_OSCURO
     return estilo.ETIQUETA_MAPA_CLARO
 
 
 def cambiar_aspecto_mapa(app, oscuro):
-    """
-    Selector Mapa: pasa al mapa oscuro o al claro (MapaOSM.cambiar_modo) y cambia el color de las
-    etiquetas que ya están dibujadas (los aviones y "Radar BCN").
-    """
+    """Cambia a mapa oscuro o claro y repinta las etiquetas que ya están."""
     app.mapa.cambiar_modo(oscuro)
     color = color_etiquetas(app)
     for marcador in app.mapa.canvas_marker_list:
@@ -389,12 +343,8 @@ def encuadrar_zona(app):
 
 def centrar_en(app, latitud, longitud):
     """
-    Centra el mapa en esa posición sin cambiar el zoom.
-    tkintermapview guarda qué parte del mundo se ve con las esquinas superior izquierda e inferior
-    derecha, en coordenadas de tesela. Aquí se desplazan las dos esquinas lo que haga falta para que
-    el centro quede en la posición y se redibuja con draw_move, lo mismo que hace la librería al
-    arrastrar el mapa con el ratón. set_position también centraría, pero vuelve a crear todas las
-    teselas y, con "Seguir" a x60, se notaría.
+    Centra el mapa sin cambiar el zoom, moviendo las esquinas (en coordenadas de tesela) y con
+    draw_move, como al arrastrar. set_position rehace todas las teselas y con "Seguir" se notaba.
     """
     mapa = app.mapa
     destino_x, destino_y = tkintermapview.decimal_to_osm(latitud, longitud, round(mapa.zoom))
@@ -409,7 +359,7 @@ def centrar_en(app, latitud, longitud):
 
 
 def centrar_en_avion(app, avion):
-    """Centra el mapa en la última posición del avión."""
+    """Centra el mapa en el avión."""
     centrar_en(app, valor(avion["fila"], "LAT"), valor(avion["fila"], "LON"))
 
 
@@ -418,7 +368,7 @@ def centrar_en_avion(app, avion):
 # =============================================================================
 
 def sistema_visible(app, categoria):
-    """True si el selector Radar / ADS-B / Ambos permite ver esa categoría."""
+    """Mira si el selector Sistema deja ver esa categoría."""
     sistema = app.selector_sistema.get()
     if sistema == "Radar":
         return categoria == CATEGORIA_048
@@ -428,10 +378,7 @@ def sistema_visible(app, categoria):
 
 
 def pareja_otro_sistema(identificador):
-    """
-    El mismo avión en el otro sistema: misma TA y la otra categoría.
-    Un avión identificado por track number (sin TA) no tiene pareja: devuelve None.
-    """
+    """El mismo avión visto por el otro sistema (None si no tiene TA)."""
     categoria = identificador[0]
     nombre = identificador[1]
     if nombre.startswith("TN"):
@@ -442,11 +389,7 @@ def pareja_otro_sistema(identificador):
 
 
 def avion_en_mapa_por_ta(app, direccion_modo_s):
-    """
-    Silueta del mapa de un avión del tráfico (por su TA): la de radar si está dibujada y, si no,
-    la de ADS-B. Devuelve su identificador, o None si el avión no está en el mapa (ha desaparecido
-    o el selector Sistema oculta los sistemas que lo ven).
-    """
+    """Busca la silueta de esa TA en el mapa, primero la de radar. None si no está."""
     for categoria in (CATEGORIA_048, CATEGORIA_021):
         if (categoria, direccion_modo_s) in app.marcadores:
             return (categoria, direccion_modo_s)
@@ -455,23 +398,19 @@ def avion_en_mapa_por_ta(app, direccion_modo_s):
 
 def rumbo_para_dibujar(identificador, avion):
     """
-    Rumbo en grados (0 = norte, sentido horario) con el que se gira la silueta, o None si no se sabe.
-        - Radar: el rumbo de I048/200.
-        - ADS-B: no se decodifica su rumbo (el enunciado no pide esos DI), así que se usa la
-          dirección en la que se ha movido. Es solo para dibujar: no va al CSV ni al panel.
+    Rumbo para girar la silueta (grados desde el norte) o None. En radar es el de I048/200; en
+    ADS-B no lo decodificamos, así que se saca de hacia dónde se ha movido (solo para dibujar).
     """
     if identificador[0] == CATEGORIA_048:
         return valor(avion["fila"], "I048_200_HDG_DEG")
 
-    # La dirección solo se recalcula cuando el avión se ha movido al menos DISTANCIA_MINIMA_RUMBO_M
-    # desde la posición con la que se calculó la última vez; si no, se mantiene la anterior. Así
-    # dos posiciones casi iguales no hacen que la silueta dé bandazos.
+    # Solo se recalcula si se ha movido 100 m o más, si no la silueta daba bandazos
     latitud, longitud = avion["estela"][-1]
     if avion["posicion_rumbo"] is None:
         avion["posicion_rumbo"] = (latitud, longitud)
         return None
     latitud_anterior, longitud_anterior = avion["posicion_rumbo"]
-    # Distancia aproximada en un plano local: la diferencia de longitud se multiplica por cos(latitud)
+    # Aproximación plana, la longitud se multiplica por cos(latitud)
     hacia_el_este = (longitud - longitud_anterior) * math.cos(math.radians(latitud)) * METROS_POR_GRADO
     hacia_el_norte = (latitud - latitud_anterior) * METROS_POR_GRADO
     if math.hypot(hacia_el_este, hacia_el_norte) >= DISTANCIA_MINIMA_RUMBO_M:
@@ -481,10 +420,7 @@ def rumbo_para_dibujar(identificador, avion):
 
 
 def icono_de_avion(app, identificador, avion):
-    """
-    Icono del avión: la antena si es el transponder fijo; un punto gris si es un blanco puro
-    (no tiene silueta ni rumbo); si no, su silueta girada según su rumbo.
-    """
+    """Antena, punto o silueta girada, según qué sea."""
     resaltado = identificador in app.aviones_resaltados
     if filtros.es_transponder_fijo(avion["fila"]):
         return app.iconos["transponder_fijo"]
@@ -495,17 +431,14 @@ def icono_de_avion(app, identificador, avion):
 
     rumbo = rumbo_para_dibujar(identificador, avion)
     if rumbo is None:
-        giro = 0        # sin rumbo, la silueta se dibuja sin girar
+        giro = 0
     else:
         giro = int(round(rumbo / PASO_GIRO_DEG)) % NUMERO_GIROS
     return app.siluetas[(identificador[0], resaltado, giro)]
 
 
 def texto_velocidad(fila):
-    """
-    Velocidad respecto al suelo (GS) en nudos, sin decimales: la de I048/200 o, si no viene, la
-    del BDS 5.0. En ADS-B no hay, porque no se decodifica: devuelve "".
-    """
+    """GS en nudos (I048/200 o BDS 5.0). En ADS-B no hay y devuelve ""."""
     velocidad = valor(fila, "I048_200_GS_KT")
     if velocidad is None:
         velocidad = valor(fila, "BDS50_GS")
@@ -516,11 +449,8 @@ def texto_velocidad(fila):
 
 def lleva_etiqueta(app, identificador):
     """
-    False si este avión del tráfico se dibuja sin etiqueta:
-        - si también se ve por radar, solo lleva etiqueta la silueta de radar (las dos etiquetas
-          casi se superponen y no se leería ninguna), así que la de ADS-B va sin texto;
-        - los aviones en tierra van sin etiqueta, porque en el aeropuerto se amontonan y lo tapan;
-          el avión seleccionado sí la lleva.
+    Si el avión lo ve también el radar, la etiqueta va solo en la silueta de radar (si no se
+    pisan). En tierra no llevan, se amontonan en el aeropuerto, salvo el seleccionado.
     """
     direccion_modo_s = identificador[1]
     if identificador[0] == CATEGORIA_021 and (CATEGORIA_048, direccion_modo_s) in app.marcadores:
@@ -532,20 +462,14 @@ def lleva_etiqueta(app, identificador):
 
 def texto_etiqueta(app, identificador, avion):
     """
-    Etiqueta del marcador, como el bloque de datos de una pantalla radar de control:
-        línea 1: callsign o, si no hay, la TA (o el track number si tampoco hay TA)
-        línea 2: nivel en cientos de pies con su tendencia y la velocidad GS, por ejemplo "045↑ 210".
-                 El nivel es el de simulacion.texto_nivel sin el prefijo A o FL, para que sea corto.
-    Los blancos puros llevan su tipo y el Modo 3/A o, si no hay, el track number (por ejemplo
-    "PSR 45"). El transponder fijo solo lleva su Modo 3/A (7777), y solo si está seleccionado.
-    Vacía si las etiquetas están ocultas o si el avión no lleva etiqueta (lleva_etiqueta).
+    Etiqueta tipo radar: callsign en la primera línea y nivel con tendencia y GS en la segunda
+    ("045↑ 210"). Los blancos puros llevan tipo y Modo 3/A, p. ej. "PSR 45".
     """
     if app.casilla_etiquetas.get() == 0:
         return ""
     fila = avion["fila"]
     if filtros.es_transponder_fijo(fila):
-        # Sin etiqueta, salvo si está seleccionado: está en LEBL, junto a "Radar BCN" y a los aviones que
-        # despegan, y su etiqueta se montaba con las de ellos (la leyenda explica la antena)
+        # Está en LEBL y su etiqueta se montaba con la de "Radar BCN", así que solo si está seleccionado
         if app.avion_seleccionado == identificador:
             return filtros.MODO_3A_TRANSPONDER_FIJO
         return ""
@@ -571,10 +495,7 @@ def texto_etiqueta(app, identificador, avion):
 
 
 def dibujar_avion(app, identificador, avion):
-    """
-    Crea el marcador del avión si aún no lo tiene o lo mueve a su última posición. También su estela.
-    El texto de la etiqueta solo se cambia si es distinto del que ya tenía.
-    """
+    """Crea o mueve el marcador del avión, y su estela."""
     fila = avion["fila"]
     latitud = valor(fila, "LAT")
     longitud = valor(fila, "LON")
@@ -584,9 +505,9 @@ def dibujar_avion(app, identificador, avion):
     if identificador in app.marcadores:
         marcador = app.marcadores[identificador]
         if marcador.icon is not icono:
-            marcador.change_icon(icono)       # solo cuando cambia el giro o el resaltado
+            marcador.change_icon(icono)
         if marcador.text != etiqueta:
-            marcador.text = etiqueta          # se dibuja con el set_position de la línea siguiente
+            marcador.text = etiqueta          # lo pinta el set_position de abajo
         marcador.set_position(latitud, longitud)
     else:
         marcador = app.mapa.set_marker(latitud, longitud, text=etiqueta, icon=icono,
@@ -598,10 +519,10 @@ def dibujar_avion(app, identificador, avion):
 
 
 def dibujar_estela(app, identificador, avion):
-    """Línea con las últimas posiciones del avión. Hacen falta al menos 2 posiciones."""
+    """Dibuja o actualiza la estela."""
     if app.casilla_estelas.get() == 0 or len(avion["estela"]) < 2:
         return
-    posiciones = list(avion["estela"])        # copia: la lista del avión sigue cambiando
+    posiciones = list(avion["estela"])        # copia, la del avión se sigue modificando
     if identificador in app.estelas:
         app.estelas[identificador].set_position_list(posiciones)
     else:
@@ -614,8 +535,8 @@ def dibujar_estela(app, identificador, avion):
 
 def quitar_marcador(app, marcador):
     """
-    Quita un marcador del mapa. Es lo mismo que marcador.delete() de tkintermapview, pero sin su
-    canvas.update(), que redibuja toda la ventana y atiende clics pendientes en mitad de un salto.
+    Como marcador.delete() pero sin el canvas.update(), que repintaba toda la ventana
+    en mitad de un salto.
     """
     if marcador in app.mapa.canvas_marker_list:
         app.mapa.canvas_marker_list.remove(marcador)
@@ -632,7 +553,7 @@ def borrar_estela(app, identificador):
 
 
 def borrar_avion(app, identificador):
-    """Quita del mapa el marcador y la estela de un avión."""
+    """Borra marcador y estela."""
     if identificador in app.marcadores:
         quitar_marcador(app, app.marcadores[identificador])
         del app.marcadores[identificador]
@@ -640,7 +561,7 @@ def borrar_avion(app, identificador):
 
 
 def borrar_todos(app):
-    """Quita del mapa todos los aviones y sus estelas."""
+    """Deja el mapa sin aviones."""
     identificadores = list(app.marcadores.keys()) + list(app.estelas.keys())
     for identificador in identificadores:
         borrar_avion(app, identificador)
@@ -648,9 +569,8 @@ def borrar_todos(app):
 
 def redibujar_todos(app, aviones):
     """
-    Quita todos los aviones y vuelve a dibujar los que están a la vista y son de un sistema visible.
-    Al final se repasan las etiquetas: al dibujar una silueta ADS-B aún no se sabe si después
-    se dibujará la de radar del mismo avión.
+    Borra todo y vuelve a dibujar los aviones de los sistemas visibles. Las etiquetas se repasan
+    al final porque al pintar la ADS-B todavía no se sabe si vendrá la de radar.
     """
     borrar_todos(app)
     for identificador in aviones:
@@ -660,16 +580,16 @@ def redibujar_todos(app, aviones):
 
 
 def poner_etiqueta(app, identificador, aviones):
-    """Vuelve a calcular la etiqueta de un marcador y solo la cambia si es distinta."""
+    """Recalcula la etiqueta y la cambia solo si es distinta."""
     marcador = app.marcadores[identificador]
     texto = texto_etiqueta(app, identificador, aviones[identificador])
     if marcador.text != texto:
-        # Para ocultarla se pone texto vacío: con None, tkintermapview no la vuelve a mostrar
+        # Para ocultarla, "" y no None (con None tkintermapview ya no la vuelve a enseñar)
         marcador.set_text(texto)
 
 
 def actualizar_etiquetas(app, aviones):
-    """Repasa la etiqueta de todos los marcadores (casilla Etiquetas o después de redibujar)."""
+    """Repasa las etiquetas de todos los marcadores."""
     for identificador in app.marcadores:
         if identificador in aviones:
             poner_etiqueta(app, identificador, aviones)
@@ -677,10 +597,8 @@ def actualizar_etiquetas(app, aviones):
 
 def actualizar_etiquetas_de(app, aviones, direcciones):
     """
-    Repasa la etiqueta de las dos siluetas (radar y ADS-B) de los aviones con esas TA. Se usa en
-    cada salto con los aviones que han cambiado o desaparecido: si una silueta de radar aparece o
-    desaparece, la etiqueta pasa de una silueta a la otra; si el avión aterriza o despega, se quita
-    o se pone. Así solo se tocan las etiquetas de esos aviones, y solo si cambia su texto.
+    Igual que la anterior pero solo para esas TA (las dos siluetas). Se usa en cada salto,
+    porque la etiqueta puede pasar de una silueta a otra o quitarse al aterrizar.
     """
     for direccion_modo_s in direcciones:
         for categoria in (CATEGORIA_048, CATEGORIA_021):
@@ -690,10 +608,7 @@ def actualizar_etiquetas_de(app, aviones, direcciones):
 
 
 def actualizar_resaltado(app, aviones):
-    """
-    Resalta el avión seleccionado y, si está en el mapa, el mismo avión visto por el otro
-    sistema (misma TA). Solo cambia el icono de los marcadores que lo necesitan.
-    """
+    """Resalta el avión seleccionado y su pareja del otro sistema."""
     app.aviones_resaltados = set()
     if app.avion_seleccionado is not None:
         app.aviones_resaltados.add(app.avion_seleccionado)
@@ -710,7 +625,7 @@ def actualizar_resaltado(app, aviones):
 
 
 def categorias_visibles(app):
-    """Categorías que deja ver el selector Sistema: (48, 21), (48,) o (21,)."""
+    """Tupla con las categorías visibles, p. ej. (48, 21)."""
     visibles = []
     for categoria in (CATEGORIA_048, CATEGORIA_021):
         if sistema_visible(app, categoria):
@@ -719,10 +634,7 @@ def categorias_visibles(app):
 
 
 def contar_en_mapa(app, aviones):
-    """
-    Devuelve (radar, ADS-B, blancos puros) dibujados en el mapa. Los blancos puros no se
-    cuentan como radar y el transponder fijo no se cuenta.
-    """
+    """Cuenta (radar, ADS-B, blancos puros) en el mapa. El transponder fijo no cuenta."""
     radar = 0
     adsb = 0
     blancos_puros = 0
@@ -746,7 +658,7 @@ def contar_en_mapa(app, aviones):
 # =============================================================================
 
 def texto_numero(numero, decimales, unidad):
-    """Número con punto decimal (la interfaz va en inglés) y su unidad, o "-" si no hay dato."""
+    """Número con punto decimal (la interfaz está en inglés) y unidad, o "-"."""
     if numero is None:
         return "-"
     texto = format(numero, "." + str(decimales) + "f")
@@ -758,19 +670,14 @@ def texto_numero(numero, decimales, unidad):
 
 
 def texto_o_guion(texto):
-    """El texto tal cual, o "-" si no hay dato."""
+    """Pone "-" si no hay texto."""
     if texto is None or texto == "":
         return "-"
     return texto
 
 
 def texto_informacion(avion, identificador, texto_estado):
-    """
-    Texto del panel con los datos del último mensaje del avión seleccionado. Si el avión también
-    está en el mapa por el otro sistema lo indica el selector Radar / ADS-B del panel, no este texto.
-    texto_estado es el de simulacion.texto_estado_avion ("airborne", "on ground"...).
-    La hora del mensaje se guarda con coma decimal (la del CSV); aquí se escribe con punto.
-    """
+    """Texto del panel del avión seleccionado, con los datos de su último mensaje."""
     fila = avion["fila"]
     lineas = []
     if filtros.es_transponder_fijo(fila):

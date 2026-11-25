@@ -1,37 +1,24 @@
 """
-filtros.py
-
-Filtros sobre las filas ya decodificadas.
-
-Cada filtro es una función que recibe una lista de filas y devuelve otra lista
-con las que cumplen la condición, en el mismo orden. No se copian las filas:
-la lista nueva apunta a las mismas tuplas, así que filtrar no gasta RAM extra.
-Como cada filtro devuelve una lista, se pueden encadenar: eso es lo que
-hace aplicar_filtros().
-
-Los filtros nunca vuelven a leer el .ast: trabajan sobre la lista en memoria.
+Filtros sobre las filas ya decodificadas. Cada uno recibe una lista de filas y devuelve
+otra con las que pasan (las mismas tuplas, sin copiarlas), así se pueden encadenar.
 """
 
 from funciones.exportar_csv import valor
 
 CATEGORIA_048 = 48
-ESTADOS_EN_TIERRA = (1, 3)      # I048/230 STAT: 1 y 3 = "aircraft on ground" (CAT048 v1.31, §5.2.23)
+ESTADOS_EN_TIERRA = (1, 3)      # STAT de I048/230: 1 y 3 son "aircraft on ground"
 PIES_POR_FL = 100
 
-# Blanco puro: TYP de I048/020 = 0, 1, 2 o 3 (sin detección, PSR, SSR y PSR+SSR). Ninguno viene
-# de una interrogación Modo S; TYP = 0 también cuenta, porque tampoco es una detección Modo S.
+# Blanco puro: TYP de I048/020 de 0 a 3 (sin detección, PSR, SSR, PSR+SSR), o sea,
+# nada que venga de Modo S. El 0 también cuenta.
 TIPOS_BLANCO_PURO = (0, 1, 2, 3)
 
-# Transponder fijo: se identifica solo por su Modo 3/A 7777, el del transponder de referencia en
-# tierra. El bit RAB de I048/020 no se usa para esto.
+# El transponder fijo de tierra se reconoce solo por el 7777 (el bit RAB no se mira)
 MODO_3A_TRANSPONDER_FIJO = "7777"
 
 
 def filtrar_por_categoria(filas, categoria):
-    """
-    Categoría ASTERIX.
-    Columna: CAT. Se quedan las filas cuya CAT es la indicada (48 o 21).
-    """
+    """Deja solo las filas de la categoría pedida (48 o 21)."""
     resultado = []
     for fila in filas:
         if valor(fila, "CAT") == categoria:
@@ -40,21 +27,14 @@ def filtrar_por_categoria(filas, categoria):
 
 
 def es_blanco_puro(fila):
-    """
-    True si el mensaje es un blanco puro: CAT048 con el TYP de I048/020 en TIPOS_BLANCO_PURO
-    (0, 1, 2 o 3: sin detección, PSR, SSR y PSR+SSR).
-    Los TYP 4 a 7 vienen de una interrogación Modo S y no lo son. También lo usa el mapa.
-    """
+    """Blanco puro = CAT048 con TYP entre 0 y 3 (el mapa también lo usa)."""
     if valor(fila, "CAT") != CATEGORIA_048:
         return False
     return valor(fila, "I048_020_TYP") in TIPOS_BLANCO_PURO
 
 
 def quitar_blancos_puros(filas):
-    """
-    Quitar blancos puros. Solo afecta a CAT048.
-    Columna: I048_020_TYP. Criterio: es_blanco_puro().
-    """
+    """Quita los blancos puros (solo hay en CAT048)."""
     resultado = []
     for fila in filas:
         if not es_blanco_puro(fila):
@@ -63,18 +43,12 @@ def quitar_blancos_puros(filas):
 
 
 def es_transponder_fijo(fila):
-    """
-    True si el mensaje es del transponder fijo: Modo 3/A igual a MODO_3A_TRANSPONDER_FIJO (7777).
-    También lo usa el mapa.
-    """
+    """True si el Modo 3/A es 7777. Se usa también en el mapa."""
     return valor(fila, "MODE3A") == MODO_3A_TRANSPONDER_FIJO
 
 
 def quitar_transponder_fijo(filas):
-    """
-    Quitar transponder fijo. CAT048 y CAT021.
-    Columna: MODE3A. Criterio: es_transponder_fijo().
-    """
+    """Quita los mensajes del transponder fijo, en las dos categorías."""
     resultado = []
     for fila in filas:
         if not es_transponder_fijo(fila):
@@ -84,10 +58,8 @@ def quitar_transponder_fijo(filas):
 
 def quitar_en_tierra(filas):
     """
-    Quitar aeronaves en tierra (filtro optativo "Ground" del enunciado). Solo afecta a CAT048
-    (los CAT021 en tierra ya se descartaron al decodificar, por el bit GBS).
-    Columna: I048_230_STAT. Se quita la fila si STAT es 1 o 3 ("aircraft on ground").
-    Si el mensaje no trae I048/230, se queda: no consta que esté en tierra.
+    Quita los CAT048 con STAT 1 o 3. Los CAT021 en tierra ya se tiran al decodificar (bit GBS),
+    y si no viene I048/230 la fila se queda.
     """
     resultado = []
     for fila in filas:
@@ -98,10 +70,7 @@ def quitar_en_tierra(filas):
 
 
 def solo_con_fl(filas):
-    """
-    Solo mensajes con FL (filtro adicional, lo usa el P3).
-    Columna: FL. Se quedan las filas que tienen nivel de vuelo.
-    """
+    """Deja solo las filas con FL (pensado para el P3)."""
     resultado = []
     for fila in filas:
         if valor(fila, "FL") is not None:
@@ -110,10 +79,7 @@ def solo_con_fl(filas):
 
 
 def altitud_de_fila(fila):
-    """
-    Altitud en ft que usa el filtro de altitud máxima: ALT_CORRECTED_FT si existe y,
-    si no, FL x 100. Devuelve None si la fila no tiene ninguna de las dos.
-    """
+    """La altitud corregida si la hay; si no, FL x 100 (None si no hay ninguna)."""
     altitud_corregida = valor(fila, "ALT_CORRECTED_FT")
     if altitud_corregida is not None:
         return altitud_corregida
@@ -124,12 +90,7 @@ def altitud_de_fila(fila):
 
 
 def filtrar_altitud_maxima(filas, altitud_maxima_ft):
-    """
-    Altitud máxima (filtro adicional, lo usa el P3 con 6000 ft).
-    Columnas: ALT_CORRECTED_FT y, si está vacía, FL x 100.
-    Se quedan las filas con altitud <= altitud_maxima_ft. Las que no tienen ninguna
-    de las dos columnas se quitan, porque no se puede saber si cumplen.
-    """
+    """Se queda con las filas a altitud_maxima_ft o menos; las que no tienen altitud se quitan."""
     resultado = []
     for fila in filas:
         altitud = altitud_de_fila(fila)
@@ -139,12 +100,7 @@ def filtrar_altitud_maxima(filas, altitud_maxima_ft):
 
 
 def buscar_aeronave(filas, texto):
-    """
-    Aeronave (filtro optativo "trayectoria" del enunciado). CAT048 y CAT021.
-    Columnas: TI (callsign), TA (dirección Modo S) y MODE3A.
-    Se quedan las filas en las que el texto aparece dentro de alguna de las tres,
-    sin distinguir mayúsculas. Por ejemplo, "RYR" encuentra todos los Ryanair.
-    """
+    """Busca el texto en TI, TA o MODE3A sin mirar mayúsculas ("RYR" saca todos los Ryanair)."""
     texto = texto.strip().upper()
     resultado = []
     for fila in filas:
@@ -157,7 +113,7 @@ def buscar_aeronave(filas, texto):
 
 
 def hay_filtros_activos(opciones):
-    """True si alguna de las opciones de filtro está activada."""
+    """Dice si hay algún filtro puesto."""
     if opciones["categoria"] is not None:
         return True
     if opciones["quitar_blancos_puros"] or opciones["quitar_transponder_fijo"]:
@@ -170,7 +126,7 @@ def hay_filtros_activos(opciones):
 
 
 def describir_filtros(opciones):
-    """Texto corto con los filtros activos (lo que ve el usuario), por ejemplo "CAT048, no aircraft on ground"."""
+    """Texto con los filtros activos para enseñarlo en la ventana."""
     partes = []
     if opciones["categoria"] is not None:
         partes.append("CAT0" + str(opciones["categoria"]))
@@ -191,15 +147,8 @@ def describir_filtros(opciones):
 
 def aplicar_filtros(filas, opciones):
     """
-    Aplica uno detrás de otro los filtros activos y devuelve las filas que quedan.
-    'opciones' es el diccionario que arma la ventana:
-        "categoria":               None (ambas), 48 o 21
-        "quitar_blancos_puros":    True / False
-        "quitar_transponder_fijo": True / False
-        "quitar_en_tierra":        True / False
-        "solo_con_fl":             True / False
-        "altitud_maxima_ft":       None o un número
-        "aeronave":                "" o el texto a buscar
+    Aplica uno detrás de otro los filtros que estén activos en 'opciones'
+    (el diccionario que monta la ventana).
     """
     resultado = filas
     if opciones["categoria"] is not None:

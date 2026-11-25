@@ -1,18 +1,6 @@
 """
-ventana.py
-
-Construcción de la ventana. Aquí solo se crean y se colocan los elementos;
-lo que hace cada botón está en main.py y los colores y tipografías, en estilo.py.
-
-Cada función recibe la aplicación (app) y guarda en ella los elementos que main.py
-usa después, por ejemplo app.boton_abrir o app.tabla.
-
-    cabecera:         título, grupo, selector de pestaña, fichero cargado y "Abrir fichero"
-    pestaña Datos:    resumen, filtros y exportar a la izquierda; tabla por páginas a la derecha
-    pestaña Simulación: controles y hora (con la barra de tiempo) arriba; aviso de qué se simula
-                      y mapa, con la leyenda y los eventos dentro; tráfico y avión seleccionado
-                      en el panel derecho
-    barra de estado:  qué está pasando y barra de progreso
+Crea y coloca los elementos de la ventana (lo que hacen los botones está en main.py y los
+colores en estilo.py). Cada función guarda en app lo que main.py necesita después.
 """
 
 import ctypes
@@ -29,69 +17,67 @@ from interfaz import estilo
 from interfaz import mapa
 
 TITULO = "ASTERIX Decoder"
-# Tamaño mínimo de la ventana: cabe en un portátil de 1920x1080 al 150 % (unos 1280 x 690 útiles)
+# Mínimo para que quepa en un portátil 1920x1080 al 150 % (quedan unos 1280x690)
 ANCHO_MINIMO = 1100
 ALTO_MINIMO = 600
-# La ventana se abre maximizada. Al pulsar Restaurar ocupa esta parte de la pantalla, centrada
+# Se abre maximizada; al pulsar Restaurar ocupa esta fracción de la pantalla, centrada
 FRACCION_VENTANA_RESTAURADA = 0.85
-# Espera antes de maximizar: con customtkinter, maximizar justo al crear la ventana a veces no hace efecto
+# Con customtkinter, maximizar nada más crear la ventana a veces no hace nada
 ESPERA_MAXIMIZAR_MS = 100
 
-# Ancho de las columnas de la tabla (píxeles): el del texto más largo, con un máximo
+# Columnas de la tabla (px): el ancho del texto más largo, con un tope
 MARGEN_COLUMNA = 24
 ANCHO_MAXIMO_COLUMNA = 220
 
-# Anchos fijos (píxeles) de lo que cambia mientras se trabaja, para que no empuje a nada
+# Anchos fijos (px) de cosas que cambian de texto, para que no muevan lo de al lado
 ANCHO_BARRA_PROGRESO_TABLA = 560
 ANCHO_RELOJ = 170
 
-# Opciones de los selectores (píxeles)
+# Botones de los selectores, en píxeles
 ALTO_SELECTOR = 28
 ANCHO_MINIMO_OPCION = 44
 RADIO_OPCION = 6
 SEPARACION_OPCIONES = 4
 
-# Pestañas Datos / Simulación de la cabecera, en forma de cápsula (píxeles)
+# Pestañas de la cabecera (en forma de cápsula), en píxeles
 ANCHO_PESTANA = 150
 ALTO_PESTANA = 36
-RADIO_PESTANA = 18              # la mitad del alto: los extremos quedan redondos
-MARGEN_PESTANAS = 4             # cápsula de fondo que se ve alrededor de las pestañas
+RADIO_PESTANA = 18              # mitad del alto, así los extremos salen redondos
+MARGEN_PESTANAS = 4             # borde de la cápsula de fondo
 TAMANO_ICONO_PESTANA = 18
 
-# Cuadro "Selected aircraft": líneas de su versión más larga (mapa.texto_informacion de un avión
-# de radar que además es el transponder fijo) y margen interior en píxeles
+# Cuadro "Selected aircraft": líneas del caso más largo (un avión de radar que es el 7777)
+# y margen interior en px
 LINEAS_INFO_AVION = 28
 MARGEN_CUADRO_INFO = 20
 TEXTO_SIN_AVION = "Click an aircraft on the map or in the traffic lists to see its details."
 
-# Listas En vuelo / En tierra del panel de tráfico: filas que se ven sin desplazar y ancho de
-# cada columna (píxeles). En vuelo: callsign, nivel y "Seen by"; en tierra: callsign.
+# Listas de tráfico: filas visibles sin desplazar y ancho de las columnas (px)
 FILAS_LISTA_TRAFICO = 8
 ANCHO_COLUMNA_CALLSIGN = 86
 ANCHO_COLUMNA_NIVEL = 68
 ANCHO_COLUMNA_VISTO_POR = 80
 ANCHO_BARRA_LISTA = 12
-# CTkScrollbar pide 200 píxeles de alto si no se le da otro: con uno pequeño, la barra se estira
-# hasta el alto de su lista en lugar de hacer más alta la tarjeta (sobre todo la de eventos)
+# CTkScrollbar pide 200 px de alto si no se le da otro. Con uno pequeño se estira hasta el alto
+# de la lista en vez de agrandar la tarjeta
 ALTO_MINIMO_BARRA_LISTA = 40
 
-# Recuadros dentro del mapa (leyenda y eventos): separación con el borde del mapa y alto de su
-# título, que se pulsa para recogerlos o mostrarlos (ver Plegable), en píxeles
+# Recuadros encima del mapa (leyenda y eventos): margen con el borde y alto del título (px)
 MARGEN_VENTANA_MAPA = 10
 ALTO_TITULO_PLEGABLE = 24
 ALTO_FILA_LEYENDA = 20
 FLECHA_DESPLEGADA = "▾"
 FLECHA_RECOGIDA = "▸"
 
-# Ventana de eventos dentro del mapa: filas que se ven sin desplazar y ancho de sus columnas (píxeles)
+# Ventana de eventos: filas visibles y ancho de las columnas (px)
 FILAS_VENTANA_EVENTOS = 4
 ANCHO_EVENTO_HORA = 66
 ANCHO_EVENTO_ICONO = 20
 ANCHO_EVENTO_TIPO = 146
-ANCHO_EVENTO_CALLSIGN = 70          # 8 caracteres de ancho fijo; el sistema va justo detrás
+ANCHO_EVENTO_CALLSIGN = 70          # justo para 8 caracteres de ancho fijo
 ANCHO_EVENTO_SISTEMA = 50
 
-# Etiqueta (tag de ttk), icono y color de cada tipo de evento en el registro
+# Tag de ttk, icono y color de cada tipo de evento
 ESTILO_EVENTO = {
     simulacion.NUEVO_CONTACTO: ("contacto", estilo.EVENTO_CONTACTO_ICONO, estilo.EVENTO_CONTACTO_COLOR),
     simulacion.DESPEGA: ("despega", estilo.EVENTO_DESPEGA_ICONO, estilo.EVENTO_DESPEGA_COLOR),
@@ -99,31 +85,28 @@ ESTILO_EVENTO = {
     simulacion.PERDIDA_CONTACTO: ("perdida", estilo.EVENTO_PERDIDA_ICONO, estilo.EVENTO_PERDIDA_COLOR),
 }
 
-# Campo de la hora de "Go to time" (píxeles)
+# Ancho del campo de "Go to time" (px)
 ANCHO_ENTRADA_HORA = 70
 
-# Barra de controles de la simulación: margen interior de la tarjeta y separación entre grupos de
-# controles (píxeles); ver crear_controles_simulacion y ColocadorControles
+# Barra de controles de la simulación: margen interior y separación entre grupos (px)
 MARGEN_CONTROLES = 16
 SEPARACION_GRUPOS_CONTROLES = 24
 
-# Desplazamiento (ver Desplazador): delta que equivale a una unidad. En la tabla, un clic de la
-# rueda (120) baja una fila, como hace Tk; en los paneles, cada 6 de delta es un píxel, como hace
-# customtkinter (20 píxeles por clic).
+# Delta de la rueda que vale una unidad. Tabla: 120, un clic baja una fila (como Tk).
+# Paneles: 6 por píxel, igual que customtkinter (20 px por clic).
 PASO_DESPLAZAMIENTO_TABLA = 120
 PASO_DESPLAZAMIENTO_PANEL = 6
-# En horizontal la unidad de la tabla es un píxel: con 120 por unidad (lo que hace Tk) un clic solo
-# movía 1 píxel. Con 3 por píxel, un clic mueve 40 píxeles y el panel táctil se nota.
+# En horizontal la unidad es un píxel y con 120 un clic movía 1 px; con 3 se mueve 40
 PASO_DESPLAZAMIENTO_TABLA_HORIZONTAL = 3
 
-# Barra de título oscura de Windows (ver poner_barra_titulo_oscura)
+# Atributo de Windows para la barra de título oscura (el 19 es el de Windows 10 antiguos)
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_USE_IMMERSIVE_DARK_MODE_ANTIGUO = 19
 
-# Color de fondo original de cada botón, para devolvérselo al activarlo (ver cambiar_estado)
+# Color original de cada botón, para devolvérselo al reactivarlo
 COLOR_ORIGINAL_BOTONES = {}
 
-# Último estado (True activo, False desactivado) aplicado a cada control (ver cambiar_estado)
+# Último estado puesto a cada control (True = activo)
 ESTADO_CONTROLES = {}
 
 
@@ -132,29 +115,23 @@ ESTADO_CONTROLES = {}
 # =============================================================================
 
 def crear_ventana_principal():
-    """
-    Crea la ventana principal en modo oscuro. Se queda escondida mientras main.py la construye y se
-    enseña ya maximizada (mostrar_maximizada), para que no se vea antes una ventana pequeña.
-    """
+    """Crea la ventana principal en modo oscuro. Empieza escondida y se enseña ya maximizada."""
     ctk.set_appearance_mode("dark")
     raiz = ctk.CTk(fg_color=estilo.FONDO)
     raiz.title(TITULO)
     raiz.minsize(ANCHO_MINIMO, ALTO_MINIMO)
     poner_tamano_restaurado(raiz)
     raiz.withdraw()
-    # after() solo se ejecuta cuando arranca mainloop(), es decir, con la ventana ya construida
+    # after() no corre hasta que arranca mainloop(), o sea, con todo ya construido
     raiz.after(ESPERA_MAXIMIZAR_MS, mostrar_maximizada, raiz)
     return raiz
 
 
 def poner_tamano_restaurado(raiz):
     """
-    Tamaño y posición de la ventana cuando se pulsa Restaurar: FRACCION_VENTANA_RESTAURADA de la
-    pantalla, centrada. Sale del tamaño de la pantalla del ordenador en el que se abre, así que vale
-    para cualquier resolución, y nunca es menor que el tamaño mínimo.
-    winfo_screenwidth() y winfo_screenheight() dan píxeles reales de la pantalla. geometry() de
-    customtkinter multiplica el ancho y el alto por la escala de Windows (125 %, 150 %...), así que
-    antes se dividen por esa escala; la posición (x, y) no la multiplica, así que va en píxeles reales.
+    Tamaño y posición que toma la ventana al pulsar Restaurar (centrada).
+    geometry() de customtkinter multiplica ancho y alto por la escala de Windows, pero no x e y:
+    por eso el tamaño se divide por la escala y la posición va en píxeles reales.
     """
     escala = ctk.ScalingTracker.get_window_scaling(raiz)
     ancho_pantalla = raiz.winfo_screenwidth()
@@ -167,29 +144,23 @@ def poner_tamano_restaurado(raiz):
 
 
 def mostrar_maximizada(raiz):
-    """
-    Enseña la ventana maximizada: el estado "zoomed" de Windows, que ocupa la pantalla y deja la barra
-    de título con los botones de minimizar, restaurar y cerrar (no es pantalla completa sin bordes).
-    """
+    """Enseña la ventana maximizada ("zoomed", no pantalla completa: la barra de título se queda)."""
     raiz.state("zoomed")
     poner_barra_titulo_oscura(raiz)
 
 
 def poner_barra_titulo_oscura(raiz):
     """
-    Pide a Windows la barra de título oscura, para que no quede una franja blanca encima del tema
-    oscuro. Se hace con la función DwmSetWindowAttribute de Windows (dwmapi.dll), llamada con ctypes,
-    con el atributo DWMWA_USE_IMMERSIVE_DARK_MODE = 20 (en Windows 10 anteriores a la versión 20H1
-    el mismo atributo era el 19). Si no funciona (otro sistema o un Windows antiguo), la barra se
-    queda como esté: no es un error.
+    Barra de título oscura con DwmSetWindowAttribute (dwmapi.dll, llamada con ctypes).
+    Si falla, por ejemplo en un Windows viejo, la barra se queda como estaba.
     """
     try:
-        ventana_windows = int(raiz.wm_frame(), 16)      # identificador de la ventana para Windows
+        ventana_windows = int(raiz.wm_frame(), 16)      # handle de la ventana
         valor = ctypes.c_int(1)                          # 1 = barra oscura
         for atributo in (DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_ANTIGUO):
             resultado = ctypes.windll.dwmapi.DwmSetWindowAttribute(ventana_windows, atributo,
                                                                   ctypes.byref(valor), ctypes.sizeof(valor))
-            if resultado == 0:                           # 0 = S_OK: Windows lo ha aceptado
+            if resultado == 0:                           # S_OK
                 break
     except Exception:
         pass
@@ -216,7 +187,7 @@ def crear_etiqueta(padre, texto, tamano, color):
 
 
 def crear_boton_principal(padre, texto, comando, ancho):
-    """Botón de la acción principal de cada zona: relleno del color de acento."""
+    """Botón principal, relleno con el color de acento."""
     return ctk.CTkButton(padre, text=texto, command=comando, width=ancho, height=estilo.ALTO_BOTON,
                          font=estilo.fuente(estilo.TAMANO_TEXTO, True), fg_color=estilo.PRINCIPAL,
                          hover_color=estilo.PRINCIPAL_HOVER, text_color=estilo.TEXTO_SOBRE_PRINCIPAL,
@@ -224,7 +195,7 @@ def crear_boton_principal(padre, texto, comando, ancho):
 
 
 def crear_boton_secundario(padre, texto, comando, ancho):
-    """Botón de una acción secundaria: solo el borde, más discreto."""
+    """Botón secundario, solo con borde."""
     return ctk.CTkButton(padre, text=texto, command=comando, width=ancho, height=estilo.ALTO_BOTON,
                          font=estilo.fuente(estilo.TAMANO_TEXTO), fg_color="transparent",
                          hover_color=estilo.SECUNDARIO_HOVER, border_width=1,
@@ -234,14 +205,8 @@ def crear_boton_secundario(padre, texto, comando, ancho):
 
 class Selector(ctk.CTkFrame):
     """
-    Selector de varias opciones: una fila de botones en la que siempre hay uno elegido.
-    Se usa igual que el CTkSegmentedButton de customtkinter: get(), set(valor) y, al pulsar
-    una opción, comando(valor).
-
-    Se hace con botones normales porque CTkSegmentedButton pone el mismo color de texto a todas
-    las opciones, y aquí la elegida va en blanco sobre azul y las demás en oscuro sobre blanco,
-    para que se vea que se pueden pulsar. Desactivado, todo va en el gris de los botones.
-    También se puede desactivar una sola opción (cambiar_estado_opcion).
+    Fila de botones con siempre una opción elegida. Se usa como CTkSegmentedButton (get, set y
+    comando), pero está hecho a mano porque ese pone el mismo color de texto a todas las opciones.
     """
 
     def __init__(self, padre, valores, comando):
@@ -250,7 +215,7 @@ class Selector(ctk.CTkFrame):
         self.elegido = valores[0]
         self.activo = True
         self.botones = {}
-        self.ayudas = {}                    # ayuda de cada opción; solo tiene texto si está desactivada
+        self.ayudas = {}                    # solo tienen texto las opciones desactivadas
         self.opciones_desactivadas = []
         for valor in valores:
             boton = ctk.CTkButton(self, text=valor, width=ANCHO_MINIMO_OPCION, height=ALTO_SELECTOR,
@@ -267,13 +232,13 @@ class Selector(ctk.CTkFrame):
         self.pintar()
 
     def funcion_al_pulsar(self, valor):
-        """Devuelve la función que ejecuta el botón de la opción 'valor' al pulsarlo."""
+        """Devuelve la función para el command del botón de 'valor'."""
         def al_pulsar():
             self.pulsar(valor)
         return al_pulsar
 
     def pulsar(self, valor):
-        """Clic en una opción: se elige y se avisa a main.py (si ya estaba elegida, no hace nada)."""
+        """Elige la opción pulsada y avisa a main.py, si no estaba ya elegida."""
         if valor == self.elegido:
             return
         self.set(valor)
@@ -284,7 +249,7 @@ class Selector(ctk.CTkFrame):
         return self.elegido
 
     def set(self, valor):
-        """Elige una opción sin llamar al comando (como CTkSegmentedButton.set)."""
+        """Como CTkSegmentedButton.set: elige sin llamar al comando."""
         if valor == self.elegido:
             return
         self.elegido = valor
@@ -296,9 +261,8 @@ class Selector(ctk.CTkFrame):
 
     def cambiar_estado_opcion(self, valor, activa, ayuda):
         """
-        Activa o desactiva una sola opción. Desactivada se ve en gris, no se puede pulsar y, con el
-        ratón encima, muestra 'ayuda' (por qué no se puede). Si ya estaba así no se toca nada,
-        para no redibujar el selector en cada salto de la simulación.
+        Activa o desactiva una sola opción; desactivada, enseña 'ayuda' al pasar el ratón.
+        Si no cambia nada no se redibuja, porque se llama en cada salto de la simulación.
         """
         if activa and valor not in self.opciones_desactivadas:
             return
@@ -313,7 +277,7 @@ class Selector(ctk.CTkFrame):
         self.pintar()
 
     def pintar(self):
-        """Pone a cada opción sus colores: desactivada, elegida o no elegida."""
+        """Colores de cada opción según esté desactivada, elegida o no."""
         for valor in self.botones:
             boton = self.botones[valor]
             if not self.activo or valor in self.opciones_desactivadas:
@@ -330,28 +294,26 @@ class Selector(ctk.CTkFrame):
 
 class Pestanas(Selector):
     """
-    Pestañas Datos / Simulación de la cabecera: un Selector en forma de cápsula sobre la franja
-    oscura, con un icono en cada pestaña. Funciona igual que Selector (get, set y comando al
-    pulsar); solo cambian el tamaño y los colores (pintar).
-    iconos: pestaña -> (icono cuando está elegida, icono cuando no lo está).
+    Pestañas de la cabecera: un Selector en forma de cápsula, con icono en cada pestaña.
+    iconos: pestaña -> (icono si está elegida, icono si no).
     """
 
     def __init__(self, padre, valores, iconos, comando):
-        self.iconos = iconos            # antes de crear el Selector, porque al crearse ya llama a pintar()
+        self.iconos = iconos            # antes del super(): el Selector ya llama a pintar() al crearse
         super().__init__(padre, valores, comando)
         self.configure(fg_color=estilo.CABECERA_PESTANA, corner_radius=RADIO_PESTANA + MARGEN_PESTANAS)
         for valor in self.botones:
-            # bg_color: las esquinas de fuera de cada pestaña son del color de la cápsula, no de la cabecera
+            # bg_color para que las esquinas de fuera sean del color de la cápsula y no de la cabecera
             self.botones[valor].configure(width=ANCHO_PESTANA, height=ALTO_PESTANA, corner_radius=RADIO_PESTANA,
                                           border_width=0, bg_color=estilo.CABECERA_PESTANA, compound="left",
                                           font=estilo.fuente(estilo.TAMANO_SECCION, True))
             self.botones[valor].pack_configure(pady=MARGEN_PESTANAS)
-        # Margen también a la izquierda de la primera y a la derecha de la última
+        # Margen también en los dos extremos
         self.botones[valores[0]].pack_configure(padx=(MARGEN_PESTANAS, 0))
         self.botones[valores[-1]].pack_configure(padx=(SEPARACION_OPCIONES, MARGEN_PESTANAS))
 
     def pintar(self):
-        """La pestaña elegida, en el color de acento con texto oscuro; la otra, del color de la cápsula."""
+        """La elegida va en el color de acento y la otra, del color de la cápsula."""
         for valor in self.botones:
             boton = self.botones[valor]
             if valor == self.elegido:
@@ -363,10 +325,7 @@ class Pestanas(Selector):
 
 
 def crear_iconos_pestanas():
-    """
-    Iconos de las pestañas: del color del texto sobre el acento para la elegida y del color suave
-    para la otra (dibujados en mapa.py).
-    """
+    """Iconos de las pestañas, en dos colores (elegida y no elegida)."""
     tamano = TAMANO_ICONO_PESTANA
     tabla = mapa.dibujar_icono_tabla(estilo.TEXTO_SOBRE_PRINCIPAL, tamano)
     tabla_suave = mapa.dibujar_icono_tabla(estilo.CABECERA_PESTANA_TEXTO, tamano)
@@ -381,7 +340,7 @@ def crear_iconos_pestanas():
 
 
 def crear_selector(padre, valores, comando):
-    """Selector de varias opciones con los colores de la aplicación (ver la clase Selector)."""
+    """Devuelve un Selector con esas opciones."""
     return Selector(padre, valores, comando)
 
 
@@ -402,7 +361,7 @@ def crear_entrada(padre, ancho, ejemplo):
 
 
 def crear_barra_desplazamiento(padre, orientacion, comando):
-    """Barra de desplazamiento con los colores de la aplicación (el tamaño, el de customtkinter)."""
+    """Barra de desplazamiento con los colores de la aplicación."""
     return ctk.CTkScrollbar(padre, orientation=orientacion, command=comando, fg_color="transparent",
                             button_color=estilo.BARRA_DESPLAZAMIENTO,
                             button_hover_color=estilo.BARRA_DESPLAZAMIENTO_HOVER)
@@ -419,7 +378,7 @@ class Tooltip:
         elemento.bind("<Leave>", self.ocultar, add="+")
 
     def mostrar(self, evento):
-        """Crea una ventanita sin bordes justo debajo del control. Sin texto, no sale nada."""
+        """Abre una ventanita sin bordes debajo del control (si hay texto)."""
         if self.ventana_ayuda is not None or self.texto == "":
             return
         x = self.elemento.winfo_rootx() + 8
@@ -444,12 +403,8 @@ class Tooltip:
 
 class Desplazador:
     """
-    Cuenta cuánto hay que desplazar con la rueda del ratón o con el panel táctil (Windows).
-    Cada clic de la rueda llega con delta = 120, pero el panel táctil manda muchos eventos con
-    deltas pequeños (10, 20...). Si cada delta se divide por separado, como hacen Tk y
-    customtkinter, los pequeños se pierden y el panel táctil no mueve nada. Aquí se van sumando
-    y se desplaza una unidad cada vez que la suma llega a 'paso': con la rueda el resultado es el
-    mismo de siempre y con el panel táctil el movimiento es suave.
+    Va sumando los deltas de la rueda o del panel táctil y mueve una unidad cada 'paso'.
+    El panel táctil manda deltas pequeños (10, 20...) que Tk y customtkinter pierden al dividirlos.
     """
 
     def __init__(self, paso):
@@ -457,18 +412,15 @@ class Desplazador:
         self.acumulado = 0
 
     def unidades(self, delta):
-        """Suma el delta y devuelve cuántas unidades hay que desplazar (positivo: hacia abajo o a la derecha)."""
-        self.acumulado = self.acumulado - delta     # delta negativo = rueda hacia uno mismo = bajar
+        """Suma el delta y devuelve las unidades a mover (positivo: abajo o a la derecha)."""
+        self.acumulado = self.acumulado - delta     # en Windows, delta negativo es bajar
         unidades = int(self.acumulado / self.paso)
         self.acumulado = self.acumulado - unidades * self.paso
         return unidades
 
 
 def activar_desplazamiento_tabla(tabla):
-    """
-    Rueda y panel táctil en la tabla: <MouseWheel> en vertical y <Shift-MouseWheel> en horizontal
-    (así llega en Windows el desplazamiento lateral del panel táctil).
-    """
+    """Rueda y panel táctil en la tabla (en Windows el lateral llega como <Shift-MouseWheel>)."""
     vertical = Desplazador(PASO_DESPLAZAMIENTO_TABLA)
     horizontal = Desplazador(PASO_DESPLAZAMIENTO_TABLA_HORIZONTAL)
 
@@ -476,7 +428,7 @@ def activar_desplazamiento_tabla(tabla):
         unidades = vertical.unidades(evento.delta)
         if unidades != 0:
             tabla.yview_scroll(unidades, "units")
-        return "break"          # "break": que no actúe además el desplazamiento propio de Tk
+        return "break"          # si no, Tk vuelve a desplazar por su cuenta
 
     def al_mover_horizontal(evento):
         unidades = horizontal.unidades(evento.delta)
@@ -490,10 +442,8 @@ def activar_desplazamiento_tabla(tabla):
 
 class PanelDesplazable(ctk.CTkScrollableFrame):
     """
-    CTkScrollableFrame que también se desplaza con el panel táctil. customtkinter recibe la rueda
-    en toda la ventana y, si el ratón está encima del panel (o de algo de dentro, como el texto
-    del avión), lo desplaza con el delta dividido entre 6 y sin decimales. Aquí se sustituye ese
-    método por uno que acumula el delta con un Desplazador.
+    CTkScrollableFrame que también va con el panel táctil: se cambia su _mouse_wheel_all, que
+    divide cada delta entre 6 y pierde los pequeños, por uno con Desplazador.
     """
 
     def __init__(self, padre, **opciones):
@@ -503,7 +453,7 @@ class PanelDesplazable(ctk.CTkScrollableFrame):
         self.desplazador = Desplazador(PASO_DESPLAZAMIENTO_PANEL)
 
     def _mouse_wheel_all(self, evento):
-        """Rueda o panel táctil en cualquier parte de la ventana: solo se mueve si es encima de este panel."""
+        """Llega con la rueda en cualquier sitio; solo desplaza si el ratón está sobre este panel."""
         if not self.check_if_master_is_canvas(evento.widget):
             return
         unidades = self.desplazador.unidades(evento.delta)
@@ -512,11 +462,7 @@ class PanelDesplazable(ctk.CTkScrollableFrame):
 
 
 def activar_desplazamiento_lista(lista):
-    """
-    Rueda y panel táctil en una lista de dentro de un panel desplazable (tráfico y eventos).
-    Si la lista tiene filas ocultas, se desplaza la lista; si caben todas, no se hace nada aquí y
-    el evento sigue hasta el panel, que se desplaza como si el ratón no estuviera encima de la lista.
-    """
+    """Rueda en una lista de tráfico o eventos. Si le caben todas las filas, el evento pasa al panel."""
     desplazador = Desplazador(PASO_DESPLAZAMIENTO_TABLA)
 
     def al_mover(evento):
@@ -532,25 +478,16 @@ def activar_desplazamiento_lista(lista):
 
 class ListaIncremental:
     """
-    Lista (ttk.Treeview) que se pone al día solo en lo que cambia. La usan las listas En vuelo y
-    En tierra del panel de tráfico, que se ponen al día en cada salto de la simulación (60 por
-    segundo a x60): rehacerlas enteras cada vez haría que la ventana fuera a tirones.
-
-    Cada fila tiene una clave (la TA del avión, que también es el identificador de la fila en el
-    Treeview), un texto por el que se ordena (el callsign) y sus valores. actualizar() recibe todas
-    las filas que tiene que haber y las compara con las que hay:
-        - borra las que ya no están y añade las nuevas;
-        - cambia los valores solo de las filas que han cambiado (por ejemplo, el nivel);
-        - si ha entrado o salido alguna fila, o ha cambiado algún callsign, vuelve a ordenar,
-          moviendo las filas a su sitio sin borrarlas.
+    Treeview de las listas de tráfico que solo toca las filas que cambian: rehacerlas enteras en
+    cada salto (60 por segundo a x60) iba a tirones. La clave de cada fila es la TA del avión.
     """
 
     def __init__(self, tabla):
         self.tabla = tabla
-        self.filas = {}             # clave -> (texto de orden, valores) de las filas que se ven
+        self.filas = {}             # clave -> (texto de orden, valores)
 
     def actualizar(self, filas_nuevas):
-        """Deja en la lista exactamente filas_nuevas (clave -> (texto de orden, valores))."""
+        """Deja en la lista justo filas_nuevas: borra, añade, cambia valores y reordena si hace falta."""
         reordenar = False
         for clave in list(self.filas.keys()):
             if clave not in filas_nuevas:
@@ -575,17 +512,17 @@ class ListaIncremental:
             self.ordenar()
 
     def clave_de_orden(self, clave):
-        """Por qué se ordena: el callsign y, si dos coinciden, la clave."""
+        """Callsign y, si hay empate, la clave."""
         return (self.filas[clave][0], clave)
 
     def ordenar(self):
-        """Pone las filas por orden alfabético de callsign, moviéndolas sin borrarlas."""
+        """Ordena por callsign moviendo las filas, sin borrarlas."""
         claves = sorted(self.filas.keys(), key=self.clave_de_orden)
         for posicion in range(len(claves)):
             self.tabla.move(claves[posicion], "", posicion)
 
     def seleccionar(self, clave):
-        """Marca la fila de esa clave (o ninguna, con None) si no lo estaba ya."""
+        """Marca la fila de esa clave (con None, ninguna)."""
         if clave is not None and clave in self.filas:
             if self.tabla.selection() != (clave,):
                 self.tabla.selection_set(clave)
@@ -602,20 +539,18 @@ class ListaIncremental:
 
 class RegistroEventos:
     """
-    Lista de eventos de la simulación (ttk.Treeview), con el más reciente arriba. Igual que en
-    ListaIncremental, en cada salto solo se añaden los eventos nuevos; cuando hay más de
-    simulacion.EVENTOS_GUARDADOS se quitan los más antiguos, que están abajo.
-    Cada fila guarda la TA del avión, para seleccionarlo al pulsar el evento (ta_de_fila).
+    Lista de eventos con el más nuevo arriba. Solo se añaden los nuevos y, pasados
+    simulacion.EVENTOS_GUARDADOS, se van quitando los de abajo.
     """
 
     def __init__(self, tabla):
         self.tabla = tabla
-        self.ta_por_fila = {}       # identificador de la fila -> TA del avión del evento
+        self.ta_por_fila = {}       # fila -> TA del avión, para seleccionarlo al pulsar
 
     def anadir(self, eventos):
-        """Pone arriba los eventos de la lista, del más antiguo al más nuevo (el último queda el primero)."""
+        """Mete arriba los eventos nuevos y quita los que sobran por abajo."""
         for evento in eventos:
-            etiqueta = ESTILO_EVENTO[evento["tipo"]][0]       # el color va en la etiqueta (crear_ventana_eventos)
+            etiqueta = ESTILO_EVENTO[evento["tipo"]][0]       # el color va en el tag
             icono = ESTILO_EVENTO[evento["tipo"]][1]
             fila = str(evento["numero"])
             hora = lector.formatear_hora(evento["segundo"])[:8]
@@ -628,7 +563,7 @@ class RegistroEventos:
             del self.ta_por_fila[filas[posicion]]
 
     def ta_de_fila(self, fila):
-        """TA del avión del evento de esa fila (None si la fila no existe)."""
+        """TA del avión de esa fila, o None."""
         return self.ta_por_fila.get(fila)
 
     def vaciar(self):
@@ -641,10 +576,8 @@ class RegistroEventos:
 
 def cambiar_estado(elemento, activo):
     """
-    Activa o desactiva un control. Los botones desactivados se ponen en gris para que se vea
-    que no se pueden pulsar; al activarlos recuperan su color original.
-    Si el control ya está en ese estado no se toca: volver a configurarlo hace que customtkinter
-    lo redibuje (en los selectores, varias veces seguidas) y se ve un parpadeo.
+    Activa o desactiva un control (los botones desactivados se ven en gris).
+    Si ya estaba así no se toca, porque customtkinter lo redibuja y parpadea.
     """
     if elemento in ESTADO_CONTROLES and ESTADO_CONTROLES[elemento] == activo:
         return
@@ -669,18 +602,18 @@ def cambiar_estado(elemento, activo):
 
 
 def esta_activo(elemento):
-    """True si el control está activo (el último cambiar_estado; al crearse, todos lo están)."""
+    """True si el control está activo (al crearse lo están todos)."""
     return ESTADO_CONTROLES.get(elemento, True)
 
 
 def cambiar_texto(etiqueta, texto):
-    """Cambia el texto de una etiqueta solo si es distinto, para no redibujarla sin necesidad."""
+    """Cambia el texto de la etiqueta solo si es otro, para no redibujarla porque sí."""
     if etiqueta.cget("text") != texto:
         etiqueta.configure(text=texto)
 
 
 def escribir_texto(cuadro, texto):
-    """Cambia el texto de un cuadro de texto de solo lectura (solo si es distinto)."""
+    """Lo mismo para un cuadro de texto de solo lectura."""
     if cuadro.get("1.0", "end-1c") == texto:
         return
     cuadro.configure(state="normal")
@@ -695,8 +628,8 @@ def escribir_texto(cuadro, texto):
 
 def crear_cabecera(app):
     """
-    Cabecera azul marino: título, grupo, selector de pestaña, fichero cargado y botón para abrirlo.
-    Guarda: app.selector_pestana, app.etiqueta_fichero, app.boton_abrir.
+    Cabecera con el título, las pestañas, el fichero cargado y el botón para abrir otro.
+    Guarda app.selector_pestana, app.etiqueta_fichero y app.boton_abrir.
     """
     cabecera = ctk.CTkFrame(app.raiz, fg_color=estilo.CABECERA, corner_radius=0, height=68)
     cabecera.pack(side="top", fill="x")
@@ -724,10 +657,7 @@ def crear_cabecera(app):
 
 
 def crear_barra_estado(app):
-    """
-    Barra de abajo: un punto de color, lo que está pasando y la barra de progreso.
-    Guarda: app.punto_estado, app.etiqueta_estado, app.etiqueta_porcentaje, app.barra_progreso.
-    """
+    """Barra de estado de abajo, con un punto de color, el mensaje y la barra de progreso."""
     barra = ctk.CTkFrame(app.raiz, fg_color=estilo.TARJETA, corner_radius=0, height=34,
                          border_width=1, border_color=estilo.BORDE)
     barra.pack(side="bottom", fill="x")
@@ -749,10 +679,7 @@ def crear_barra_estado(app):
 
 
 def crear_pestanas(app):
-    """
-    Zona central con las dos pestañas; el selector de la cabecera muestra una u otra.
-    Guarda: app.pestana_datos y app.pestana_simulacion.
-    """
+    """Zona central con las dos pestañas (app.pestana_datos y app.pestana_simulacion)."""
     contenido = ctk.CTkFrame(app.raiz, fg_color="transparent")
     contenido.pack(side="top", fill="both", expand=True, padx=estilo.MARGEN, pady=estilo.MARGEN)
     app.pestana_datos = ctk.CTkFrame(contenido, fg_color="transparent")
@@ -765,7 +692,7 @@ def crear_pestanas(app):
 # =============================================================================
 
 def crear_cifra(padre, fila, columna, texto_pie):
-    """Una cifra grande con su explicación debajo (tarjeta de resumen). Devuelve la etiqueta de la cifra."""
+    """Cifra grande con su texto debajo; devuelve la etiqueta de la cifra."""
     celda = ctk.CTkFrame(padre, fg_color="transparent")
     celda.grid(row=fila, column=columna, sticky="w", padx=(16, 8), pady=4)
     cifra = ctk.CTkLabel(celda, text="—", font=estilo.fuente_numeros(estilo.TAMANO_CIFRA, True),
@@ -776,11 +703,7 @@ def crear_cifra(padre, fila, columna, texto_pie):
 
 
 def crear_tarjeta_resumen(app, padre):
-    """
-    Resumen de la decodificación en cifras grandes y el detalle de los descartes.
-    Guarda: app.cifra_leidos, app.cifra_filas, app.cifra_descartados, app.cifra_tiempo,
-            app.etiqueta_detalle_resumen.
-    """
+    """Tarjeta del resumen: cuatro cifras grandes y debajo el detalle de los descartes."""
     tarjeta = crear_tarjeta(padre, "File summary")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
 
@@ -798,11 +721,7 @@ def crear_tarjeta_resumen(app, padre):
 
 
 def crear_tarjeta_filtros(app, padre):
-    """
-    Filtros combinables.
-    Guarda: app.selector_categoria, las casillas, app.entrada_altitud, app.entrada_aeronave,
-            app.boton_aplicar y app.boton_quitar.
-    """
+    """Tarjeta de filtros: categoría, casillas, altitud máxima, aeronave y los botones."""
     tarjeta = crear_tarjeta(padre, "Filters")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
 
@@ -849,10 +768,7 @@ def crear_tarjeta_filtros(app, padre):
 
 
 def crear_tarjeta_exportar(app, padre):
-    """
-    Exportar a CSV.
-    Guarda: app.boton_exportar_todo y app.boton_exportar_filtrado.
-    """
+    """Los dos botones de exportar a CSV."""
     tarjeta = crear_tarjeta(padre, "Export to CSV")
     tarjeta.pack(fill="x")
 
@@ -869,15 +785,12 @@ def crear_tarjeta_exportar(app, padre):
 
 def configurar_estilo_tabla(app):
     """
-    Fuente, alto de fila y colores de las tablas (ttk.Treeview) de Datos y del panel de tráfico:
-    cabecera un poco más clara que la tarjeta, filas alternas y selección en azul petróleo.
-    El tema "clam" de ttk dibuja los bordes con tres colores (bordercolor, lightcolor y darkcolor)
-    que por defecto son claros: se les ponen los de la paleta para que no quede ninguna línea blanca.
-    Guarda: app.fuente_tabla y app.fuente_cabecera, que se usan para calcular los anchos.
+    Estilo de las tablas ttk de Datos y de tráfico. En el tema "clam" hay que dar bordercolor,
+    lightcolor y darkcolor, o salen líneas blancas. Guarda app.fuente_tabla y app.fuente_cabecera.
     """
     app.fuente_tabla = tkinter.font.Font(family=estilo.FAMILIA, size=estilo.TAMANO_TABLA)
     app.fuente_cabecera = tkinter.font.Font(family=estilo.FAMILIA, size=estilo.TAMANO_TABLA, weight="bold")
-    # El alto de fila sale de la fuente, para que se vea bien con cualquier escala de pantalla
+    # Alto de fila a partir de la fuente, así vale con cualquier escala de pantalla
     alto_fila = app.fuente_tabla.metrics("linespace") + 10
 
     tabla = ttk.Style(app.raiz)
@@ -895,11 +808,7 @@ def configurar_estilo_tabla(app):
 
 
 def crear_tarjeta_tabla(app, padre):
-    """
-    Tarjeta con la tabla de mensajes (todas las columnas del CSV), su paginación y lo que se
-    pone en su sitio cuando está vacía o mientras se decodifica.
-    Guarda: app.etiqueta_total y lo que guarda cada función de las que llama.
-    """
+    """Tarjeta de la tabla de mensajes, con la paginación y los avisos que se ponen encima."""
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=1, sticky="nsew")
 
@@ -915,7 +824,7 @@ def crear_tarjeta_tabla(app, padre):
     marco.grid_rowconfigure(0, weight=1)
     marco.grid_columnconfigure(0, weight=1)
 
-    # La tabla se crea antes que los dos avisos para que estos queden por encima al mostrarlos
+    # La tabla va antes que los avisos para que estos queden encima
     crear_tabla(app, marco)
     crear_estado_vacio_tabla(app, marco)
     crear_progreso_tabla(app, marco)
@@ -923,7 +832,7 @@ def crear_tarjeta_tabla(app, padre):
 
 
 def crear_tabla(app, marco):
-    """La tabla (ttk.Treeview) con una columna por columna del CSV y sus dos barras. Guarda: app.tabla."""
+    """Crea app.tabla, con todas las columnas del CSV y sus dos barras."""
     configurar_estilo_tabla(app)
     app.tabla = ttk.Treeview(marco, columns=COLUMNAS, show="headings", style="Asterix.Treeview",
                              selectmode="browse")
@@ -943,10 +852,7 @@ def crear_tabla(app, marco):
 
 
 def crear_estado_vacio_tabla(app, marco):
-    """
-    Mensaje que se pone encima de la tabla cuando no hay nada que mostrar (main.py dice cuál).
-    Guarda: app.estado_vacio_tabla, app.etiqueta_vacio_tabla, app.boton_vacio_tabla.
-    """
+    """Aviso que tapa la tabla cuando no hay nada que enseñar (el texto lo pone main.py)."""
     app.estado_vacio_tabla = ctk.CTkFrame(marco, fg_color=estilo.TARJETA)
     app.etiqueta_vacio_tabla = ctk.CTkLabel(app.estado_vacio_tabla, text="",
                                             font=estilo.fuente(estilo.TAMANO_SECCION),
@@ -958,10 +864,7 @@ def crear_estado_vacio_tabla(app, marco):
 
 
 def crear_progreso_tabla(app, marco):
-    """
-    Progreso grande de la decodificación, en el sitio de la tabla (main.py lo muestra y lo quita).
-    Guarda: app.progreso_tabla, app.barra_progreso_tabla, app.etiqueta_progreso_tabla.
-    """
+    """Barra de progreso grande que sale en lugar de la tabla mientras se decodifica."""
     app.progreso_tabla = ctk.CTkFrame(marco, fg_color=estilo.TARJETA)
     app.barra_progreso_tabla = ctk.CTkProgressBar(app.progreso_tabla, width=ANCHO_BARRA_PROGRESO_TABLA, height=14,
                                                   fg_color=estilo.BORDE, progress_color=estilo.PRINCIPAL)
@@ -973,10 +876,7 @@ def crear_progreso_tabla(app, marco):
 
 
 def crear_paginacion(app, tarjeta):
-    """
-    Botones Anterior y Siguiente y la página actual.
-    Guarda: app.boton_anterior, app.etiqueta_pagina, app.boton_siguiente.
-    """
+    """Botones Previous / Next con la página en medio."""
     paginacion = ctk.CTkFrame(tarjeta, fg_color="transparent")
     paginacion.pack(fill="x", padx=16, pady=(8, 12))
     app.boton_anterior = crear_boton_secundario(paginacion, "◀  Previous", app.pagina_anterior, 110)
@@ -990,9 +890,8 @@ def crear_paginacion(app, tarjeta):
 
 def ajustar_anchos_columnas(app, filas_formateadas):
     """
-    Pone a cada columna el ancho de su texto más largo: la cabecera o alguno de los valores de
-    filas_formateadas (listas de textos de celdas). Primero se busca el texto más largo por número
-    de letras y solo se mide ese, para no hacer miles de medidas.
+    Ancho de cada columna según su texto más largo (cabecera o celdas).
+    Solo se mide el que tiene más letras, para no hacer miles de medidas.
     """
     for posicion in range(len(COLUMNAS)):
         texto_mas_largo = ""
@@ -1009,7 +908,7 @@ def ajustar_anchos_columnas(app, filas_formateadas):
 
 
 def crear_pestana_datos(app):
-    """Pestaña Datos: panel izquierdo (resumen, filtros, exportar) y la tabla a la derecha."""
+    """Pestaña Datos: resumen, filtros y exportar a la izquierda y la tabla al lado."""
     pestana = app.pestana_datos
     pestana.grid_rowconfigure(0, weight=1)
     pestana.grid_columnconfigure(1, weight=1)
@@ -1029,20 +928,13 @@ def crear_pestana_datos(app):
 
 def crear_controles_simulacion(app, padre):
     """
-    Barra de controles de la simulación: una sola tarjeta a todo el ancho, encima del mapa y del panel.
-        - Fila 1: a la izquierda la reproducción (Play, Pause, +1 s, Reset) y la velocidad; a la derecha
-          los controles de vista (Labels, Trails, Follow, System y Map), si caben.
-        - Fila de vista: solo se usa si los controles de vista no caben en la fila 1 (ver ColocadorControles).
-        - Línea de tiempo: el reloj, la barra de tiempo con la hora inicial y la final y "Go to time".
-    Los controles se crean dentro de grupos (un marco por grupo) que son hijos de la tarjeta, no de una
-    fila: así ColocadorControles puede pasar un grupo de una fila a otra con pack(in_=...).
-    Lo que guarda cada parte está en su función.
+    Tarjeta de controles encima del mapa. Los grupos son hijos de la tarjeta y no de una fila,
+    así ColocadorControles los puede cambiar de fila con pack(in_=...).
     """
     tarjeta = crear_tarjeta(padre, "")
     tarjeta.grid(row=0, column=0, columnspan=2, sticky="nsew", pady=(0, estilo.MARGEN))
 
-    # Primero las filas y después los grupos: en tkinter, lo que se crea después queda por encima, y
-    # los grupos tienen que verse encima de la fila en la que se colocan
+    # Filas antes que grupos: en tkinter lo último que se crea queda encima
     fila_1 = ctk.CTkFrame(tarjeta, fg_color="transparent")
     fila_1.pack(fill="x", padx=MARGEN_CONTROLES, pady=(12, 6))
     fila_vista = ctk.CTkFrame(tarjeta, fg_color="transparent")
@@ -1070,15 +962,8 @@ def crear_controles_simulacion(app, padre):
 
 class ColocadorControles:
     """
-    Coloca los grupos de la barra de controles según el ancho de la tarjeta:
-        - Si todo cabe en una fila: en la fila 1, la reproducción y la velocidad a la izquierda y los
-          controles de vista (casillas, System y Map) a la derecha.
-        - Si no cabe (por ejemplo, en un portátil de 1366 píxeles o con la ventana al ancho mínimo): los
-          controles de vista pasan a su propia fila, entre la fila 1 y la línea de tiempo. Para que no
-          quede un hueco grande al final de las filas, en cada una los grupos se reparten a lo ancho: el
-          primero pegado a la izquierda y el último a la derecha, alineados con el reloj y con "Go to time".
-    Se llama cada vez que la tarjeta cambia de tamaño (evento <Configure>), pero solo vuelve a colocar los
-    grupos cuando hay que pasar de una forma a la otra.
+    Pone los controles de vista en la fila 1 si caben y, si no (portátil o ventana estrecha),
+    en una fila propia debajo. Solo recoloca cuando se pasa de un caso al otro.
     """
 
     def __init__(self, tarjeta, fila_1, fila_vista, fila_tiempo, grupos_reproduccion, grupos_vista):
@@ -1091,9 +976,8 @@ class ColocadorControles:
         self.en_una_fila = None                             # None hasta la primera colocación
 
     def ancho_necesario(self):
-        """Ancho (píxeles) que hacen falta para poner todos los grupos en una sola fila."""
-        # winfo_reqwidth() da píxeles reales; las separaciones de pack las multiplica customtkinter por
-        # la escala de Windows, así que aquí también se multiplican
+        """Píxeles que hacen falta para tenerlo todo en una fila."""
+        # winfo_reqwidth() ya da píxeles reales, pero los padx los escala customtkinter
         escala = ctk.ScalingTracker.get_widget_scaling(self.tarjeta)
         ancho = 0
         for grupo in self.grupos_reproduccion + self.grupos_vista:
@@ -1102,7 +986,7 @@ class ColocadorControles:
         return ancho + int((separaciones * SEPARACION_GRUPOS_CONTROLES + 2 * MARGEN_CONTROLES) * escala)
 
     def al_cambiar_tamano(self, evento):
-        """Evento <Configure> de la tarjeta: decide si los controles caben en una fila y los coloca."""
+        """<Configure> de la tarjeta: mira si todo cabe en una fila."""
         cabe = self.tarjeta.winfo_width() >= self.ancho_necesario()
         if cabe == self.en_una_fila:
             return
@@ -1115,22 +999,19 @@ class ColocadorControles:
             self.colocar_en_dos_filas()
 
     def colocar_en_una_fila(self):
-        """Reproducción y velocidad a la izquierda de la fila 1; los controles de vista a su derecha."""
+        """Todo en la fila 1: reproducción y velocidad a la izquierda, vista a la derecha."""
         self.fila_vista.pack_forget()
         reproduccion, velocidad = self.grupos_reproduccion
         casillas, sistema, mapa_aspecto = self.grupos_vista
         reproduccion.pack(in_=self.fila_1, side="left")
         velocidad.pack(in_=self.fila_1, side="left", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
-        # Con side="right" se colocan de derecha a izquierda: primero Map, después System y las casillas
+        # side="right" coloca de derecha a izquierda: Map, System y luego las casillas
         mapa_aspecto.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
         sistema.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
         casillas.pack(in_=self.fila_1, side="right", padx=(SEPARACION_GRUPOS_CONTROLES, 0))
 
     def colocar_en_dos_filas(self):
-        """
-        Fila 1: reproducción a la izquierda y velocidad a la derecha. Fila de vista (debajo): casillas a la
-        izquierda, System en el centro y Map a la derecha.
-        """
+        """Reproducción y velocidad en la fila 1; casillas, System y Map en la fila de debajo."""
         self.fila_vista.pack(fill="x", padx=MARGEN_CONTROLES, pady=(6, 6), before=self.fila_tiempo)
         reproduccion, velocidad = self.grupos_reproduccion
         casillas, sistema, mapa_aspecto = self.grupos_vista
@@ -1143,14 +1024,11 @@ class ColocadorControles:
 
 
 def crear_botones_reproduccion(app, grupo):
-    """
-    Reproducir, Pausa, +1 s y Reset.
-    Guarda: app.boton_play, app.boton_pausa, app.boton_paso, app.boton_reset.
-    """
+    """Botones Play, Pause, +1 s y Reset."""
     app.boton_play = crear_boton_principal(grupo, "▶  Play", app.play, 120)
     app.boton_play.pack(side="left")
     Tooltip(app.boton_play, "Runs the simulation in steps of 1 s of time of day.")
-    # Símbolos de texto normales: los de pausa y avance (⏸, ⏭) salen como emojis en Windows
+    # ⏸ y ⏭ salen como emojis en Windows, por eso se usan estos símbolos
     app.boton_pausa = crear_boton_secundario(grupo, "❚❚  Pause", app.pausa, 92)
     app.boton_pausa.pack(side="left", padx=(8, 0))
     app.boton_paso = crear_boton_secundario(grupo, "▶❚  +1 s", app.avanzar_un_segundo, 82)
@@ -1162,8 +1040,8 @@ def crear_botones_reproduccion(app, grupo):
 
 
 def crear_selector_velocidad(app, grupo):
-    """Selector de velocidad. Guarda: app.selector_velocidad."""
-    # La ayuda de los selectores va en su etiqueta
+    """Etiqueta "Speed" y el selector de x1 a x60."""
+    # La ayuda de los selectores se pone en su etiqueta
     etiqueta_velocidad = crear_etiqueta(grupo, "Speed", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_velocidad.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_velocidad, "Each step is always 1 s; the speed changes how often a step is drawn.")
@@ -1172,7 +1050,7 @@ def crear_selector_velocidad(app, grupo):
 
 
 def crear_selector_sistema(app, grupo):
-    """Selector Radar / ADS-B / Ambos. Guarda: app.selector_sistema."""
+    """Selector de sistema: Both, Radar o ADS-B."""
     etiqueta_sistema = crear_etiqueta(grupo, "System", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_sistema.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_sistema, "Aircraft seen by the radar (CAT048), by ADS-B (CAT021) or by both. "
@@ -1182,21 +1060,18 @@ def crear_selector_sistema(app, grupo):
 
 
 def crear_selector_mapa(app, grupo):
-    """Selector del aspecto del mapa: Oscuro (el de la aplicación) o Claro (el original). Guarda: app.selector_mapa."""
+    """Selector del mapa oscuro o claro."""
     etiqueta_mapa = crear_etiqueta(grupo, "Map", estilo.TAMANO_TEXTO, estilo.TEXTO)
     etiqueta_mapa.pack(side="left", padx=(0, 6))
     Tooltip(etiqueta_mapa, "Dark: the OpenStreetMap map darkened, so that the aircraft stand out. "
                            "Light: the original map.")
     app.selector_mapa = crear_selector(grupo, ["Dark", "Light"], app.cambiar_mapa)
-    app.selector_mapa.set("Light")              # al empezar, el mapa claro (MapaOSM empieza así)
+    app.selector_mapa.set("Light")              # MapaOSM también empieza en claro
     app.selector_mapa.pack(side="left")
 
 
 def crear_casillas_simulacion(app, grupo):
-    """
-    Casillas Etiquetas y Estelas (marcadas al empezar) y Seguir (sin marcar).
-    Guarda: app.casilla_etiquetas, app.casilla_estelas, app.casilla_seguir.
-    """
+    """Casillas Labels y Trails (marcadas al empezar) y Follow."""
     app.casilla_etiquetas = crear_casilla(grupo, "Labels", app.cambiar_etiquetas)
     app.casilla_etiquetas.select()
     app.casilla_etiquetas.pack(side="left")
@@ -1218,13 +1093,7 @@ def crear_casillas_simulacion(app, grupo):
 
 
 def crear_linea_tiempo(app, fila):
-    """
-    Línea de tiempo de la barra de controles: a la izquierda la hora del día de la simulación, grande y
-    legible; a la derecha "Go to time"; y en el centro, con todo el ancho que sobra, la barra de tiempo,
-    que va de la primera a la última hora de los datos, con esas horas a sus lados.
-    Guarda: app.etiqueta_reloj, app.entrada_hora, app.boton_ir, app.barra_tiempo,
-            app.etiqueta_hora_inicio, app.etiqueta_hora_fin.
-    """
+    """Fila del reloj, la barra de tiempo (con la primera y la última hora) y "Go to time"."""
     reloj = ctk.CTkFrame(fila, fg_color="transparent")
     reloj.pack(side="left")
     crear_etiqueta(reloj, "Simulation time (UTC)", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(anchor="w")
@@ -1246,15 +1115,14 @@ def crear_linea_tiempo(app, fila):
     app.boton_ir = crear_boton_secundario(campos, "Go", app.ir_a_hora, 44)
     app.boton_ir.pack(side="left", padx=(6, 0))
 
-    # La barra va la última: con expand=True ocupa todo el ancho que dejan el reloj y "Go to time"
+    # La barra va la última para que expand=True le dé todo el ancho que sobra
     barra = ctk.CTkFrame(fila, fg_color="transparent")
     barra.pack(side="left", fill="x", expand=True, padx=SEPARACION_GRUPOS_CONTROLES)
     app.etiqueta_hora_inicio = crear_etiqueta(barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_hora_inicio.pack(side="left")
     app.etiqueta_hora_fin = crear_etiqueta(barra, "--:--", estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO)
     app.etiqueta_hora_fin.pack(side="right")
-    # Al arrastrar, command avisa de cada posición (el reloj enseña esa hora); el salto se hace
-    # al soltar el ratón (<ButtonRelease-1>), no en cada movimiento, para que no se trabe.
+    # Al arrastrar solo cambia el reloj; el salto se hace al soltar, si no se traba
     app.barra_tiempo = ctk.CTkSlider(barra, from_=0, to=1, height=16, command=app.mover_barra_tiempo,
                                      fg_color=estilo.BORDE, progress_color=estilo.PRINCIPAL,
                                      button_color=estilo.PRINCIPAL, button_hover_color=estilo.PRINCIPAL_HOVER)
@@ -1265,7 +1133,7 @@ def crear_linea_tiempo(app, fila):
 
 
 def configurar_barra_tiempo(app, inicio, fin, texto_inicio, texto_fin):
-    """Pone la barra de tiempo de inicio a fin (segundos desde medianoche), en pasos de 1 s, con sus horas a los lados."""
+    """Ajusta la barra de tiempo de inicio a fin (segundos del día), de 1 s en 1 s."""
     if fin <= inicio:
         fin = inicio + 1
     app.barra_tiempo.configure(from_=inicio, to=fin, number_of_steps=fin - inicio)
@@ -1276,12 +1144,8 @@ def configurar_barra_tiempo(app, inicio, fin, texto_inicio, texto_fin):
 
 def crear_zona_mapa(app, padre):
     """
-    Aviso de qué se simula y el mapa, que ocupa todo el alto que queda. Dentro del mapa, en las
-    esquinas: la leyenda (abajo a la izquierda), la ventana de eventos (arriba a la derecha), la
-    atribución de OpenStreetMap (abajo a la derecha) y, en el centro, el mensaje que se ve cuando no
-    hay nada que mostrar.
-    Guarda: app.etiqueta_aviso_simulacion, app.mapa, app.mensaje_mapa, app.etiqueta_mensaje_mapa
-            y lo que guardan crear_leyenda_mapa y crear_ventana_eventos.
+    Aviso de qué se simula y el mapa, con la leyenda, los eventos y la atribución encima.
+    Guarda app.mapa, app.mensaje_mapa y app.etiqueta_aviso_simulacion, entre otros.
     """
     zona = ctk.CTkFrame(padre, fg_color="transparent")
     zona.grid(row=1, column=0, sticky="nsew", padx=(0, estilo.MARGEN))
@@ -1298,37 +1162,32 @@ def crear_zona_mapa(app, padre):
     app.mapa = mapa.MapaOSM(marco_mapa, corner_radius=0)
     app.mapa.pack(fill="both", expand=True, padx=1, pady=1)
 
-    # Lo que va encima del mapa se crea después del mapa, para que quede por encima
+    # Después del mapa, para que quede encima
     crear_leyenda_mapa(app, marco_mapa)
     crear_ventana_eventos(app, marco_mapa)
 
-    # Mensaje en el centro del mapa cuando no hay nada que ver (main.py dice cuál)
+    # Mensaje del centro cuando no hay nada que ver (el texto lo pone main.py)
     app.mensaje_mapa = crear_tarjeta(marco_mapa, "")
     app.etiqueta_mensaje_mapa = ctk.CTkLabel(app.mensaje_mapa, text="", font=estilo.fuente(estilo.TAMANO_SECCION),
                                              text_color=estilo.TEXTO, justify="center")
     app.etiqueta_mensaje_mapa.pack(padx=28, pady=18)
 
-    # Atribución que pide OpenStreetMap, en la esquina inferior derecha del mapa
+    # OpenStreetMap pide poner la atribución
     atribucion = tkinter.Label(marco_mapa, text=mapa.ATRIBUCION_MAPA, font=(estilo.FAMILIA, 8),
                                bg=estilo.FONDO_ATRIBUCION, fg=estilo.TEXTO_SECUNDARIO, padx=4)
     atribucion.place(relx=1.0, rely=1.0, x=-2, y=-2, anchor="se")
 
 
 def crear_ventana_mapa(marco_mapa):
-    """
-    Recuadro que va encima del mapa (la leyenda y la ventana de eventos): del color de las tarjetas,
-    con borde y sin esquinas redondeadas, porque sus esquinas no pueden ser transparentes sobre el mapa.
-    """
+    """Recuadro para encima del mapa, sin esquinas redondeadas (no pueden ser transparentes ahí)."""
     return ctk.CTkFrame(marco_mapa, fg_color=estilo.TARJETA, corner_radius=0, border_width=1,
                         border_color=estilo.CONTROL_BORDE)
 
 
 class Plegable:
     """
-    Título de un recuadro del mapa (leyenda o eventos) que, al pulsarlo, recoge o vuelve a mostrar
-    su contenido. Empieza desplegado, para que se vea nada más abrir la pestaña; recogerlo sirve
-    para ver más mapa en una pantalla pequeña. El contenido son los elementos colocados con grid():
-    grid_remove() los quita y grid() los vuelve a poner donde estaban.
+    Título de un recuadro del mapa que recoge o enseña su contenido al pulsarlo (empieza abierto).
+    Las partes van con grid(), así grid_remove() y grid() las dejan en su sitio.
     """
 
     def __init__(self, padre, texto):
@@ -1342,11 +1201,11 @@ class Plegable:
         self.pintar()
 
     def anadir(self, parte):
-        """Añade un elemento al contenido que se recoge."""
+        """Añade una parte al contenido plegable."""
         self.partes.append(parte)
 
     def cambiar(self):
-        """Clic en el título: recoge el contenido si se ve y al revés."""
+        """Recoge o despliega."""
         self.desplegado = not self.desplegado
         for parte in self.partes:
             if self.desplegado:
@@ -1356,7 +1215,7 @@ class Plegable:
         self.pintar()
 
     def pintar(self):
-        """Flecha delante del título: ▾ desplegado, ▸ recogido."""
+        """Pone la flecha (▾ o ▸) delante del título."""
         if self.desplegado:
             self.boton.configure(text=FLECHA_DESPLEGADA + "  " + self.texto)
         else:
@@ -1364,12 +1223,9 @@ class Plegable:
 
 
 def crear_fila_leyenda(padre, fila, columna, imagen, texto, ayuda):
-    """
-    Un elemento de la leyenda, en su fila y columna: la misma imagen que se dibuja en el mapa y lo que
-    significa. Si se da 'ayuda', sale al dejar el ratón encima. Devuelve el elemento.
-    """
+    """Un elemento de la leyenda (imagen y texto, con ayuda si se da). Lo devuelve."""
     icono = ctk.CTkImage(light_image=imagen, size=(imagen.width, imagen.height))
-    # height: CTkLabel mide 28 píxeles de alto si no se le dice otra cosa; con 20 la leyenda tapa menos mapa
+    # CTkLabel mide 28 px de alto por defecto; con 20 la leyenda tapa menos mapa
     elemento = ctk.CTkLabel(padre, text="  " + texto, image=icono, compound="left", anchor="w", height=ALTO_FILA_LEYENDA,
                             font=estilo.fuente(estilo.TAMANO_AYUDA), text_color=estilo.TEXTO)
     elemento.grid(row=fila, column=columna, sticky="w", padx=(10, 6), pady=1)
@@ -1379,11 +1235,7 @@ def crear_fila_leyenda(padre, fila, columna, imagen, texto, ayuda):
 
 
 def crear_leyenda_mapa(app, marco_mapa):
-    """
-    Leyenda dentro del mapa, abajo a la izquierda, a la vista nada más abrir la pestaña. Usa las
-    mismas imágenes que se dibujan en el mapa, en dos columnas para que ocupe poco, y debajo explica
-    las etiquetas. Pulsando su título se recoge (Plegable), por si en un portátil tapa algo.
-    """
+    """Leyenda abajo a la izquierda del mapa: dos columnas de símbolos y la explicación de las etiquetas."""
     leyenda = crear_ventana_mapa(marco_mapa)
     leyenda.place(relx=0.0, rely=1.0, x=MARGEN_VENTANA_MAPA, y=-MARGEN_VENTANA_MAPA, anchor="sw")
     plegable = Plegable(leyenda, "Legend")
@@ -1406,7 +1258,7 @@ def crear_leyenda_mapa(app, marco_mapa):
     ]
     for fila, columna, imagen, texto, ayuda in elementos:
         plegable.anadir(crear_fila_leyenda(leyenda, fila, columna, imagen, texto, ayuda))
-    # Tres líneas cortas escritas a mano, para que ninguna se parta a mitad de una idea
+    # Saltos de línea a mano para que no se corte a mitad de frase
     explicacion = crear_etiqueta(leyenda,
                                  "Label: callsign and, below, level in hundreds of ft\n"
                                  "with its trend (" + simulacion.SUBE + " climbing, " + simulacion.BAJA + " descending, "
@@ -1418,11 +1270,7 @@ def crear_leyenda_mapa(app, marco_mapa):
 
 
 def configurar_estilo_eventos(app):
-    """
-    Estilo de la lista de eventos: letra de ancho fijo (como en una pantalla de control, para que
-    las columnas queden alineadas) y filas más bajas que las de la tabla de Datos. Cada tipo de
-    evento tiene su color (las etiquetas se configuran en crear_ventana_eventos).
-    """
+    """Estilo de la lista de eventos: letra de ancho fijo para que cuadren las columnas y filas más bajas."""
     app.fuente_eventos = tkinter.font.Font(family=estilo.FAMILIA_NUMEROS, size=estilo.TAMANO_TABLA)
     alto_fila = app.fuente_eventos.metrics("linespace") + 4
     eventos = ttk.Style(app.raiz)
@@ -1435,10 +1283,8 @@ def configurar_estilo_eventos(app):
 
 def crear_ventana_eventos(app, marco_mapa):
     """
-    Ventana de eventos dentro del mapa, arriba a la derecha, como la de mensajes de una pantalla radar:
-    arriba, el título y los totales de despegues y aterrizajes; debajo, los eventos más recientes
-    (hora, icono, tipo, callsign y sistema), con su barra de desplazamiento.
-    Guarda: app.registro_eventos (RegistroEventos), app.etiqueta_totales_eventos.
+    Ventana de eventos arriba a la derecha del mapa: título, totales y la lista.
+    Guarda app.registro_eventos y app.etiqueta_totales_eventos.
     """
     configurar_estilo_eventos(app)
     ventana_eventos = crear_ventana_mapa(marco_mapa)
@@ -1462,7 +1308,7 @@ def crear_ventana_eventos(app, marco_mapa):
 
     columnas = ("hora", "icono", "tipo", "callsign", "sistema")
     anchos = (ANCHO_EVENTO_HORA, ANCHO_EVENTO_ICONO, ANCHO_EVENTO_TIPO, ANCHO_EVENTO_CALLSIGN, ANCHO_EVENTO_SISTEMA)
-    # show="": sin cabecera, para que quepan más eventos en poco alto
+    # Sin cabecera, así caben más filas
     tabla = ttk.Treeview(ventana_eventos, columns=columnas, show="", style="Eventos.Treeview", selectmode="browse",
                          height=FILAS_VENTANA_EVENTOS)
     for posicion in range(len(columnas)):
@@ -1486,12 +1332,7 @@ def crear_ventana_eventos(app, marco_mapa):
 
 
 def crear_panel_simulacion(app, padre):
-    """
-    Panel derecho de la simulación, de arriba abajo: tráfico (lo que más se consulta) e información
-    del avión seleccionado. La leyenda y los eventos van dentro del mapa. En pantallas bajas
-    (portátiles) el panel se desplaza con la rueda del ratón o el panel táctil, como el de la
-    pestaña Datos.
-    """
+    """Panel derecho con el tráfico y el avión seleccionado; se desplaza si la pantalla es baja."""
     panel = PanelDesplazable(padre, width=estilo.ANCHO_PANEL_SIMULACION, fg_color="transparent")
     panel.grid(row=1, column=1, sticky="nsew")
     crear_tarjeta_trafico(app, panel)
@@ -1499,11 +1340,7 @@ def crear_panel_simulacion(app, padre):
 
 
 def crear_lista_trafico(app, padre, columna, columnas, titulos, anchos):
-    """
-    Una lista del panel de tráfico (ttk.Treeview con el estilo de la tabla de Datos) con su barra
-    de desplazamiento, en la columna indicada de 'padre'. Al pulsar una fila se selecciona su avión.
-    Devuelve la ListaIncremental que la pone al día.
-    """
+    """Crea una lista de tráfico con su barra en esa columna y devuelve su ListaIncremental."""
     marco = ctk.CTkFrame(padre, fg_color="transparent")
     marco.grid(row=1, column=columna, sticky="nsew")
     if columna == 0:
@@ -1527,7 +1364,7 @@ def crear_lista_trafico(app, padre, columna, columnas, titulos, anchos):
 
 
 def crear_cifra_pequena(padre, color, texto_pie):
-    """Una cifra del contador "En el mapa" (el número en color y lo que cuenta). Devuelve la etiqueta de la cifra."""
+    """Número en color con su texto, para la línea "On the map". Devuelve la etiqueta del número."""
     cifra = ctk.CTkLabel(padre, text="0", font=estilo.fuente(estilo.TAMANO_TEXTO, True), text_color=color)
     cifra.pack(side="left", padx=(8, 3))
     crear_etiqueta(padre, texto_pie, estilo.TAMANO_AYUDA, estilo.TEXTO_SECUNDARIO).pack(side="left")
@@ -1536,12 +1373,8 @@ def crear_cifra_pequena(padre, color, texto_pie):
 
 def crear_tarjeta_trafico(app, panel):
     """
-    Panel de tráfico: dos contadores (en vuelo y en tierra), cada uno encima de su lista, y debajo
-    las cifras de lo que hay dibujado en el mapa (radar, ADS-B y blancos puros).
-    La lista En vuelo dice por qué sistema se ve cada avión ("Seen by": Radar, ADS-B o Ambos). La
-    lista En tierra no lo necesita: en tierra solo lo ve el radar (el ADS-B en tierra se descarta).
-    Guarda: app.contador_en_vuelo, app.contador_en_tierra, app.lista_en_vuelo, app.lista_en_tierra
-            (ListaIncremental), app.cifra_radar, app.cifra_adsb, app.cifra_blancos_puros.
+    Tarjeta Traffic: contadores y listas en vuelo / en tierra, y lo que hay dibujado en el mapa.
+    La de tierra no lleva "Seen by" porque el ADS-B en tierra se descarta.
     """
     tarjeta = crear_tarjeta(panel, "Traffic")
     tarjeta.pack(fill="x", pady=(0, estilo.MARGEN))
@@ -1584,21 +1417,19 @@ def crear_tarjeta_trafico(app, panel):
 
 
 def escribir_contadores_trafico(app, en_vuelo, en_tierra):
-    """Textos de los contadores del panel de tráfico, por ejemplo "✈ 12 airborne" y "▣ 3 on ground"."""
+    """Pone los contadores, p. ej. "✈ 12 airborne" y "▣ 3 on ground"."""
     cambiar_texto(app.contador_en_vuelo, estilo.ICONO_EN_VUELO + "  " + str(en_vuelo) + " airborne")
     cambiar_texto(app.contador_en_tierra, estilo.ICONO_EN_TIERRA + "  " + str(en_tierra) + " on ground")
 
 
 def crear_tarjeta_avion(app, panel):
     """
-    Información del avión pulsado, con el selector Radar / ADS-B encima.
-    El cuadro de texto tiene la altura justa para su versión más larga y no tiene barra propia:
-    si no cabe en la pantalla, se ve desplazando el panel.
-    Guarda: app.selector_sistema_avion, app.cuadro_info.
+    Tarjeta del avión seleccionado, con el selector Radar / ADS-B. El cuadro tiene el alto justo
+    para el caso más largo y no lleva barra: si no cabe, se desplaza el panel.
     """
     informacion = crear_tarjeta(panel, "Selected aircraft")
     informacion.pack(fill="x", pady=(0, estilo.MARGEN))
-    # Radar / ADS-B: pasa a los datos del mismo avión visto por el otro sistema (main.py lo pone al día)
+    # Para ver el mismo avión con el otro sistema
     app.selector_sistema_avion = crear_selector(informacion, ["Radar", "ADS-B"], app.cambiar_sistema_avion)
     app.selector_sistema_avion.pack(fill="x", padx=16, pady=(0, 8))
     cambiar_estado(app.selector_sistema_avion, False)      # al empezar no hay avión seleccionado
@@ -1612,7 +1443,7 @@ def crear_tarjeta_avion(app, panel):
 
 
 def crear_pestana_simulacion(app):
-    """Pestaña Simulación: la barra de controles arriba; mapa (con la leyenda y los eventos dentro) y panel debajo."""
+    """Pestaña Simulación: controles arriba y, debajo, el mapa y el panel."""
     pestana = app.pestana_simulacion
     pestana.grid_rowconfigure(1, weight=1)
     pestana.grid_columnconfigure(0, weight=1)

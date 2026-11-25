@@ -1,48 +1,32 @@
 """
-lector.py
-
-Paso 1 del flujo: LECTURA.
-    lectura -> decodificación -> coordenadas -> QNH -> CSV
-
-Lee el fichero .ast y separa sus piezas según la estructura general de
-ASTERIX (Part 1, §4.3, y CAT048 v1.31, §4.6.2):
-
-    bloque   = CAT (1 octeto) + LEN (2 octetos) + uno o varios registros
-    registro = FSPEC + los DI presentes, en orden creciente de FRN
-
-LEN es la longitud total del bloque e incluye los 3 octetos de CAT y LEN.
-
-Aquí también están las funciones de bits que usan cat048.py, cat021.py y
-bds.py (complemento a dos y campos con bit FX).
+Lectura del .ast: bloques (CAT + LEN + registros) y FSPEC de cada registro.
+LEN es la longitud del bloque entero, con los 3 octetos de cabecera incluidos.
+También están aquí las funciones de bits que usan cat048, cat021 y bds.
 """
 
 LONGITUD_CABECERA_BLOQUE = 3   # CAT (1 octeto) + LEN (2 octetos)
-BIT_FX = 0x01                  # bit 1 de un octeto: FX (Field Extension)
-FRN_POR_OCTETO_FSPEC = 7       # cada octeto del FSPEC indica 7 FRN (bits 8 a 2)
+BIT_FX = 0x01                  # el FX es el bit 1 del octeto
+FRN_POR_OCTETO_FSPEC = 7       # bits 8 a 2 de cada octeto del FSPEC
 
-# Problemas que puede tener un bloque (los devuelve problema_bloque)
+# Lo que puede devolver problema_bloque
 BLOQUE_CORTADO = "cortado"     # el bloque no cabe entero en el fichero
-LEN_NO_VALIDO = "len"          # LEN menor que la cabecera (3 octetos)
+LEN_NO_VALIDO = "len"          # LEN menor que la cabecera
 
 
 def leer_fichero(ruta):
-    """Devuelve todo el contenido del fichero .ast como bytes."""
+    """Lee el fichero entero en bytes."""
     with open(ruta, "rb") as fichero:
         datos = fichero.read()
     return datos
 
 
 def leer_entero(datos, posicion, numero_octetos):
-    """Lee numero_octetos a partir de posicion como un entero sin signo (MSB primero)."""
+    """Entero sin signo de numero_octetos octetos a partir de posicion (MSB primero)."""
     return int.from_bytes(datos[posicion:posicion + numero_octetos], "big")
 
 
 def con_signo(valor, numero_bits):
-    """
-    Interpreta 'valor' como un número en complemento a dos de numero_bits bits.
-    Part 1, §5: los valores negativos se representan en complemento a dos.
-    Ejemplo: con 14 bits, 0x3FFC (16380) es -4.
-    """
+    """Pasa un valor en complemento a dos de numero_bits bits a entero con signo (con 14 bits, 0x3FFC es -4)."""
     bit_de_signo = 1 << (numero_bits - 1)
     if valor & bit_de_signo:
         return valor - (1 << numero_bits)
@@ -50,11 +34,7 @@ def con_signo(valor, numero_bits):
 
 
 def longitud_fx(datos, posicion):
-    """
-    Longitud en octetos de un campo de longitud variable con FX
-    (Part 1, §4.3.4, "Extended length Data Fields"): se avanza octeto a
-    octeto mientras el bit 1 (FX) valga 1.
-    """
+    """Longitud de un campo con FX: se van contando octetos mientras el bit 1 valga 1."""
     longitud = 1
     while datos[posicion + longitud - 1] & BIT_FX:
         longitud = longitud + 1
@@ -62,12 +42,7 @@ def longitud_fx(datos, posicion):
 
 
 def problema_bloque(datos, posicion):
-    """
-    Comprueba si el bloque que empieza en 'posicion' se puede leer. Devuelve:
-        ""              si el bloque está bien
-        BLOQUE_CORTADO  si no cabe entero en el fichero (el fichero se corta)
-        LEN_NO_VALIDO   si su LEN es menor que la cabecera: no puede ser un bloque ASTERIX
-    """
+    """Mira si el bloque se puede leer: devuelve "" si está bien, o BLOQUE_CORTADO / LEN_NO_VALIDO."""
     if posicion + LONGITUD_CABECERA_BLOQUE > len(datos):
         return BLOQUE_CORTADO
 
@@ -80,11 +55,7 @@ def problema_bloque(datos, posicion):
 
 
 def leer_cabecera_bloque(datos, posicion):
-    """
-    Lee CAT y LEN del bloque que empieza en 'posicion'.
-    Devuelve (categoria, longitud_bloque).
-    Lanza ValueError si los octetos no pueden ser un bloque ASTERIX.
-    """
+    """Lee CAT y LEN y devuelve (categoria, longitud_bloque). Si no es un bloque válido, ValueError."""
     problema = problema_bloque(datos, posicion)
     if problema == BLOQUE_CORTADO:
         raise ValueError("the block at byte " + str(posicion) + " does not fit in the file")
@@ -99,13 +70,8 @@ def leer_cabecera_bloque(datos, posicion):
 
 def leer_fspec(datos, posicion):
     """
-    Lee el FSPEC de un registro y devuelve (lista_frn, posicion_siguiente).
-
-    Part 1, §4.3.7: cada octeto del FSPEC tiene 7 bits de presencia y el bit FX.
-    En el FSPEC los bits se numeran de izquierda a derecha, así que:
-        octeto 1: bit 8 = FRN 1, bit 7 = FRN 2, ..., bit 2 = FRN 7, bit 1 = FX
-        octeto 2: bit 8 = FRN 8, ..., bit 2 = FRN 14, bit 1 = FX
-    Si FX = 1 sigue otro octeto de FSPEC; si FX = 0, el FSPEC termina.
+    Lee el FSPEC y devuelve (lista_frn, posicion_siguiente).
+    En cada octeto el bit 8 es el primer FRN y el bit 1 es FX (si vale 1, sigue otro octeto).
     """
     lista_frn = []
     numero_octeto = 0
@@ -113,7 +79,7 @@ def leer_fspec(datos, posicion):
         octeto = datos[posicion]
         posicion = posicion + 1
 
-        # Se revisan los bits 8 a 2 del octeto: la máscara 0x80 es el bit 8
+        # bits 8 a 2 (0x80 es el bit 8)
         for numero_bit in range(FRN_POR_OCTETO_FSPEC):
             mascara = 0x80 >> numero_bit
             if octeto & mascara:
@@ -129,15 +95,10 @@ def leer_fspec(datos, posicion):
 
 def decodificar_caracteres_6_bits(datos, posicion):
     """
-    Decodifica los 8 caracteres de 6 bits de I048/240 e I021/170 (6 octetos).
-    Codificación: "Tabla codificación Target Identification" (ICAO, tabla 3-8):
-        1-26  -> A-Z
-        32    -> espacio
-        48-57 -> 0-9
-    Cualquier otro código no está en la tabla y se escribe como '?'.
-    Los espacios del final son relleno y se quitan.
+    Callsign de I048/240 e I021/170: 8 caracteres de 6 bits (1-26 A-Z, 32 espacio, 48-57 0-9).
+    Lo que no está en la tabla sale como '?', y los espacios del final se quitan porque son relleno.
     """
-    valor = leer_entero(datos, posicion, 6)   # 48 bits: carácter 1 en los bits 48-43
+    valor = leer_entero(datos, posicion, 6)   # carácter 1 en los bits 48-43
     texto = ""
     for numero_caracter in range(8):
         desplazamiento = 42 - 6 * numero_caracter
@@ -154,10 +115,7 @@ def decodificar_caracteres_6_bits(datos, posicion):
 
 
 def formatear_hora(segundos):
-    """
-    Pasa segundos desde medianoche a texto hh:mm:ss,sss (con coma decimal).
-    Lo usan I048/140 e I021/073.
-    """
+    """Segundos desde medianoche -> "hh:mm:ss,sss", con coma decimal."""
     milisegundos_totales = round(segundos * 1000)
     horas = milisegundos_totales // 3600000
     minutos = (milisegundos_totales // 60000) % 60

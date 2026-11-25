@@ -1,20 +1,7 @@
 """
-decodificar.py
-
-Motor de decodificación: une los pasos del flujo para un fichero completo.
-    lectura -> decodificación -> coordenadas -> QNH -> (filas en memoria)
-    (lector)  (cat048/cat021)   (geo)         (qnh)
-
-Lo usa main.py (la aplicación). Para cada bloque del fichero lee sus registros,
-los decodifica según su categoría, aplica los descartes obligatorios y calcula
-las columnas extra (posición WGS84 y altitud corregida). Cada registro que se
-queda produce una fila (diccionario columna -> valor), y decodificar_fichero la
-guarda en la lista que devuelve, ya como tupla (ver exportar_csv.py).
-
-Descartes obligatorios (no entran en la tabla ni en el CSV):
-    - CAT048 y CAT021 fuera de 40,9-41,7° N y 1,5-2,6° E (filtro geográfico del enunciado)
-    - CAT021 con GBS = 1, en tierra
-    - mensajes sin posición: sin ella no se puede aplicar el filtro geográfico obligatorio
+Motor de decodificación: recorre el fichero, decodifica cada registro y le añade posición y altitud corregida.
+Se descartan los que están fuera de 40,9-41,7° N y 1,5-2,6° E, los CAT021 en tierra (GBS = 1)
+y los que no tienen posición.
 """
 
 import time
@@ -29,14 +16,13 @@ from funciones import exportar_csv
 CATEGORIA_048 = 48
 CATEGORIA_021 = 21
 PIES_POR_FL = 100
-PASO_PROGRESO = 1           # se informa del progreso cada 1 %
+PASO_PROGRESO = 1           # en %
 
-# CAT048 sin FL: no se conoce la altura del blanco, y la transformación necesita una.
-# Se usa 0 m y la columna H_NO_FL lo marca con un 1.
+# CAT048 sin FL: la transformación necesita una altura, así que se pone 0 m y se marca H_NO_FL = 1
 ALTURA_SI_NO_HAY_FL_M = 0.0
 
 def crear_recuentos():
-    """Contadores que se muestran en el resumen final."""
+    """Contadores para el resumen final."""
     return {
         "registros_048": 0,
         "registros_021": 0,
@@ -49,26 +35,26 @@ def crear_recuentos():
         "filas_048_sin_fl": 0,
         "filas_021": 0,
         "bloques_desincronizados": 0,
-        "lectura_parada": "",       # si se para antes del final: lector.BLOQUE_CORTADO o lector.LEN_NO_VALIDO
-        "octeto_parada": 0,         # octeto donde empieza el bloque en el que se ha parado
+        "lectura_parada": "",       # por qué se ha parado antes del final, si pasa
+        "octeto_parada": 0,         # dónde empieza el bloque en el que se ha parado
         "segundos": 0.0,
     }
 
 
 def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     """
-    Decodifica un registro CAT048 y calcula sus columnas extra.
-    Devuelve (fila, posicion_siguiente); fila es None si el mensaje se descarta.
+    Decodifica un registro CAT048 y le añade LAT, LON, H y la altitud corregida.
+    Devuelve (fila, posicion_siguiente), con fila = None si se descarta.
     """
     fila, posicion = cat048.decodificar_registro(datos, posicion, lista_frn)
 
-    # Sin I048/040 no hay posición ni, por tanto, filtro geográfico: se descarta
+    # sin I048/040 no hay posición y no se puede aplicar el filtro geográfico
     if "I048_040_RHO_NM" not in fila:
         recuentos["descartados_048_sin_posicion"] += 1
         return None, posicion
 
-    # Altura para la transformación: FL x 100 ft sin corregir, el dato que da el radar
-    # (la altitud corregida solo existe por debajo de 6000 ft). Sin FL, ALTURA_SI_NO_HAY_FL_M.
+    # Para la transformación se usa el FL sin corregir (la altitud corregida
+    # solo existe por debajo de 6000 ft)
     if "FL" in fila:
         altura_m = fila["FL"] * PIES_POR_FL * geo.GeoUtils.FEET2METERS
         fila["H_NO_FL"] = 0
@@ -80,7 +66,6 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
                                                             fila["I048_040_THETA_DEG"],
                                                             altura_m)
 
-    # Filtro geográfico del enunciado
     if not geo.dentro_de_zona(latitud, longitud):
         recuentos["descartados_048_fuera_de_zona"] += 1
         return None, posicion
@@ -89,7 +74,7 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
     fila["LON"] = longitud
     fila["H"] = altura_wgs84
 
-    # Corrección QNH, solo con los mensajes que se quedan
+    # el QNH solo se aplica a los que se quedan
     fila["ALT_CORRECTED_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_048)
     return fila, posicion
@@ -97,19 +82,17 @@ def procesar_registro_048(datos, posicion, lista_frn, estado_qnh, recuentos):
 
 def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
     """
-    Decodifica un registro CAT021 y calcula su altitud corregida.
-    Devuelve (fila, posicion_siguiente); fila es None si el mensaje se descarta.
-    LAT y LON vienen ya en WGS84 (I021/131). CAT021 no tiene altura WGS84: no se decodifica
-    I021/140 (Geometric Height), así que H y H_NO_FL quedan vacías.
+    Igual que el de CAT048 pero solo hace falta la altitud corregida: LAT y LON ya vienen en WGS84.
+    H y H_NO_FL se quedan vacías porque I021/140 no se decodifica.
     """
     fila, posicion, motivo = cat021.decodificar_registro(datos, posicion, lista_frn)
 
-    # Los descartes de CAT021 se hacen dentro de cat021.py (en tierra, sin posición, fuera de zona)
+    # en CAT021 los descartes ya se hacen dentro de cat021.py
     if fila is None:
         recuentos["descartados_021_" + motivo] += 1
         return None, posicion
 
-    # Corrección QNH, solo con los mensajes que se quedan
+    # corrección QNH
     fila["ALT_CORRECTED_FT"] = qnh.corregir_altitud(estado_qnh, fila.get("TA"), fila.get("FL"),
                                                     fila.get("BP"), CATEGORIA_021)
     return fila, posicion
@@ -117,10 +100,8 @@ def procesar_registro_021(datos, posicion, lista_frn, estado_qnh, recuentos):
 
 def decodificar_bloque(datos, inicio_bloque, longitud_bloque, categoria, estados_qnh, recuentos):
     """
-    Decodifica todos los registros de un bloque y devuelve la lista de filas que se quedan.
-    Un bloque puede tener varios registros: se leen uno detrás de otro hasta llegar al LEN.
-    Cada registro debe acabar dentro del bloque y el último justo en el LEN; si no, el
-    bloque está desincronizado: se cuenta y se sigue con el bloque siguiente.
+    Decodifica los registros de un bloque y devuelve las filas que se quedan.
+    Si un registro se pasa del LEN el bloque está desincronizado: se cuenta y se deja ahí.
     """
     filas = []
     fin_bloque = inicio_bloque + longitud_bloque
@@ -140,7 +121,7 @@ def decodificar_bloque(datos, inicio_bloque, longitud_bloque, categoria, estados
                                                        estados_qnh[CATEGORIA_021], recuentos)
 
             if posicion > fin_bloque:
-                # El registro se sale del bloque: alguna longitud no cuadra
+                # se ha salido del bloque, alguna longitud no cuadra
                 recuentos["bloques_desincronizados"] += 1
                 return filas
 
@@ -156,14 +137,9 @@ def decodificar_bloque(datos, inicio_bloque, longitud_bloque, categoria, estados
 
 def decodificar_fichero(ruta_ast, informar_progreso=None):
     """
-    Decodifica un fichero ASTERIX completo una sola vez y devuelve (filas, recuentos):
-        filas:     lista de tuplas, una por mensaje que se queda, en el orden del fichero
-        recuentos: diccionario con los contadores del resumen
-    informar_progreso, si se da, es una función que recibe el porcentaje del fichero leído (0-100)
-    y los registros leídos hasta ahora. La ventana la usa para mover la barra de progreso.
-    Lanza ValueError si el fichero no es ASTERIX. Si se corta en mitad del último bloque o un bloque
-    tiene un LEN no válido, lee hasta el bloque anterior y lo indica en recuentos["lectura_parada"]
-    (el motivo) y recuentos["octeto_parada"] (dónde).
+    Decodifica el fichero entero y devuelve (filas, recuentos), con las filas ya como tuplas.
+    informar_progreso(porcentaje, registros_leidos) es opcional; la ventana lo usa para la barra.
+    Si el fichero se corta o un LEN está mal, se queda con lo leído hasta ahí y lo apunta en recuentos.
     """
     instante_inicio = time.time()
 
@@ -178,9 +154,8 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
     posicion = 0
     siguiente_aviso = 0
     while posicion < len(datos):
-        # Bloque que no se puede leer (fichero cortado o LEN no válido): se para aquí, se queda todo
-        # lo leído y el resumen lo avisa. Si es el primero, no es un fichero ASTERIX y
-        # leer_cabecera_bloque lo rechaza.
+        # Si un bloque no se puede leer se para aquí y se guarda lo que haya. Si es el
+        # primero, leer_cabecera_bloque lanza el error (no es un fichero ASTERIX)
         problema = lector.problema_bloque(datos, posicion)
         if posicion > 0 and problema != "":
             recuentos["lectura_parada"] = problema
@@ -188,7 +163,7 @@ def decodificar_fichero(ruta_ast, informar_progreso=None):
             break
         categoria, longitud_bloque = lector.leer_cabecera_bloque(datos, posicion)
 
-        # Un bloque de otra categoría no es un error: se salta entero
+        # los bloques de otras categorías se saltan enteros
         if categoria == CATEGORIA_048 or categoria == CATEGORIA_021:
             filas_bloque = decodificar_bloque(datos, posicion, longitud_bloque, categoria,
                                               estados_qnh, recuentos)

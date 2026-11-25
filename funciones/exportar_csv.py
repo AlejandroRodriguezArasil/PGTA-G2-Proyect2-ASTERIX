@@ -1,39 +1,27 @@
 """
-exportar_csv.py
-
-Paso 5 del flujo: CSV.
-    lectura -> decodificación -> coordenadas -> QNH -> CSV
-
-Define las 82 columnas, cómo se guarda una fila en memoria (una tupla con un
-valor por columna) y cómo se escribe el CSV con el formato que pide el enunciado:
-    - delimitador punto y coma (;) y separador decimal coma (,)
-    - una columna por subcampo y una fila por mensaje, en el orden del fichero
-    - celda vacía cuando el mensaje no trae ese dato
-
-Todos los CSV tienen las mismas columnas, sea cual sea el fichero. El fichero combinado da
-un solo CSV, con CAT048 y CAT021 mezclados en el orden del fichero: la columna CAT dice de
-qué categoría es cada fila.
+Las 82 columnas del CSV, cómo se guarda cada fila en memoria (una tupla) y la exportación.
+El CSV va con ";" de separador y coma decimal; celda vacía si el mensaje no trae el dato.
 """
 
 import csv
 
 SEPARADOR_CSV = ";"
 
-# Columnas en el orden en que aparecen en el CSV.
+# En el mismo orden que salen en el CSV
 COLUMNAS = [
     # --- Comunes a CAT048 y CAT021 ---
     "CAT",
     "SAC", "SIC",                       # I048/010 - I021/010
     "TIME", "TIME_S",                   # I048/140 - I021/073
-    "LAT", "LON",                       # WGS84: calculadas (CAT048) o de I021/131 (CAT021)
-    "H",                                # altura WGS84, solo CAT048 (CAT021 no la tiene)
-    "H_NO_FL",                         # solo CAT048: 1 si no había FL y H se calculó con altura 0
+    "LAT", "LON",                       # calculadas en CAT048, de I021/131 en CAT021
+    "H",                                # altura WGS84, solo CAT048
+    "H_NO_FL",                         # 1 si no había FL y H se calculó con altura 0
     "TA",                               # I048/220 - I021/080
     "TI",                               # I048/240 - I021/170
     "MODE3A",                           # I048/070 - I021/070
     "FL",                               # I048/090 - I021/145
-    "BP",                               # BDS 4.0 de I048/250 - BPS del RE de CAT021
-    "ALT_CORRECTED_FT",                 # corrección QNH (qnh.py)
+    "BP",                               # BDS 4.0 (I048/250) - BPS del RE de CAT021
+    "ALT_CORRECTED_FT",                 # sale de qnh.py
 
     # --- CAT048: I048/020 Target Report Descriptor ---
     "I048_020_TYP", "I048_020_SIM", "I048_020_RDP", "I048_020_SPI", "I048_020_RAB",
@@ -51,7 +39,7 @@ COLUMNAS = [
     "I048_130_SRL", "I048_130_SRR", "I048_130_SAM", "I048_130_PRL",
     "I048_130_PAM", "I048_130_RPD", "I048_130_APD",
 
-    # --- CAT048: I048/250 BDS 4.0, 5.0 y 6.0 (el BP va en la columna común) ---
+    # --- CAT048: I048/250 BDS 4.0, 5.0 y 6.0 (el BP está arriba) ---
     "BDS40_MCP_ALT", "BDS40_FMS_ALT", "BDS40_VNAV", "BDS40_ALT_HOLD",
     "BDS40_APPROACH", "BDS40_ALT_SOURCE",
     "BDS50_RA", "BDS50_TTA", "BDS50_GS", "BDS50_TAR", "BDS50_TAS",
@@ -66,8 +54,7 @@ COLUMNAS = [
     "I048_230_ARC", "I048_230_AIC", "I048_230_B1A", "I048_230_B1B",
 ]
 
-# Valores calculados: se escriben con un número fijo de decimales.
-# Los valores decodificados se escriben exactos, sin redondear.
+# Lo calculado se redondea a estos decimales; lo decodificado se escribe tal cual.
 DECIMALES_FIJOS = {
     "LAT": 8,
     "LON": 8,
@@ -77,7 +64,7 @@ DECIMALES_FIJOS = {
 
 
 def formatear_valor(columna, valor):
-    """Convierte un valor al texto de su celda: vacío si no hay dato y coma decimal."""
+    """Texto de la celda: vacío si no hay dato, y con coma decimal."""
     if valor is None:
         return ""
     if isinstance(valor, float):
@@ -85,31 +72,30 @@ def formatear_valor(columna, valor):
             decimales = DECIMALES_FIJOS[columna]
             redondeado = round(valor, decimales)
             if redondeado == 0:
-                redondeado = 0.0    # evita que se escriba "-0,00" con valores como -0,0001
+                redondeado = 0.0    # si no, -0,0001 sale como "-0,00"
             texto = format(redondeado, "." + str(decimales) + "f")
         else:
-            texto = repr(valor)    # valor exacto, con todas sus cifras
+            texto = repr(valor)    # con todas las cifras
         return texto.replace(".", ",")
     return str(valor)
 
 
 # -----------------------------------------------------------------------------
-# Cómo se guarda una fila en memoria
+# Filas en memoria
 # -----------------------------------------------------------------------------
-# Al decodificar, cada mensaje es un diccionario (columna -> valor). Para guardarlo se
-# pasa a una tupla con los 82 valores en el orden de COLUMNAS (None si no hay dato),
-# que ocupa menos RAM que el diccionario. Un valor se lee con valor(fila, "FL").
+# Cada mensaje se guarda como tupla en el orden de COLUMNAS (gasta menos RAM que un
+# diccionario). Para leer un valor: valor(fila, "FL").
 
-# Posición de cada columna dentro de la tupla: "CAT" -> 0, "SAC" -> 1, ...
+# "CAT" -> 0, "SAC" -> 1, ...
 INDICE_COLUMNA = {}
 for posicion_columna in range(len(COLUMNAS)):
     INDICE_COLUMNA[COLUMNAS[posicion_columna]] = posicion_columna
 
-PASO_PROGRESO = 1           # se informa del progreso de la exportación cada 1 %
+PASO_PROGRESO = 1           # aviso de progreso cada 1 %
 
 
 def fila_a_tupla(fila_diccionario):
-    """Convierte una fila decodificada (diccionario) en la tupla que se guarda en memoria."""
+    """Pasa el diccionario de un mensaje a tupla."""
     valores = []
     for columna in COLUMNAS:
         valores.append(fila_diccionario.get(columna))
@@ -117,12 +103,12 @@ def fila_a_tupla(fila_diccionario):
 
 
 def valor(fila, columna):
-    """Devuelve el valor de una columna de una fila guardada (None si no hay dato)."""
+    """Valor de una columna de la fila (None si no hay dato)."""
     return fila[INDICE_COLUMNA[columna]]
 
 
 def formatear_fila(fila):
-    """Devuelve la lista de textos de las celdas de una fila (CSV y tabla de la ventana)."""
+    """Celdas de una fila ya en texto; sirve para el CSV y para la tabla."""
     celdas = []
     for posicion in range(len(COLUMNAS)):
         celdas.append(formatear_valor(COLUMNAS[posicion], fila[posicion]))
@@ -134,10 +120,7 @@ def formatear_fila(fila):
 # -----------------------------------------------------------------------------
 
 def exportar(ruta, filas, informar_progreso=None):
-    """
-    Escribe en 'ruta' un CSV con la cabecera y todas las filas de la lista, en su orden.
-    informar_progreso, si se da, es una función que recibe el porcentaje (0-100).
-    """
+    """Escribe el CSV. Si se pasa informar_progreso, se le va llamando con el % hecho."""
     total = len(filas)
     siguiente_aviso = 0
     with open(ruta, "w", newline="", encoding="utf-8") as fichero:
